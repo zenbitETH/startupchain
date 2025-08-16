@@ -18,7 +18,6 @@ export const SkyscraperHero: React.FC<SkyscraperHeroProps> = ({
   const [name, setName] = useState<string>('')
   const [email, setEmail] = useState<string>('')
   const [hasTypedOnce, setHasTypedOnce] = useState<boolean>(false)
-  const [isOutlineDrawn, setIsOutlineDrawn] = useState<boolean>(false)
   const [showGlints, setShowGlints] = useState<boolean>(false)
   const outlinePathRef = useRef<SVGPathElement | null>(null)
   const [outlineLength, setOutlineLength] = useState<number>(0)
@@ -45,14 +44,12 @@ export const SkyscraperHero: React.FC<SkyscraperHeroProps> = ({
   // After outline draws and bricks animate, trigger one-time window glints
   useEffect(() => {
     if (prefersReducedMotion) {
-      setIsOutlineDrawn(true)
       setShowGlints(true)
       return
     }
 
     const totalMs = 1200 + 1200 // outline 1.2s + bricks <= 1.2s
     const timer = window.setTimeout(() => {
-      setIsOutlineDrawn(true)
       setShowGlints(true)
     }, totalMs)
     return () => window.clearTimeout(timer)

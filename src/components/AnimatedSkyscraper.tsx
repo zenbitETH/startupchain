@@ -92,26 +92,6 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
     if (nonEmpty && !prefersReducedMotion) setHasTypedOnce(true)
   }, [nonEmpty, prefersReducedMotion])
 
-  // Only show text when user has typed something
-  const displayName = nonEmpty ? name! : ''
-  const signFontSize = useMemo(() => {
-    const len = displayName.length
-    if (len <= 12) return 26
-    if (len <= 18) return 22
-    if (len <= 26) return 18
-    if (len <= 34) return 14
-    return 12
-  }, [displayName])
-
-  const signTextFill = 'url(#neonGradient)'
-
-  // Static randomized glint delays per mount
-  const glintDelays = useMemo(() => {
-    const delays: number[] = []
-    for (let i = 0; i < 14; i += 1)
-      delays.push(300 + Math.floor(Math.random() * 1000))
-    return delays
-  }, [])
 
   // Windows that follow the actual building shape
   const windowGrid = useMemo(() => {

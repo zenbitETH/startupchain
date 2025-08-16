@@ -16,7 +16,7 @@ const StyledButton = styled(Button)`
 
 export function ConnectButton() {
   const { ready, authenticated, user, login, logout } = usePrivy()
-  const { address, isConnected } = useAccount()
+  const { address } = useAccount()
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
 

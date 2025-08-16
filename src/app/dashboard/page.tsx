@@ -73,6 +73,24 @@ export default function Dashboard() {
   const balanceInEth = balance ? parseFloat(formatEther(balance.value)) : 0
   const balanceInUsd = balanceInEth * ethPrice
 
+  // Get email verification status from linkedAccounts
+  const getEmailVerificationStatus = () => {
+    if (!user?.linkedAccounts) return null
+    
+    const emailAccount = user.linkedAccounts.find(
+      (account: any) => account.type === 'email'
+    )
+    
+    if (!emailAccount) return null
+    
+    return {
+      isVerified: emailAccount.firstVerifiedAt !== null,
+      firstVerifiedAt: emailAccount.firstVerifiedAt,
+    }
+  }
+
+  const emailVerification = getEmailVerificationStatus()
+
   if (!authenticated || !ready) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -153,7 +171,15 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                 
+                      {emailVerification?.isVerified ? (
+                        <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                          ✓ Verified
+                        </span>
+                      ) : (
+                        <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full font-medium">
+                          ⚠ Unverified
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}

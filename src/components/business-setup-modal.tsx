@@ -1,6 +1,6 @@
 'use client'
 
-import { Minus, Plus, Trash2, X } from 'lucide-react'
+import { Plus, Trash2, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 
 interface Founder {
@@ -185,7 +185,7 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
               </div>
 
               <div className="space-y-3">
-                {founders.map((founder, index) => (
+                {founders.map((founder) => (
                   <div key={founder.id} className="bg-muted/10 border-border rounded-xl border p-4">
                     <div className="flex items-center gap-3">
                       {/* Address Input */}
