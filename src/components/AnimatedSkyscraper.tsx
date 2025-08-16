@@ -49,31 +49,41 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
     return () => window.clearTimeout(timer)
   }, [prefersReducedMotion])
 
-  // Scroll effect (blur, opacity, scale)
+  // Scroll effect (blur, opacity, scale) - lightweight throttling
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY
-      const effectStart = 100 // Start effects after 100px scroll
-      const effectComplete = 600 // Complete effects at 600px scroll
+    let timeoutId: NodeJS.Timeout | null = null
 
-      if (scrollY <= effectStart) {
-        setScrollBlur(0)
-        setScrollOpacity(1)
-      } else if (scrollY >= effectComplete) {
-        setScrollBlur(15) // More blur
-        setScrollOpacity(0.3) // Lower opacity
-      } else {
-        const progress =
-          (scrollY - effectStart) / (effectComplete - effectStart)
-        setScrollBlur(progress * 15)
-        setScrollOpacity(1 - progress * 0.7) // From 1 to 0.3
-      }
+    const handleScroll = () => {
+      if (timeoutId) return // Already scheduled
+      
+      timeoutId = setTimeout(() => {
+        const scrollY = window.scrollY
+        const effectStart = 100 // Start effects after 100px scroll
+        const effectComplete = 600 // Complete effects at 600px scroll
+
+        if (scrollY <= effectStart) {
+          setScrollBlur(0)
+          setScrollOpacity(1)
+        } else if (scrollY >= effectComplete) {
+          setScrollBlur(15) // More blur
+          setScrollOpacity(0.3) // Lower opacity
+        } else {
+          const progress =
+            (scrollY - effectStart) / (effectComplete - effectStart)
+          setScrollBlur(progress * 15)
+          setScrollOpacity(1 - progress * 0.7) // From 1 to 0.3
+        }
+        timeoutId = null
+      }, 8) // 8ms throttle (~120fps max)
     }
 
-    window.addEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll() // Call once to set initial state
 
-    return () => window.removeEventListener('scroll', handleScroll)
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   }, [])
 
   // One-time sweep activation on first non-empty name
@@ -103,34 +113,48 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
     return delays
   }, [])
 
-  // Brick rows config
+  // Windows that follow the actual building shape
   const windowGrid = useMemo(() => {
-    const windows: { x: number; y: number; width: number; height: number }[] =
-      []
-    const tiers = [
-      { startX: 60, startY: 520, width: 380, endY: 600, windowSize: 8 },
-      { startX: 80, startY: 480, width: 340, endY: 520, windowSize: 8 },
-      { startX: 100, startY: 440, width: 300, endY: 480, windowSize: 7 },
-      { startX: 120, startY: 400, width: 260, endY: 440, windowSize: 7 },
-      { startX: 140, startY: 360, width: 220, endY: 400, windowSize: 6 },
-      { startX: 160, startY: 320, width: 180, endY: 360, windowSize: 6 },
-      { startX: 180, startY: 280, width: 140, endY: 320, windowSize: 5 },
-      { startX: 200, startY: 240, width: 100, endY: 280, windowSize: 5 },
-      { startX: 220, startY: 200, width: 80, endY: 240, windowSize: 4 },
-      { startX: 240, startY: 160, width: 40, endY: 200, windowSize: 4 },
+    const windows: { x: number; y: number; width: number; height: number }[] = []
+    
+    // Building tiers with 50% bigger windows and proper positioning
+    const buildingTiers = [
+      // Base level: x 50-470, y 520-600
+      { leftX: 70, rightX: 450, topY: 540, bottomY: 580, windowWidth: 6, windowHeight: 12 },
+      // Level 2: x 70-450, y 480-520  
+      { leftX: 90, rightX: 430, topY: 490, bottomY: 510, windowWidth: 6, windowHeight: 9 },
+      // Level 3: x 90-430, y 440-480
+      { leftX: 110, rightX: 410, topY: 450, bottomY: 470, windowWidth: 6, windowHeight: 9 },
+      // Level 4: x 110-410, y 400-440
+      { leftX: 130, rightX: 390, topY: 410, bottomY: 430, windowWidth: 5, windowHeight: 9 },
+      // Level 5: x 130-390, y 360-400
+      { leftX: 150, rightX: 370, topY: 370, bottomY: 390, windowWidth: 5, windowHeight: 8 },
+      // Level 6: x 150-370, y 320-360
+      { leftX: 170, rightX: 350, topY: 330, bottomY: 350, windowWidth: 5, windowHeight: 8 },
+      // Level 7: x 170-350, y 280-320
+      { leftX: 190, rightX: 330, topY: 290, bottomY: 310, windowWidth: 4, windowHeight: 8 },
+      // Level 8: x 190-330, y 240-280
+      { leftX: 210, rightX: 310, topY: 250, bottomY: 270, windowWidth: 4, windowHeight: 6 },
+      // Level 9: x 210-310, y 200-240
+      { leftX: 230, rightX: 290, topY: 210, bottomY: 230, windowWidth: 3, windowHeight: 6 },
+      // Level 10: x 230-290, y 160-200
+      { leftX: 250, rightX: 270, topY: 170, bottomY: 190, windowWidth: 3, windowHeight: 6 },
     ]
 
-    tiers.forEach((tier) => {
-      const cols = Math.floor(tier.width / (tier.windowSize + 3))
-      const rows = Math.floor((tier.endY - tier.startY) / (tier.windowSize + 2))
-
+    buildingTiers.forEach((tier) => {
+      const tierWidth = tier.rightX - tier.leftX - 20 // Leave margins
+      const tierHeight = tier.bottomY - tier.topY - 6
+      
+      const cols = Math.floor(tierWidth / (tier.windowWidth + 8))
+      const rows = Math.floor(tierHeight / (tier.windowHeight + 3))
+      
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
           windows.push({
-            x: tier.startX + col * (tier.windowSize + 3),
-            y: tier.startY + row * (tier.windowSize + 2),
-            width: tier.windowSize,
-            height: tier.windowSize,
+            x: tier.leftX + 10 + col * (tier.windowWidth + 8),
+            y: tier.topY + 3 + row * (tier.windowHeight + 3),
+            width: tier.windowWidth,
+            height: tier.windowHeight,
           })
         }
       }
@@ -292,11 +316,13 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
                 y={window.y}
                 width={window.width}
                 height={window.height}
-                fill="#2a3441"
-                stroke="#4a5568"
+                fill="#2c3e50"
+                stroke="#bdc3c7"
                 strokeWidth="0.5"
                 vectorEffect="non-scaling-stroke"
-                opacity={prefersReducedMotion ? 0.8 : 0}
+                rx="1"
+                ry="1"
+                opacity={prefersReducedMotion ? 1 : 0}
                 className={prefersReducedMotion ? '' : 'window-appear'}
                 style={{ animationDelay: `${delayMs}ms` }}
               />
@@ -310,9 +336,9 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
             <rect x="256" y="80" width="8" height="20" fill="#b3c0d1" />
           </g>
 
-          {showGlints && (
+          {showGlints && !prefersReducedMotion && (
             <g>
-              {Array.from({ length: 20 }).map((_, i) => {
+              {Array.from({ length: 8 }).map((_, i) => {
                 const randomWindow =
                   windowGrid[Math.floor(Math.random() * windowGrid.length)]
                 return (
@@ -326,7 +352,7 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
                     opacity="0"
                     className="glint"
                     style={{
-                      animationDelay: `${2000 + Math.random() * 2000}ms`,
+                      animationDelay: `${2000 + i * 500}ms`,
                     }}
                   />
                 )
@@ -341,20 +367,20 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
         src="/eth-logo.svg"
         alt="Ethereum Logo"
         className="floating-eth-logo"
-        width={80}
-        height={80}
+        width={40}
+        height={40}
         style={{
           position: 'fixed',
-          top: '120px',
-          right: '80px',
-          width: '80px',
-          height: '80px',
-          opacity: 0.6,
+          bottom: '40px',
+          right: '40px',
+          width: '40px',
+          height: '40px',
+          opacity: 0.8,
           zIndex: 1,
           pointerEvents: 'none',
           mixBlendMode: 'multiply',
           filter:
-            'brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%)',
+            'brightness(0) saturate(100%) invert(70%) sepia(100%) saturate(1500%) hue-rotate(200deg) brightness(120%) contrast(110%)',
         }}
       />
 
@@ -398,10 +424,10 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
         @keyframes windowAppear {
           from {
             opacity: 0;
-            transform: scale(0.8);
+            transform: scale(0.9);
           }
           to {
-            opacity: 0.8;
+            opacity: 1;
             transform: scale(1);
           }
         }
@@ -443,18 +469,18 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
           }
         }
         :global(.floating-eth-logo) {
-          animation: floatUpDown 4s ease-in-out infinite !important;
+          animation: floatUpDown 6s ease-in-out infinite !important;
         }
         .cloud-bounce-1 {
-          animation: cloudBounce1 416s linear infinite;
+          animation: cloudBounce1 60s linear infinite;
           opacity: 0.3;
         }
         .cloud-bounce-2 {
-          animation: cloudBounce2 624s linear infinite;
+          animation: cloudBounce2 80s linear infinite;
           opacity: 0.3;
         }
         .cloud-bounce-3 {
-          animation: cloudBounce3 520s linear infinite;
+          animation: cloudBounce3 70s linear infinite;
           opacity: 0.3;
         }
         @keyframes floatUpDown {
@@ -464,24 +490,6 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
           }
           50% {
             transform: translateY(-30px);
-          }
-        }
-        @keyframes cloudFloat {
-          0%,
-          100% {
-            transform: translateX(0px);
-          }
-          50% {
-            transform: translateX(20px);
-          }
-        }
-        @keyframes cloudFloatAtPosition {
-          0%,
-          100% {
-            transform: translateX(0px);
-          }
-          50% {
-            transform: translateX(20px);
           }
         }
         @keyframes cloudBounce1 {
@@ -520,7 +528,7 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
         @media (prefers-reduced-motion: reduce) {
           .outline-draw,
           .facade-fade,
-          .brick-row rect,
+          .window-appear,
           svg #sweepRect,
           .glint,
           :global(.neon-text),
