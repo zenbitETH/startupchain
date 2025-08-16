@@ -1,7 +1,7 @@
 'use client'
 
 import { ThorinGlobalStyles, lightTheme } from '@ensdomains/thorin'
-import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
+import { PrivyProvider } from '@privy-io/react-auth'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { ThemeProvider } from 'styled-components'
@@ -17,15 +17,27 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => setIsMounted(true), [])
 
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <StyledComponentsRegistry>
-          <ThemeProvider theme={lightTheme}>
-            <ThorinGlobalStyles />
-            <RainbowKitProvider>{isMounted && children}</RainbowKitProvider>
-          </ThemeProvider>
-        </StyledComponentsRegistry>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <PrivyProvider
+      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ''}
+      config={{
+        appearance: {
+          theme: 'light',
+        },
+        embeddedWallets: {
+          createOnLogin: 'users-without-wallets',
+        },
+      }}
+    >
+      <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+          <StyledComponentsRegistry>
+            <ThemeProvider theme={lightTheme}>
+              <ThorinGlobalStyles />
+              {isMounted && children}
+            </ThemeProvider>
+          </StyledComponentsRegistry>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </PrivyProvider>
   )
 }
