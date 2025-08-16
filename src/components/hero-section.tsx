@@ -7,6 +7,7 @@ import { useDebounce } from 'usehooks-ts'
 import { normalize } from 'viem/ens'
 import { useEnsAddress } from 'wagmi'
 
+import { AnimatedSkyscraper } from '@/components/AnimatedSkyscraper'
 import { isValidEnsName } from '@/lib/ens'
 
 export function HeroSection() {
@@ -60,15 +61,12 @@ export function HeroSection() {
 
   return (
     <section className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0">
-        <div className="bg-primary/20 animate-blob absolute top-40 left-10 h-72 w-72 rounded-full opacity-70 mix-blend-multiply blur-xl filter"></div>
-        <div className="bg-accent/20 animate-blob animation-delay-2000 absolute top-40 right-10 h-72 w-72 rounded-full opacity-70 mix-blend-multiply blur-xl filter"></div>
-        <div className="bg-primary/10 animate-blob animation-delay-4000 absolute -bottom-8 left-20 h-72 w-72 rounded-full opacity-70 mix-blend-multiply blur-xl filter"></div>
-      </div>
+
+      {/* Animated skyscraper background */}
+      <AnimatedSkyscraper name={ensName || 'Your company'} />
 
       <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-        <div className="text-center">
+        <div className="text-center lg:text-left lg:max-w-3xl">
           {/* Main Headline */}
           <h1 className="text-foreground mb-6 text-4xl font-bold tracking-tight md:text-6xl lg:text-7xl">
             Build your business
@@ -85,7 +83,7 @@ export function HeroSection() {
           </p>
 
           {/* Email emphasis */}
-          <div className="mx-auto mb-12 max-w-2xl">
+          <div className="mx-auto lg:mx-0 mb-12 max-w-2xl">
             <div className="from-primary/10 via-accent/10 to-primary/10 border-primary/20 rounded-xl border bg-gradient-to-r p-4">
               <p className="text-foreground text-lg font-medium">
                 ✨ Start with just your email address - we&apos;ll handle the
@@ -95,7 +93,7 @@ export function HeroSection() {
           </div>
 
           {/* ENS Name Checker */}
-          <div className="mx-auto mb-16 max-w-2xl">
+          <div className="mx-auto lg:mx-0 mb-16 max-w-2xl">
             <div className="bg-card/50 border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
               {/* Title that disappears on focus */}
               <div
@@ -220,7 +218,7 @@ export function HeroSection() {
           </div>
 
           {/* Social Proof */}
-          <div className="flex flex-wrap items-center justify-center gap-8 opacity-60">
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-8 opacity-60">
             <div className="text-muted-foreground text-sm">Trusted by</div>
             <div className="flex items-center gap-6">
               <div className="text-lg font-semibold">ENS</div>

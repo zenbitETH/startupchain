@@ -15,7 +15,7 @@ export function Navbar() {
             <div className="from-primary to-accent flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br">
               <Sparkles className="text-primary-foreground h-5 w-5" />
             </div>
-            <span className="text-foreground text-xl font-bold tracking-tight">
+            <span className="text-foreground text-xl font-bold tracking-tight" style={{ fontFamily: 'Orbitron, monospace' }}>
               StartupChain
             </span>
           </Link>
