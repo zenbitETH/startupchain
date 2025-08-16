@@ -96,18 +96,22 @@ export function HeroSection() {
 
           {/* ENS Name Checker */}
           <div className="mx-auto mb-16 max-w-2xl">
-            <div className="bg-card/50 border-border/50 relative min-h-[200px] rounded-2xl border p-6 shadow-2xl backdrop-blur-sm overflow-hidden">
+            <div className="bg-card/50 border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
               {/* Title that disappears on focus */}
-              <div className={`absolute top-6 left-6 right-6 transition-all duration-300 ${isFocused ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0'}`}>
+              <div
+                className={`absolute top-6 right-6 left-6 transition-all duration-300 ${isFocused ? '-translate-y-2 opacity-0' : 'translate-y-0 opacity-100'}`}
+              >
                 <h3 className="text-foreground text-center text-xl font-semibold">
-                  <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+                  <span className="from-primary via-accent to-primary bg-gradient-to-r bg-clip-text text-transparent">
                     Enter your business name
                   </span>
                 </h3>
               </div>
-              
+
               {/* Input field that moves up when focused */}
-              <div className={`relative transition-all duration-300 ${isFocused ? 'translate-y-0' : 'translate-y-12'}`}>
+              <div
+                className={`relative transition-all duration-300 ${isFocused ? 'translate-y-0' : 'translate-y-12'}`}
+              >
                 <input
                   type="text"
                   placeholder="Your company name"
