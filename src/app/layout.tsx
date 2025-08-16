@@ -4,8 +4,8 @@ import { ClientProviders } from '@/lib/providers'
 import '@/style.css'
 
 export const metadata: Metadata = {
-  title: 'ENS Frontend Template',
-  description: 'Starter web app for web3 developers',
+  title: 'StartupChain - Build your business on-chain',
+  description: 'Register ENS names, split revenue transparently, and build with the security of blockchain technology. No wallet required to start.',
 }
 
 export default function RootLayout({
@@ -14,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body>
         <ClientProviders>{children}</ClientProviders>
       </body>

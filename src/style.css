@@ -137,8 +137,8 @@
   --secondary-foreground: oklch(0.9053 0.0245 293.5570);
   --muted: oklch(0.2560 0.0320 294.8380);
   --muted-foreground: oklch(0.6974 0.0282 300.0614);
-  --accent: oklch(0.3181 0.0321 308.6149);
-  --accent-foreground: oklch(0.8391 0.0692 2.6681);
+  --accent: oklch(0.8391 0.0692 2.6681);
+  --accent-foreground: oklch(0.3181 0.0321 308.6149);
   --destructive: oklch(0.6875 0.1420 21.4566);
   --border: oklch(0.3063 0.0359 293.3367);
   --input: oklch(0.2847 0.0346 291.2726);
@@ -162,21 +162,21 @@
   --font-serif: "Lora", Georgia, serif;
   --font-mono: "Fira Code", "Courier New", monospace;
   --shadow-color: hsl(0 0% 0%);
-  --shadow-opacity: 0.06;
-  --shadow-blur: 5px;
-  --shadow-spread: 1px;
-  --shadow-offset-x: 1px;
-  --shadow-offset-y: 2px;
+  --shadow-opacity: 0.15;
+  --shadow-blur: 8px;
+  --shadow-spread: 2px;
+  --shadow-offset-x: 2px;
+  --shadow-offset-y: 4px;
   --letter-spacing: 0em;
   --spacing: 0.25rem;
-  --shadow-2xs: 1px 2px 5px 1px hsl(0 0% 0% / 0.03);
-  --shadow-xs: 1px 2px 5px 1px hsl(0 0% 0% / 0.03);
-  --shadow-sm: 1px 2px 5px 1px hsl(0 0% 0% / 0.06), 1px 1px 2px 0px hsl(0 0% 0% / 0.06);
-  --shadow: 1px 2px 5px 1px hsl(0 0% 0% / 0.06), 1px 1px 2px 0px hsl(0 0% 0% / 0.06);
-  --shadow-md: 1px 2px 5px 1px hsl(0 0% 0% / 0.06), 1px 2px 4px 0px hsl(0 0% 0% / 0.06);
-  --shadow-lg: 1px 2px 5px 1px hsl(0 0% 0% / 0.06), 1px 4px 6px 0px hsl(0 0% 0% / 0.06);
-  --shadow-xl: 1px 2px 5px 1px hsl(0 0% 0% / 0.06), 1px 8px 10px 0px hsl(0 0% 0% / 0.06);
-  --shadow-2xl: 1px 2px 5px 1px hsl(0 0% 0% / 0.15);
+  --shadow-2xs: 2px 4px 8px 2px hsl(0 0% 0% / 0.1);
+  --shadow-xs: 2px 4px 8px 2px hsl(0 0% 0% / 0.1);
+  --shadow-sm: 2px 4px 8px 2px hsl(0 0% 0% / 0.15), 2px 2px 4px 0px hsl(0 0% 0% / 0.15);
+  --shadow: 2px 4px 8px 2px hsl(0 0% 0% / 0.15), 2px 2px 4px 0px hsl(0 0% 0% / 0.15);
+  --shadow-md: 2px 4px 8px 2px hsl(0 0% 0% / 0.15), 2px 4px 8px 0px hsl(0 0% 0% / 0.15);
+  --shadow-lg: 2px 4px 8px 2px hsl(0 0% 0% / 0.15), 2px 8px 12px 0px hsl(0 0% 0% / 0.15);
+  --shadow-xl: 2px 4px 8px 2px hsl(0 0% 0% / 0.15), 2px 16px 20px 0px hsl(0 0% 0% / 0.15);
+  --shadow-2xl: 2px 4px 8px 2px hsl(0 0% 0% / 0.25);
 }
 
 @layer base {
@@ -186,5 +186,123 @@
   body {
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
+  }
+}
+
+/* Custom animations for the landing page */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes gradient-x {
+  0%, 100% {
+    background-size: 200% 200%;
+    background-position: left center;
+  }
+  50% {
+    background-size: 200% 200%;
+    background-position: right center;
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animate-gradient-x {
+  animation: gradient-x 15s ease infinite;
+  background-size: 200% 200%;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+@layer utilities {
+  /* Gradient text animation */
+  .animate-gradient-x {
+    background-size: 400% 400%;
+    animation: gradient-x 3s ease infinite;
+  }
+  
+  @keyframes gradient-x {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+  
+  /* Blob animations for background */
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+  
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+  
+  @keyframes blob {
+    0% {
+      transform: translate(0px, 0px) scale(1);
+    }
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+    100% {
+      transform: translate(0px, 0px) scale(1);
+    }
+  }
+  
+  /* Glassmorphism backdrop blur enhancement */
+  .backdrop-blur-xl {
+    backdrop-filter: blur(24px);
+  }
+  
+  /* Smooth hover transitions for cards */
+  .hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.25);
+  }
+  
+  /* Pulse animation for status indicators */
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  /* Web3 glow effects */
+  .glow-primary {
+    box-shadow: 0 0 20px rgba(var(--primary), 0.3);
+  }
+  
+  .glow-accent {
+    box-shadow: 0 0 20px rgba(var(--accent), 0.3);
   }
 }
