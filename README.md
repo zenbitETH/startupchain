@@ -1,42 +1,104 @@
-This is a Next.js template designed to get you up and running with a new web3 project as quickly as possible.
+# StartupChain
+
+ENS Company Registry dApp - A decentralized application that allows users to register ENS names for companies, choose single or multi-owner structures, and set revenue split percentages.
+
+## Features
+
+- **ENS Name Registration** - Register ENS names for your business
+- **Multi-owner Support** - Create single owner or Safe multisig structures
+- **Revenue Splitting** - Set revenue split percentages between treasury and owners
+- **Email Onboarding** - Support email authentication with embedded wallets via Privy
+- **Gasless Transactions** - Enable gasless transactions for email users
+
+## Tech Stack
+
+- [Next.js 14](https://nextjs.org/) with App Router
+- [React 18](https://react.dev/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Privy](https://privy.io/) for Web3 authentication
+- [Wagmi](https://wagmi.sh/) + [Viem](https://viem.sh/) for blockchain interactions
+- [ENS](https://ens.domains/) for domain registration
+- [Safe](https://safe.global/) for multisig wallets
 
 ## Getting Started
 
-Check out the [live demo](https://ens-frontend-template.vercel.app/) to see what this template looks like.
+### 1. Clone the Repository
 
-Built with:
+```bash
+git clone git@github.com:zenbitETH/startupchain.git
+cd startupchain
+```
 
-- [Next.js](https://nextjs.org/)
-- [Thorin](https://thorin.ens.domains/)
-- [Styled Components](https://styled-components.com/)
-- [Viem](https://viem.sh/)
-- [Wagmi](https://wagmi.sh/)
-- [RainbowKit](https://www.rainbowkit.com/)
-
-## How to use
-
-Install dependencies:
+### 2. Install Dependencies
 
 ```bash
 yarn install
 ```
 
-Create a [WalletConnect account](https://cloud.walletconnect.com/sign-in) and add your Project ID to `.env.local`:
+### 3. Setup Environment Variables
+
+Create a `.env` file in the root directory:
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env
 ```
 
-Start the development server:
+Add your Privy credentials to `.env`:
+
+```bash
+# Get your app ID and secret at https://dashboard.privy.io
+NEXT_PUBLIC_PRIVY_APP_ID=your_app_id_here
+PRIVY_APP_SECRET=your_app_secret_here
+```
+
+### 4. Configure Privy
+
+1. Go to [Privy Dashboard](https://dashboard.privy.io)
+2. Create a new app following [this guide](https://docs.privy.io/basics/get-started/dashboard/create-new-app)
+3. Copy your App ID and App Secret to the `.env` file
+4. Configure your login methods (email, social, wallet)
+5. Set up embedded wallets if needed
+
+### 5. Start Development Server
 
 ```bash
 yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the application.
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+## Available Scripts
 
-## Deploy on Vercel
+- `yarn dev` - Start development server
+- `yarn build` - Build for production
+- `yarn start` - Start production server
+- `yarn lint` - Run ESLint
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fensdomains%2Ffrontend-template&env=NEXT_PUBLIC_WALLETCONNECT_ID&envDescription=API%20Keys%20needed%20for%20the%20applicatation.)
+## Project Structure
+
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── dashboard/         # User dashboard
+│   └── layout.tsx         # Root layout
+├── components/            # React components
+│   ├── AnimatedSkyscraper.tsx
+│   ├── business-setup-modal.tsx
+│   └── hero-section.tsx
+└── lib/                   # Utilities and configurations
+    └── web3.ts           # Web3 configuration
+```
+
+## Smart Contracts (TODO)
+
+The following contracts need to be implemented:
+
+- **CompanyRegistry.sol** - Store company metadata, ENS names, treasury addresses
+- **RevenueManager.sol** - Handle revenue splitting and withdrawals
+- **ENS Integration** - Direct integration with ENS registrar contracts
+- **Safe Integration** - Multi-signature wallet creation and management
+
+## License
+
+This project is licensed under the MIT License.
