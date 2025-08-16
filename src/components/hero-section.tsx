@@ -11,26 +11,33 @@ import { isValidEnsName } from '@/lib/ens'
 
 export function HeroSection() {
   const [ensName, setEnsName] = useState('')
+  const [isFocused, setIsFocused] = useState(false)
   const { login, authenticated } = usePrivy()
 
   const debouncedEnsName = useDebounce(ensName, 800)
-  
+
   // Normalize and validate the ENS name
   const shouldCheck = debouncedEnsName && isValidEnsName(debouncedEnsName)
   let normalizedName: string | undefined
-  
+
   try {
-    normalizedName = shouldCheck 
-      ? normalize(debouncedEnsName.endsWith('.eth') 
-          ? debouncedEnsName 
-          : `${debouncedEnsName}.eth`)
+    normalizedName = shouldCheck
+      ? normalize(
+          debouncedEnsName.endsWith('.eth')
+            ? debouncedEnsName
+            : `${debouncedEnsName}.eth`
+        )
       : undefined
   } catch {
     normalizedName = undefined
   }
 
   // Use wagmi's useEnsAddress to check if name resolves to an address
-  const { data: resolvedAddress, isLoading, error } = useEnsAddress({
+  const {
+    data: resolvedAddress,
+    isLoading,
+    error,
+  } = useEnsAddress({
     name: normalizedName,
     chainId: 1, // mainnet
     query: {
@@ -55,8 +62,8 @@ export function HeroSection() {
     <section className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0">
-        <div className="bg-primary/20 animate-blob absolute left-10 top-40 h-72 w-72 rounded-full opacity-70 mix-blend-multiply blur-xl filter"></div>
-        <div className="bg-accent/20 animate-blob animation-delay-2000 absolute right-10 top-40 h-72 w-72 rounded-full opacity-70 mix-blend-multiply blur-xl filter"></div>
+        <div className="bg-primary/20 animate-blob absolute top-40 left-10 h-72 w-72 rounded-full opacity-70 mix-blend-multiply blur-xl filter"></div>
+        <div className="bg-accent/20 animate-blob animation-delay-2000 absolute top-40 right-10 h-72 w-72 rounded-full opacity-70 mix-blend-multiply blur-xl filter"></div>
         <div className="bg-primary/10 animate-blob animation-delay-4000 absolute -bottom-8 left-20 h-72 w-72 rounded-full opacity-70 mix-blend-multiply blur-xl filter"></div>
       </div>
 
@@ -89,107 +96,122 @@ export function HeroSection() {
 
           {/* ENS Name Checker */}
           <div className="mx-auto mb-16 max-w-2xl">
-            <div className="bg-card/50 border-border/50 rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
-              <div className="relative">
+            <div className="bg-card/50 border-border/50 relative min-h-[200px] rounded-2xl border p-6 shadow-2xl backdrop-blur-sm overflow-hidden">
+              {/* Title that disappears on focus */}
+              <div className={`absolute top-6 left-6 right-6 transition-all duration-300 ${isFocused ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0'}`}>
+                <h3 className="text-foreground text-center text-xl font-semibold">
+                  <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+                    Enter your business name
+                  </span>
+                </h3>
+              </div>
+              
+              {/* Input field that moves up when focused */}
+              <div className={`relative transition-all duration-300 ${isFocused ? 'translate-y-0' : 'translate-y-12'}`}>
                 <input
                   type="text"
-                  placeholder="Enter your business name"
+                  placeholder="Your company name"
                   value={ensName}
                   onChange={(e) =>
                     setEnsName(
                       e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
                     )
                   }
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => !ensName && setIsFocused(false)}
                   className="bg-background border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-xl border px-6 py-4 pr-16 text-lg transition-all duration-200 focus:ring-2"
                 />
-                <div className="text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 font-medium">
+                <div className="text-muted-foreground absolute top-1/2 right-4 -translate-y-1/2 font-medium">
                   .eth
                 </div>
               </div>
 
-              {/* Status Display */}
-              {normalizedName && isValidEnsName(ensName) && (
-                <div className="animate-in fade-in slide-in-from-top-1 mt-4 duration-300">
-                  {isLoading ? (
-                    <div className="text-muted-foreground flex items-center gap-3">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      <span>Checking availability on ENS...</span>
-                    </div>
-                  ) : error ? (
-                    <div className="bg-destructive/10 border-destructive/20 rounded-xl border p-4">
-                      <div className="text-destructive flex items-center gap-3">
-                        <AlertCircle className="h-5 w-5" />
-                        <span className="font-medium">
-                          Error checking availability
-                        </span>
+              {/* Status Display - Fixed height container */}
+              <div className="mt-4 min-h-[120px]">
+                {normalizedName && isValidEnsName(ensName) && (
+                  <div className="animate-in fade-in duration-300">
+                    {isLoading ? (
+                      <div className="text-muted-foreground flex items-center gap-3">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Checking availability on ENS...</span>
                       </div>
-                      <p className="text-muted-foreground mt-2 text-sm">
-                        Failed to check name availability. Please try again.
-                      </p>
-                    </div>
-                  ) : isTaken ? (
-                    <div className="bg-destructive/10 border-destructive/20 rounded-xl border p-4">
-                      <div className="text-destructive flex items-center gap-3">
-                        <AlertCircle className="h-5 w-5" />
-                        <span className="font-medium">
-                          This name is already taken
-                        </span>
-                      </div>
-                      <div className="mt-3 space-y-2">
-                        {resolvedAddress && (
-                          <p className="text-muted-foreground font-mono text-sm">
-                            Owned by: {resolvedAddress.slice(0, 6)}...
-                            {resolvedAddress.slice(-4)}
-                          </p>
-                        )}
-                        <p className="text-muted-foreground text-sm">
-                          Try adding your industry or location (e.g.,{' '}
-                          {ensName}tech, {ensName}dao)
+                    ) : error ? (
+                      <div className="bg-destructive/10 border-destructive/20 rounded-xl border p-4">
+                        <div className="text-destructive flex items-center gap-3">
+                          <AlertCircle className="h-5 w-5" />
+                          <span className="font-medium">
+                            Error checking availability
+                          </span>
+                        </div>
+                        <p className="text-muted-foreground mt-2 text-sm">
+                          Failed to check name availability. Please try again.
                         </p>
                       </div>
-                    </div>
-                  ) : isAvailable ? (
-                    <div className="bg-primary/10 border-primary/20 rounded-xl border p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="text-primary flex items-center gap-3">
-                          <CheckCircle className="h-5 w-5" />
-                          <div>
-                            <span className="font-medium">
-                              Great! {ensName}.eth is available
-                            </span>
-                            <p className="text-muted-foreground mt-1 text-sm">
-                              Claim it now before someone else does
-                            </p>
-                          </div>
+                    ) : isTaken ? (
+                      <div className="bg-destructive/10 border-destructive/20 rounded-xl border p-4">
+                        <div className="text-destructive flex items-center gap-3">
+                          <AlertCircle className="h-5 w-5" />
+                          <span className="font-medium">
+                            This name is already taken
+                          </span>
                         </div>
-                        <button
-                          onClick={handleProceed}
-                          className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-all duration-200"
-                        >
-                          Proceed to setup
-                          <ArrowRight className="h-4 w-4" />
-                        </button>
+                        <div className="mt-3 space-y-2">
+                          {resolvedAddress && (
+                            <p className="text-muted-foreground font-mono text-sm">
+                              Owned by: {resolvedAddress.slice(0, 6)}...
+                              {resolvedAddress.slice(-4)}
+                            </p>
+                          )}
+                          <p className="text-muted-foreground text-sm">
+                            Try adding your industry or location (e.g.,{' '}
+                            {ensName}
+                            tech, {ensName}dao)
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ) : null}
-                </div>
-              )}
-
-              {/* Validation Message */}
-              {ensName.length > 0 && !isValidEnsName(ensName) && (
-                <div className="animate-in fade-in slide-in-from-top-1 mt-4 duration-300">
-                  <div className="bg-muted/10 border-muted/20 rounded-xl border p-4">
-                    <div className="text-muted-foreground flex items-center gap-3">
-                      <AlertCircle className="h-5 w-5" />
-                      <span className="font-medium">Invalid name format</span>
-                    </div>
-                    <p className="text-muted-foreground mt-2 text-sm">
-                      Name must be 3-63 characters, contain only letters,
-                      numbers, and hyphens
-                    </p>
+                    ) : isAvailable ? (
+                      <div className="bg-primary/10 border-primary/20 rounded-xl border p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="text-primary flex items-center gap-3">
+                            <CheckCircle className="h-5 w-5" />
+                            <div>
+                              <span className="font-medium">
+                                Great! {ensName}.eth is available
+                              </span>
+                              <p className="text-muted-foreground mt-1 text-sm">
+                                Claim it now before someone else does
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={handleProceed}
+                            className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-all duration-200"
+                          >
+                            Proceed to setup
+                            <ArrowRight className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
-                </div>
-              )}
+                )}
+
+                {/* Validation Message */}
+                {ensName.length > 0 && !isValidEnsName(ensName) && (
+                  <div className="animate-in fade-in duration-300">
+                    <div className="bg-muted/10 border-muted/20 rounded-xl border p-4">
+                      <div className="text-muted-foreground flex items-center gap-3">
+                        <AlertCircle className="h-5 w-5" />
+                        <span className="font-medium">Invalid name format</span>
+                      </div>
+                      <p className="text-muted-foreground mt-2 text-sm">
+                        Name must be 3-63 characters, contain only letters,
+                        numbers, and hyphens
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
