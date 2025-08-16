@@ -126,7 +126,7 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
+      <section className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden">
         {/* Background Effects */}
         <div className="absolute inset-0">
           <div className="bg-primary/20 animate-blob absolute top-40 left-10 h-72 w-72 rounded-full opacity-70 mix-blend-multiply blur-xl filter"></div>
@@ -134,14 +134,14 @@ export default function Home() {
           <div className="bg-primary/10 animate-blob animation-delay-4000 absolute -bottom-8 left-20 h-72 w-72 rounded-full opacity-70 mix-blend-multiply blur-xl filter"></div>
         </div>
 
-        <div className="relative mx-auto max-w-7xl px-4 pt-10 pb-32 sm:px-6 lg:px-8">
+        <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
           <div className="text-center">
             {/* Main Headline */}
             <h1 className="text-foreground mb-6 text-4xl font-bold tracking-tight md:text-6xl lg:text-7xl">
               Build your business
               <br />
               <span className="from-primary via-accent to-primary animate-gradient-x bg-gradient-to-r bg-clip-text text-transparent">
-                on-chain forever
+                on-chain
               </span>
             </h1>
 
