@@ -2,29 +2,58 @@
 
 import { usePrivy } from '@privy-io/react-auth'
 import {
+  AlertCircle,
   ArrowRight,
   CheckCircle,
   ChevronRight,
   DollarSign,
+  Loader2,
   Shield,
   Sparkles,
   Users,
 } from 'lucide-react'
-import { useState } from 'react'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { useDebounce } from '@/hooks/use-debounce'
 
 export default function Home() {
   const [ensName, setEnsName] = useState('')
   const [isChecking, setIsChecking] = useState(false)
+  const [availability, setAvailability] = useState<'available' | 'taken' | null>(null)
   const { login, authenticated, user } = usePrivy()
+  
+  const debouncedEnsName = useDebounce(ensName, 500)
 
-  const handleCheckName = async () => {
-    if (!ensName.trim()) return
-    setIsChecking(true)
-    // Simulate ENS check - replace with actual ENS resolution
-    setTimeout(() => {
+  useEffect(() => {
+    if (!debouncedEnsName || debouncedEnsName.length < 3) {
+      setAvailability(null)
+      return
+    }
+
+    const checkAvailability = async () => {
+      setIsChecking(true)
+      setAvailability(null)
+      
+      // TODO: Replace with actual ENS availability check
+      // For now, simulate API call
+      await new Promise(resolve => setTimeout(resolve, 800))
+      
+      // Mock availability check - names with 'eth' or numbers are taken
+      const isTaken = debouncedEnsName.includes('eth') || /\d/.test(debouncedEnsName)
+      setAvailability(isTaken ? 'taken' : 'available')
       setIsChecking(false)
-      // Navigate to registration flow
-    }, 1500)
+    }
+
+    checkAvailability()
+  }, [debouncedEnsName])
+
+  const handleProceed = () => {
+    if (!authenticated) {
+      login()
+    } else {
+      // Navigate to company setup
+      console.log('Proceeding to company setup...')
+    }
   }
 
   return (
@@ -66,9 +95,12 @@ export default function Home() {
                     {user?.email?.address ||
                       user?.wallet?.address?.slice(0, 6) + '...'}
                   </span>
-                  <button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 py-2 font-medium transition-all duration-200">
+                  <Link 
+                    href="/dashboard"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 py-2 font-medium transition-all duration-200 inline-block"
+                  >
                     Dashboard
-                  </button>
+                  </Link>
                 </div>
               ) : (
                 <button
@@ -123,35 +155,61 @@ export default function Home() {
             {/* ENS Name Checker */}
             <div className="mx-auto mb-16 max-w-2xl">
               <div className="bg-card/50 border-border/50 rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
-                <div className="flex flex-col gap-4 sm:flex-row">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      placeholder="Enter your business name"
-                      value={ensName}
-                      onChange={(e) => setEnsName(e.target.value)}
-                      className="bg-background border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-xl border px-6 py-4 text-lg transition-all duration-200 focus:ring-2"
-                    />
-                    <div className="text-muted-foreground absolute top-1/2 right-4 -translate-y-1/2 font-medium">
-                      .eth
-                    </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Enter your business name"
+                    value={ensName}
+                    onChange={(e) => setEnsName(e.target.value.toLowerCase())}
+                    className="bg-background border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-xl border px-6 py-4 text-lg transition-all duration-200 focus:ring-2 pr-16"
+                  />
+                  <div className="text-muted-foreground absolute top-1/2 right-4 -translate-y-1/2 font-medium">
+                    .eth
                   </div>
-                  <button
-                    onClick={handleCheckName}
-                    disabled={isChecking || !ensName.trim()}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 flex min-w-fit items-center gap-2 rounded-xl px-8 py-4 text-lg font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isChecking ? (
-                      <div className="border-primary-foreground/30 border-t-primary-foreground h-5 w-5 animate-spin rounded-full border-2" />
-                    ) : (
-                      <>
-                        Check availability
-                        <ArrowRight className="h-5 w-5" />
-                      </>
-                    )}
-                  </button>
                 </div>
                 
+                {/* Status Display */}
+                {(isChecking || availability) && ensName.length >= 3 && (
+                  <div className="mt-4 animate-in fade-in slide-in-from-top-1 duration-300">
+                    {isChecking ? (
+                      <div className="flex items-center gap-3 text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Checking availability...</span>
+                      </div>
+                    ) : availability === 'taken' ? (
+                      <div className="bg-destructive/10 border-destructive/20 rounded-xl border p-4">
+                        <div className="flex items-center gap-3 text-destructive">
+                          <AlertCircle className="h-5 w-5" />
+                          <span className="font-medium">This name is already taken</span>
+                        </div>
+                        <p className="text-muted-foreground mt-2 text-sm">
+                          Try adding your industry or location (e.g., {ensName}tech, {ensName}dao)
+                        </p>
+                      </div>
+                    ) : availability === 'available' ? (
+                      <div className="bg-primary/10 border-primary/20 rounded-xl border p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 text-primary">
+                            <CheckCircle className="h-5 w-5" />
+                            <div>
+                              <span className="font-medium">Great! {ensName}.eth is available</span>
+                              <p className="text-muted-foreground text-sm mt-1">
+                                Claim it now before someone else does
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={handleProceed}
+                            className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-all duration-200"
+                          >
+                            Proceed to setup
+                            <ArrowRight className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -264,7 +322,7 @@ export default function Home() {
                 </h3>
                 <p className="text-muted-foreground leading-relaxed">
                   No need to buy crypto to get started. We cover gas fees for
-                  email users until you're ready to self-custody.
+                  email users until you&apos;re ready to self-custody.
                 </p>
               </div>
             </div>
