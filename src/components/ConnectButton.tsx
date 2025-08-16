@@ -61,6 +61,10 @@ export function ConnectButton() {
 
   const userAddress = address || user?.wallet?.address
 
+  if (!userAddress) {
+    return null
+  }
+
   return (
     <Profile
       address={userAddress}

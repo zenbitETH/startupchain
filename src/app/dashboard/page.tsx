@@ -153,11 +153,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {user.email.verified && (
-                        <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full">
-                          Verified
-                        </span>
-                      )}
+                 
                     </div>
                   </div>
                 )}
@@ -169,8 +165,8 @@ export default function Dashboard() {
                       <Wallet className="text-muted-foreground h-5 w-5" />
                       <div>
                         <p className="text-foreground font-medium">
-                          {primaryWallet.walletClientType === 'privy' 
-                            ? 'Embedded Wallet' 
+                          {primaryWallet.walletClientType === 'privy'
+                            ? 'Embedded Wallet'
                             : 'Connected Wallet'}
                         </p>
                         <p className="text-muted-foreground text-sm font-mono">
@@ -245,7 +241,7 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                {balance && balance.value === 0n && (
+                {balance && balance.value === BigInt(0) && (
                   <div className="bg-accent/10 border-accent/20 rounded-lg border p-4 text-center">
                     <p className="text-accent font-medium">Get started!</p>
                     <p className="text-muted-foreground text-sm mt-1">
