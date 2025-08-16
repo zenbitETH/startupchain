@@ -2,49 +2,45 @@
 
 import { usePrivy } from '@privy-io/react-auth'
 import { AlertCircle, ArrowRight, CheckCircle, Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useDebounce } from 'usehooks-ts'
+import { normalize } from 'viem/ens'
+import { useEnsAddress } from 'wagmi'
 
-import { useDebounce } from '@/hooks/use-debounce'
-import {
-  type ENSAvailabilityResult,
-  checkEnsAvailability,
-  isValidEnsName,
-} from '@/lib/ens'
+import { isValidEnsName } from '@/lib/ens'
 
 export function HeroSection() {
   const [ensName, setEnsName] = useState('')
-  const [isChecking, setIsChecking] = useState(false)
-  const [ensResult, setEnsResult] = useState<ENSAvailabilityResult | null>(null)
   const { login, authenticated } = usePrivy()
 
   const debouncedEnsName = useDebounce(ensName, 800)
+  
+  // Normalize and validate the ENS name
+  const shouldCheck = debouncedEnsName && isValidEnsName(debouncedEnsName)
+  let normalizedName: string | undefined
+  
+  try {
+    normalizedName = shouldCheck 
+      ? normalize(debouncedEnsName.endsWith('.eth') 
+          ? debouncedEnsName 
+          : `${debouncedEnsName}.eth`)
+      : undefined
+  } catch {
+    normalizedName = undefined
+  }
 
-  useEffect(() => {
-    if (!debouncedEnsName || !isValidEnsName(debouncedEnsName)) {
-      setEnsResult(null)
-      return
-    }
+  // Use wagmi's useEnsAddress to check if name resolves to an address
+  const { data: resolvedAddress, isLoading, error } = useEnsAddress({
+    name: normalizedName,
+    chainId: 1, // mainnet
+    query: {
+      enabled: !!normalizedName,
+    },
+  })
 
-    const checkAvailability = async () => {
-      setIsChecking(true)
-      setEnsResult(null)
-
-      try {
-        const result = await checkEnsAvailability(debouncedEnsName)
-        setEnsResult(result)
-      } catch (error) {
-        console.error('Failed to check ENS availability:', error)
-        setEnsResult({
-          available: false,
-          error: 'Failed to check name availability. Please try again.',
-        })
-      } finally {
-        setIsChecking(false)
-      }
-    }
-
-    checkAvailability()
-  }, [debouncedEnsName])
+  // Determine availability based on whether the name resolves to an address
+  const isAvailable = normalizedName && !isLoading && !error && !resolvedAddress
+  const isTaken = normalizedName && !isLoading && !error && !!resolvedAddress
 
   const handleProceed = () => {
     if (!authenticated) {
@@ -112,14 +108,14 @@ export function HeroSection() {
               </div>
 
               {/* Status Display */}
-              {(isChecking || ensResult) && isValidEnsName(ensName) && (
+              {normalizedName && isValidEnsName(ensName) && (
                 <div className="animate-in fade-in slide-in-from-top-1 mt-4 duration-300">
-                  {isChecking ? (
+                  {isLoading ? (
                     <div className="text-muted-foreground flex items-center gap-3">
                       <Loader2 className="h-5 w-5 animate-spin" />
                       <span>Checking availability on ENS...</span>
                     </div>
-                  ) : ensResult?.error ? (
+                  ) : error ? (
                     <div className="bg-destructive/10 border-destructive/20 rounded-xl border p-4">
                       <div className="text-destructive flex items-center gap-3">
                         <AlertCircle className="h-5 w-5" />
@@ -128,10 +124,10 @@ export function HeroSection() {
                         </span>
                       </div>
                       <p className="text-muted-foreground mt-2 text-sm">
-                        {ensResult.error}
+                        Failed to check name availability. Please try again.
                       </p>
                     </div>
-                  ) : ensResult && !ensResult.available ? (
+                  ) : isTaken ? (
                     <div className="bg-destructive/10 border-destructive/20 rounded-xl border p-4">
                       <div className="text-destructive flex items-center gap-3">
                         <AlertCircle className="h-5 w-5" />
@@ -140,10 +136,10 @@ export function HeroSection() {
                         </span>
                       </div>
                       <div className="mt-3 space-y-2">
-                        {ensResult.address && (
+                        {resolvedAddress && (
                           <p className="text-muted-foreground font-mono text-sm">
-                            Owned by: {ensResult.address.slice(0, 6)}...
-                            {ensResult.address.slice(-4)}
+                            Owned by: {resolvedAddress.slice(0, 6)}...
+                            {resolvedAddress.slice(-4)}
                           </p>
                         )}
                         <p className="text-muted-foreground text-sm">
@@ -152,7 +148,7 @@ export function HeroSection() {
                         </p>
                       </div>
                     </div>
-                  ) : ensResult?.available ? (
+                  ) : isAvailable ? (
                     <div className="bg-primary/10 border-primary/20 rounded-xl border p-4">
                       <div className="flex items-center justify-between">
                         <div className="text-primary flex items-center gap-3">
