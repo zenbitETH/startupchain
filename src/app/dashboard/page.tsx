@@ -48,12 +48,12 @@ export default function Dashboard() {
     fetchEthPrice()
   }, [])
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated (wait for Privy to be ready)
   useEffect(() => {
-    if (!authenticated) {
+    if (ready && !authenticated) {
       router.push('/')
     }
-  }, [authenticated, router])
+  }, [authenticated, ready, router])
 
   const handleLogout = async () => {
     await logout()
@@ -76,13 +76,13 @@ export default function Dashboard() {
   // Get email verification status from linkedAccounts
   const getEmailVerificationStatus = () => {
     if (!user?.linkedAccounts) return null
-    
+
     const emailAccount = user.linkedAccounts.find(
       (account: any) => account.type === 'email'
     )
-    
+
     if (!emailAccount) return null
-    
+
     return {
       isVerified: emailAccount.firstVerifiedAt !== null,
       firstVerifiedAt: emailAccount.firstVerifiedAt,
@@ -93,9 +93,9 @@ export default function Dashboard() {
 
   if (!authenticated || !ready) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="bg-background flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="border-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent mx-auto mb-4" />
+          <div className="border-primary mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
           <p className="text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
@@ -103,7 +103,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+    <div className="from-background via-background to-primary/5 min-h-screen bg-gradient-to-br">
       {/* Navigation */}
       <nav className="border-border/40 bg-background/80 relative z-50 border-b backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -131,7 +131,7 @@ export default function Dashboard() {
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-foreground text-3xl font-bold mb-2">
+          <h1 className="text-foreground mb-2 text-3xl font-bold">
             Welcome back!
           </h1>
           <p className="text-muted-foreground">
@@ -143,7 +143,7 @@ export default function Dashboard() {
           {/* User Info Card */}
           <div className="lg:col-span-2">
             <div className="bg-card border-border rounded-2xl border p-6">
-              <div className="flex items-center gap-4 mb-6">
+              <div className="mb-6 flex items-center gap-4">
                 <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-xl">
                   <User className="text-primary h-6 w-6" />
                 </div>
@@ -160,7 +160,7 @@ export default function Dashboard() {
               <div className="space-y-4">
                 {/* Email */}
                 {user?.email?.address && (
-                  <div className="flex items-center justify-between p-4 bg-background rounded-lg">
+                  <div className="bg-background flex items-center justify-between rounded-lg p-4">
                     <div className="flex items-center gap-3">
                       <Mail className="text-muted-foreground h-5 w-5" />
                       <div>
@@ -172,11 +172,11 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center gap-2">
                       {emailVerification?.isVerified ? (
-                        <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                        <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
                           ✓ Verified
                         </span>
                       ) : (
-                        <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full font-medium">
+                        <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
                           ⚠ Unverified
                         </span>
                       )}
@@ -186,7 +186,7 @@ export default function Dashboard() {
 
                 {/* Wallet */}
                 {primaryWallet && (
-                  <div className="flex items-center justify-between p-4 bg-background rounded-lg">
+                  <div className="bg-background flex items-center justify-between rounded-lg p-4">
                     <div className="flex items-center gap-3">
                       <Wallet className="text-muted-foreground h-5 w-5" />
                       <div>
@@ -195,7 +195,7 @@ export default function Dashboard() {
                             ? 'Embedded Wallet'
                             : 'Connected Wallet'}
                         </p>
-                        <p className="text-muted-foreground text-sm font-mono">
+                        <p className="text-muted-foreground font-mono text-sm">
                           {formatAddress(primaryWallet.address)}
                         </p>
                       </div>
@@ -220,12 +220,12 @@ export default function Dashboard() {
                 )}
 
                 {/* User ID */}
-                <div className="flex items-center justify-between p-4 bg-background rounded-lg">
+                <div className="bg-background flex items-center justify-between rounded-lg p-4">
                   <div className="flex items-center gap-3">
                     <Settings className="text-muted-foreground h-5 w-5" />
                     <div>
                       <p className="text-foreground font-medium">User ID</p>
-                      <p className="text-muted-foreground text-sm font-mono">
+                      <p className="text-muted-foreground font-mono text-sm">
                         {user?.id?.slice(0, 20)}...
                       </p>
                     </div>
@@ -238,7 +238,7 @@ export default function Dashboard() {
           {/* Wallet Balance Card */}
           <div className="space-y-6">
             <div className="bg-card border-border rounded-2xl border p-6">
-              <div className="flex items-center gap-4 mb-6">
+              <div className="mb-6 flex items-center gap-4">
                 <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-xl">
                   <Wallet className="text-primary h-6 w-6" />
                 </div>
@@ -253,15 +253,15 @@ export default function Dashboard() {
               </div>
 
               <div className="space-y-4">
-                <div className="text-center p-6 bg-gradient-to-r from-primary/5 to-accent/5 rounded-xl">
-                  <div className="text-3xl font-bold text-foreground mb-2">
+                <div className="from-primary/5 to-accent/5 rounded-xl bg-gradient-to-r p-6 text-center">
+                  <div className="text-foreground mb-2 text-3xl font-bold">
                     ${balanceInUsd.toFixed(2)}
                   </div>
                   <div className="text-muted-foreground">
                     {balanceInEth.toFixed(6)} ETH
                   </div>
                   {ethPrice > 0 && (
-                    <div className="text-muted-foreground text-xs mt-2">
+                    <div className="text-muted-foreground mt-2 text-xs">
                       ETH @ ${ethPrice.toFixed(2)}
                     </div>
                   )}
@@ -270,7 +270,7 @@ export default function Dashboard() {
                 {balance && balance.value === BigInt(0) && (
                   <div className="bg-accent/10 border-accent/20 rounded-lg border p-4 text-center">
                     <p className="text-accent font-medium">Get started!</p>
-                    <p className="text-muted-foreground text-sm mt-1">
+                    <p className="text-muted-foreground mt-1 text-sm">
                       Fund your wallet to start building on-chain
                     </p>
                   </div>
@@ -280,7 +280,9 @@ export default function Dashboard() {
 
             {/* Quick Actions */}
             <div className="bg-card border-border rounded-2xl border p-6">
-              <h3 className="text-foreground font-semibold mb-4">Quick Actions</h3>
+              <h3 className="text-foreground mb-4 font-semibold">
+                Quick Actions
+              </h3>
               <div className="space-y-3">
                 <button className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-lg px-4 py-3 font-medium transition-colors">
                   Register ENS Name

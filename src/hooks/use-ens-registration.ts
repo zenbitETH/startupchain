@@ -24,6 +24,7 @@ export interface ENSRegistrationParams {
   name: string
   durationYears: number
   reverseRecord?: boolean
+  owner?: Address
 }
 
 export function useEnsRegistration() {
@@ -245,10 +246,9 @@ export function useEnsRegistration() {
         throw new Error(`Insufficient balance. You need ${costEth} ETH but only have ${balance} ETH. Get Sepolia ETH from: https://sepoliafaucet.com/`)
       }
 
-      // For testing, register directly to embedded wallet (simpler flow)
-      // Later we can register to smart wallet if needed
-      const ownerAddress = embeddedWallet.address as Address
-      console.log('🎯 Registering to wallet address:', ownerAddress)
+      // Use custom owner if provided, otherwise use embedded wallet as owner
+      const ownerAddress = params.owner || (embeddedWallet.address as Address)
+      console.log('🎯 Registering to address:', ownerAddress, params.owner ? '(custom address)' : '(wallet address)')
 
       console.log('🔐 Making ENS commitment for:', {
         name: params.name,
