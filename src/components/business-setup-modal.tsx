@@ -8,6 +8,7 @@ import { useSmartWallet } from '@/hooks/use-smart-wallet'
 
 import { CongratulationsModal } from './congratulations-modal'
 import { ENSCostEstimate } from './ens-cost-estimate'
+import { CountdownModal } from './countdown-modal'
 
 interface Founder {
   id: string
@@ -35,6 +36,7 @@ export function BusinessSetupModal({
     transactionHashes,
     showCongratulations,
     setShowCongratulations,
+    commitmentCountdown,
   } = useSmartWallet()
   const [showCostEstimate, setShowCostEstimate] = useState(false)
 
@@ -480,6 +482,7 @@ export function BusinessSetupModal({
                       onClick={handleCreateBusiness}
                       disabled={
                         isCreating ||
+                        commitmentCountdown !== null ||
                         (!authenticated &&
                           founders.some((f) => !f.address.trim())) ||
                         (isMultipleFounders &&
@@ -488,7 +491,9 @@ export function BusinessSetupModal({
                       }
                       className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-6 py-2 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {isCreating
+                      {commitmentCountdown !== null
+                        ? `Waiting... ${commitmentCountdown}s`
+                        : isCreating
                         ? 'Creating...'
                         : !authenticated
                           ? 'Sign in & Create'
@@ -525,6 +530,12 @@ export function BusinessSetupModal({
         isOpen={showCostEstimate}
         onProceed={handleProceedWithRegistration}
         onCancel={() => setShowCostEstimate(false)}
+      />
+      
+      {/* Countdown Modal */}
+      <CountdownModal
+        isOpen={commitmentCountdown !== null}
+        countdown={commitmentCountdown || 0}
       />
     </>
   )
