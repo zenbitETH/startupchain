@@ -99,8 +99,14 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
     
     // Building tiers with 50% bigger windows and proper positioning
     const buildingTiers = [
-      // Base level: x 50-470, y 520-600
-      { leftX: 70, rightX: 450, topY: 540, bottomY: 580, windowWidth: 6, windowHeight: 12 },
+      // Extended base level 1: x 50-470, y 720-800
+      { leftX: 70, rightX: 450, topY: 740, bottomY: 780, windowWidth: 6, windowHeight: 12 },
+      // Extended base level 2: x 50-470, y 640-720
+      { leftX: 70, rightX: 450, topY: 660, bottomY: 700, windowWidth: 6, windowHeight: 12 },
+      // Extended base level 3: x 50-470, y 560-640
+      { leftX: 70, rightX: 450, topY: 580, bottomY: 620, windowWidth: 6, windowHeight: 12 },
+      // Original base level: x 50-470, y 520-560
+      { leftX: 70, rightX: 450, topY: 540, bottomY: 560, windowWidth: 6, windowHeight: 12 },
       // Level 2: x 70-450, y 480-520  
       { leftX: 90, rightX: 430, topY: 490, bottomY: 510, windowWidth: 6, windowHeight: 9 },
       // Level 3: x 90-430, y 440-480
@@ -160,7 +166,7 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
         }`}
         width="100%"
         height="100%"
-        viewBox="0 0 1200 800"
+        viewBox="0 0 1200 1000"
         preserveAspectRatio="xMaxYEnd meet"
         role="img"
       >
@@ -262,10 +268,10 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
           </g>
         </g>
 
-        <g transform="translate(600, 150)">
+        <g transform="translate(670, 150)">
           <path
             ref={outlinePathRef}
-            d="M50,600 L50,520 L70,520 L70,480 L90,480 L90,440 L110,440 L110,400 L130,400 L130,360 L150,360 L150,320 L170,320 L170,280 L190,280 L190,240 L210,240 L210,200 L230,200 L230,160 L250,160 L250,120 L270,120 L270,160 L290,160 L290,200 L310,200 L310,240 L330,240 L330,280 L350,280 L350,320 L370,320 L370,360 L390,360 L390,400 L410,400 L410,440 L430,440 L430,480 L450,480 L450,520 L470,520 L470,600 Z"
+            d="M50,800 L50,520 L70,520 L70,480 L90,480 L90,440 L110,440 L110,400 L130,400 L130,360 L150,360 L150,320 L170,320 L170,280 L190,280 L190,240 L210,240 L210,200 L230,200 L230,160 L250,160 L250,120 L270,120 L270,160 L290,160 L290,200 L310,200 L310,240 L330,240 L330,280 L350,280 L350,320 L370,320 L370,360 L390,360 L390,400 L410,400 L410,440 L430,440 L430,480 L450,480 L450,520 L470,520 L470,800 Z"
             fill="none"
             stroke="#2e3742"
             strokeWidth="2.5"
@@ -280,7 +286,7 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
           />
 
           <path
-            d="M50,600 L50,520 L70,520 L70,480 L90,480 L90,440 L110,440 L110,400 L130,400 L130,360 L150,360 L150,320 L170,320 L170,280 L190,280 L190,240 L210,240 L210,200 L230,200 L230,160 L250,160 L250,120 L270,120 L270,160 L290,160 L290,200 L310,200 L310,240 L330,240 L330,280 L350,280 L350,320 L370,320 L370,360 L390,360 L390,400 L410,400 L410,440 L430,440 L430,480 L450,480 L450,520 L470,520 L470,600 Z"
+            d="M50,800 L50,520 L70,520 L70,480 L90,480 L90,440 L110,440 L110,400 L130,400 L130,360 L150,360 L150,320 L170,320 L170,280 L190,280 L190,240 L210,240 L210,200 L230,200 L230,160 L250,160 L250,120 L270,120 L270,160 L290,160 L290,200 L310,200 L310,240 L330,240 L330,280 L350,280 L350,320 L370,320 L370,360 L390,360 L390,400 L410,400 L410,440 L430,440 L430,480 L450,480 L450,520 L470,520 L470,800 Z"
             fill="url(#facade)"
             opacity={prefersReducedMotion ? 1 : 0}
             className={prefersReducedMotion ? '' : 'facade-fade'}
