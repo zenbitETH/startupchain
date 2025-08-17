@@ -48,12 +48,12 @@ export default function Dashboard() {
     fetchEthPrice()
   }, [])
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated (wait for Privy to be ready)
   useEffect(() => {
-    if (!authenticated) {
+    if (ready && !authenticated) {
       router.push('/')
     }
-  }, [authenticated, router])
+  }, [authenticated, ready, router])
 
   const handleLogout = async () => {
     await logout()
