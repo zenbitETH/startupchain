@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { Address, parseEther, formatEther } from 'viem'
 import { baseSepolia, sepolia, mainnet } from 'viem/chains'
 import { useEnsRegistration } from './use-ens-registration'
+import { useStartUpChain } from './use-startup-chain'
 
 // Get current environment
 const isDevelopment = process.env.NODE_ENV === 'development'
@@ -26,12 +27,27 @@ export function useSmartWallet() {
   const [transactionHashes, setTransactionHashes] = useState<{
     commitTx?: string
     registrationTx?: string
+    startupChainTxs?: {
+      registerTx?: string
+      sharesTx?: string
+      founderTxs?: string[]
+      ownershipTx?: string
+    }
   }>({})
   const [showCongratulations, setShowCongratulations] = useState(false)
   const [commitmentCountdown, setCommitmentCountdown] = useState<number | null>(null)
+  const [startupChainProgress, setStartupChainProgress] = useState<{
+    step: string
+    completed: string[]
+    current?: string
+    error?: string
+  } | null>(null)
 
   // Get ENS registration functionality
   const ensRegistration = useEnsRegistration()
+  
+  // Get StartUpChain contract functionality
+  const startUpChain = useStartUpChain()
 
   // Get smart wallet from user's linked accounts
   const getSmartWallet = useCallback(() => {
@@ -160,7 +176,78 @@ export function useSmartWallet() {
         console.log('⚠️ Continuing with business creation without ENS...')
       }
 
-      // Step 5: Deploy business contracts (future implementation)
+      // Step 5: Register company on StartUpChain contract (fixed version)
+      try {
+        console.log('🔗 Registering company on StartUpChain contract...')
+        
+        // Initialize progress tracking
+        setStartupChainProgress({
+          step: 'Starting StartUpChain registration...',
+          completed: [],
+          current: 'Preparing data'
+        })
+        
+        // Calculate total founder ownership percentage
+        const totalFounderOwnership = founders.reduce((sum, f) => sum + parseFloat(f.equity), 0)
+        
+        // Convert founders data to the format expected by StartUpChain
+        const startupChainFounders = founders.map((founder, index) => ({
+          name: `Founder ${index + 1}`, // Using generic names as we don't have names in the current form
+          title: 'Founder', // Generic title
+          percentOwnership: Math.round(parseFloat(founder.equity))
+        }))
+        
+        // Default number of shares (can be made configurable later)
+        const numberOfShares = 1000000
+        
+        setStartupChainProgress({
+          step: 'Registering on StartUpChain...',
+          completed: [],
+          current: 'Writing to blockchain'
+        })
+        
+        const startupChainTxs = await startUpChain.registerCompanyOnChain(
+          ensName,
+          numberOfShares,
+          startupChainFounders,
+          Math.round(totalFounderOwnership)
+        )
+        
+        // Update transaction hashes
+        setTransactionHashes(prev => ({
+          ...prev,
+          startupChainTxs: {
+            registerTx: startupChainTxs.registerTxHash,
+            sharesTx: startupChainTxs.sharesTxHash,
+            founderTxs: startupChainTxs.founderTxHashes,
+            ownershipTx: startupChainTxs.ownershipTxHash
+          }
+        }))
+        
+        setStartupChainProgress({
+          step: 'StartUpChain registration complete!',
+          completed: [
+            '✅ Company registered',
+            '✅ Shares allocated',
+            `✅ ${startupChainFounders.length} founders added`,
+            '✅ Ownership percentages set'
+          ],
+          current: undefined
+        })
+        
+        console.log('✅ Company registered on StartUpChain contract!')
+      } catch (startupChainError) {
+        console.error('StartUpChain registration failed:', startupChainError)
+        setStartupChainProgress({
+          step: 'StartUpChain registration failed',
+          completed: [],
+          error: startupChainError instanceof Error ? startupChainError.message : 'Unknown error'
+        })
+        console.log('⚠️ Continuing with business creation without StartUpChain registration...')
+        // Continue without StartUpChain registration - this is optional
+      }
+
+      // Step 6: Deploy additional contracts (future implementation)
       // TODO: Deploy revenue splitting contracts
       // TODO: Configure multi-sig if needed
       
@@ -194,7 +281,7 @@ export function useSmartWallet() {
     } finally {
       setIsCreating(false)
     }
-  }, [authenticated, user, getSmartWallet, getEmbeddedWallet, ensRegistration])
+  }, [authenticated, user, getSmartWallet, getEmbeddedWallet, ensRegistration, startUpChain])
 
   // Send transaction from business wallet
   const sendFromBusinessWallet = useCallback(async (
@@ -295,6 +382,8 @@ export function useSmartWallet() {
     showCongratulations,
     setShowCongratulations,
     commitmentCountdown,
+    startupChainProgress,
+    setStartupChainProgress,
     // ENS registration functionality
     ensRegistration: {
       checkAvailability: ensRegistration.checkAvailability,
