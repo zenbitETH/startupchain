@@ -97,10 +97,29 @@ export interface StartUpChainData {
   }>
 }
 
+export type TransactionStep = 
+  | 'idle'
+  | 'registering-company'
+  | 'setting-shares'
+  | 'adding-founders'
+  | 'setting-ownership'
+  | 'complete'
+
+export interface TransactionStatus {
+  step: TransactionStep
+  message: string
+  currentFounder?: string
+}
+
 export function useStartUpChain() {
   const { wallets } = useWallets()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({
+    step: 'idle',
+    message: ''
+  })
+  const [onTransactionUpdate, setOnTransactionUpdate] = useState<((status: TransactionStatus) => void) | null>(null)
 
   // Get embedded wallet for signing transactions
   const getEmbeddedWallet = useCallback(() => {
@@ -109,6 +128,18 @@ export function useStartUpChain() {
       w.connectorType === 'embedded'
     )
   }, [wallets])
+
+  // Set callback for transaction updates
+  const setTransactionCallback = useCallback((callback: (status: TransactionStatus) => void) => {
+    setOnTransactionUpdate(() => callback)
+  }, [])
+
+  // Update transaction status and notify UI
+  const updateStatus = useCallback((step: TransactionStep, message: string, currentFounder?: string) => {
+    const status: TransactionStatus = { step, message, currentFounder }
+    setTransactionStatus(status)
+    onTransactionUpdate?.(status)
+  }, [onTransactionUpdate])
 
   // Register company on StartUpChain contract
   const registerCompanyOnChain = useCallback(async (
@@ -152,6 +183,9 @@ export function useStartUpChain() {
       })
 
       // 1. Register company name
+      updateStatus('registering-company', `Registering company: ${companyName}`)
+      await new Promise(resolve => setTimeout(resolve, 500)) // Brief delay for UI update
+      
       const registerData = encodeFunctionData({
         abi: STARTUP_CHAIN_ABI,
         functionName: 'registerCompany',
@@ -168,6 +202,9 @@ export function useStartUpChain() {
       console.log('✅ Company registered:', registerTxHash)
 
       // 2. Set number of shares
+      updateStatus('setting-shares', `Setting ${numberOfShares.toLocaleString()} shares`)
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
       const setSharesData = encodeFunctionData({
         abi: STARTUP_CHAIN_ABI,
         functionName: 'setNumberOfShares',
@@ -186,6 +223,9 @@ export function useStartUpChain() {
       // 3. Add founders
       const founderTxHashes = []
       for (const founder of foundersData) {
+        updateStatus('adding-founders', `Adding founder: ${founder.name} (${founder.title})`, founder.name)
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
         const addFounderData = encodeFunctionData({
           abi: STARTUP_CHAIN_ABI,
           functionName: 'addFounder',
@@ -204,6 +244,9 @@ export function useStartUpChain() {
       }
 
       // 4. Set founders ownership percentage
+      updateStatus('setting-ownership', `Setting founders ownership: ${foundersOwnershipPercent}%`)
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
       const setOwnershipData = encodeFunctionData({
         abi: STARTUP_CHAIN_ABI,
         functionName: 'setFoundersOwnership',
@@ -218,6 +261,8 @@ export function useStartUpChain() {
       })
 
       console.log('✅ Founders ownership percentage set:', ownershipTxHash)
+      
+      updateStatus('complete', 'All transactions completed successfully!')
 
       return {
         registerTxHash,
@@ -229,12 +274,13 @@ export function useStartUpChain() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to register on StartUpChain'
       setError(message)
+      updateStatus('idle', '')
       console.error('StartUpChain registration failed:', err)
       throw err
     } finally {
       setIsLoading(false)
     }
-  }, [getEmbeddedWallet])
+  }, [getEmbeddedWallet, updateStatus])
 
   // Create shares contract
   const createSharesContract = useCallback(async (initialValue: number = 1000000) => {
@@ -287,7 +333,9 @@ export function useStartUpChain() {
     createSharesContract,
     isLoading,
     error,
-    contractAddress: STARTUP_CHAIN_ADDRESS
+    contractAddress: STARTUP_CHAIN_ADDRESS,
+    transactionStatus,
+    setTransactionCallback
   }
 }
 
