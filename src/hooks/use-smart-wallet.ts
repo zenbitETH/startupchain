@@ -56,6 +56,7 @@ export function useSmartWallet() {
   
   // Set up transaction status callback
   useEffect(() => {
+    console.log('Setting transaction callback')
     startUpChain.setTransactionCallback(setCurrentTransactionStatus)
   }, [startUpChain])
   
