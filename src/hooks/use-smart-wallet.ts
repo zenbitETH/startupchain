@@ -28,6 +28,7 @@ export function useSmartWallet() {
     registrationTx?: string
   }>({})
   const [showCongratulations, setShowCongratulations] = useState(false)
+  const [commitmentCountdown, setCommitmentCountdown] = useState<number | null>(null)
 
   // Get ENS registration functionality
   const ensRegistration = useEnsRegistration()
@@ -124,11 +125,14 @@ export function useSmartWallet() {
           console.log('⏳ Waiting for commitment period (61 seconds)...')
           console.log('⚠️ You can close this and check back later - the process will continue')
           
-          // Wait 61 seconds for commitment period
+          // Wait 61 seconds for commitment period with UI countdown
+          setCommitmentCountdown(61)
           for (let i = 61; i > 0; i--) {
+            setCommitmentCountdown(i)
             console.log(`⏳ ${i} seconds remaining...`)
             await new Promise(resolve => setTimeout(resolve, 1000))
           }
+          setCommitmentCountdown(null)
           console.log('✅ Commitment period complete!')
 
           console.log('📝 Registering ENS name...')
@@ -290,6 +294,7 @@ export function useSmartWallet() {
     transactionHashes,
     showCongratulations,
     setShowCongratulations,
+    commitmentCountdown,
     // ENS registration functionality
     ensRegistration: {
       checkAvailability: ensRegistration.checkAvailability,
