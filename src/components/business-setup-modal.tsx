@@ -3,12 +3,14 @@
 import { usePrivy } from '@privy-io/react-auth'
 import { Plus, Trash2, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 import { useSmartWallet } from '@/hooks/use-smart-wallet'
 
 import { CongratulationsModal } from './congratulations-modal'
 import { ENSCostEstimate } from './ens-cost-estimate'
 import { CountdownModal } from './countdown-modal'
+import { TransactionProgress } from './transaction-progress'
 
 interface Founder {
   id: string
@@ -27,6 +29,7 @@ export function BusinessSetupModal({
   onClose,
   ensName,
 }: BusinessSetupModalProps) {
+  const router = useRouter()
   const { login, authenticated, user } = usePrivy()
   const {
     createBusinessAccount,
@@ -39,6 +42,7 @@ export function BusinessSetupModal({
     commitmentCountdown,
     startupChainProgress,
     setStartupChainProgress,
+    currentTransactionStatus,
   } = useSmartWallet()
   const [showCostEstimate, setShowCostEstimate] = useState(false)
 
@@ -569,7 +573,7 @@ export function BusinessSetupModal({
           onContinue={() => {
             setShowCongratulations(false)
             onClose()
-            window.location.href = '/dashboard'
+            router.push('/dashboard')
           }}
         />
       )}
@@ -586,6 +590,14 @@ export function BusinessSetupModal({
       <CountdownModal
         isOpen={commitmentCountdown !== null}
         countdown={commitmentCountdown || 0}
+      />
+      
+      {/* Transaction Progress Overlay */}
+      <TransactionProgress
+        status={currentTransactionStatus}
+        companyName={ensName}
+        numberOfShares={1000000}
+        foundersCount={founders.length}
       />
     </>
   )
