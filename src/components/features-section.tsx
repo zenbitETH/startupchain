@@ -47,7 +47,7 @@ const features: Feature[] = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="bg-card/30 py-24">
+    <section id="features" className="bg-background/30 py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-16 text-center">
           <h2 className="text-foreground mb-6 text-3xl font-bold md:text-5xl">
@@ -64,7 +64,7 @@ export function FeaturesSection() {
           {features.map((feature, index) => (
             <div key={index} className="group relative">
               <div className="from-primary/20 to-accent/20 absolute inset-0 rounded-2xl bg-gradient-to-r opacity-25 blur transition-opacity group-hover:opacity-40"></div>
-              <div className="bg-card border-border hover:border-primary/50 relative rounded-2xl border p-8 transition-all duration-300">
+              <div className="bg-background border-border hover:border-primary/50 relative rounded-2xl border p-8 transition-all duration-300">
                 <div className="bg-primary/10 mb-6 flex h-12 w-12 items-center justify-center rounded-xl">
                   {feature.icon}
                 </div>

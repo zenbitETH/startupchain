@@ -16,7 +16,7 @@ export function CTASection() {
             Start building
             <ChevronRight className="h-5 w-5" />
           </button>
-          <button className="border-border text-foreground hover:bg-card rounded-xl border px-8 py-4 text-lg font-semibold transition-all duration-200">
+          <button className="border-border text-foreground hover:bg-background rounded-xl border px-8 py-4 text-lg font-semibold transition-all duration-200">
             View documentation
           </button>
         </div>

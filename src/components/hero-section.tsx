@@ -91,7 +91,7 @@ export function HeroSection() {
 
           {/* ENS Name Checker */}
           <div className="mx-auto mb-16 max-w-2xl lg:mx-0">
-            <div className="bg-card/50 border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
+            <div className="bg-background/50 border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
               {/* Title that disappears on focus */}
               <div
                 className={`absolute top-6 right-6 left-6 transition-all duration-300 ${isFocused ? '-translate-y-2 opacity-0' : 'translate-y-0 opacity-100'}`}

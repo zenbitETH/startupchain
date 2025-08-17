@@ -139,7 +139,7 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
 
       {/* Modal Content */}
       <div className="relative mx-4 w-full max-w-2xl">
-        <div className="bg-card border-border relative overflow-hidden rounded-2xl border shadow-2xl">
+        <div className="bg-background border-border relative overflow-hidden rounded-2xl border shadow-2xl">
           {/* Header */}
           <div className="border-border flex items-center justify-between border-b px-6 py-4">
             <h2 className="text-foreground text-2xl font-bold">Set your business</h2>

@@ -51,7 +51,7 @@ export function CongratulationsModal({
       
       {/* Modal */}
       <div className="relative mx-4 w-full max-w-2xl">
-        <div className="bg-card border-border relative overflow-hidden rounded-2xl border shadow-2xl">
+        <div className="bg-background border-border relative overflow-hidden rounded-2xl border shadow-2xl">
           {/* Success Animation Background */}
           <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-teal-500/10" />
           

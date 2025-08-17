@@ -70,7 +70,7 @@ export function ENSCostEstimate({ ensName, onProceed, onCancel, isOpen }: ENSCos
       
       {/* Modal */}
       <div className="relative mx-4 w-full max-w-md">
-        <div className="bg-card border-border relative overflow-hidden rounded-2xl border shadow-2xl">
+        <div className="bg-background border-border relative overflow-hidden rounded-2xl border shadow-2xl">
           {/* Header */}
           <div className="border-border border-b px-6 py-4">
             <h3 className="text-foreground text-xl font-bold flex items-center gap-2">

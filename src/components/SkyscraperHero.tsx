@@ -143,7 +143,7 @@ export const SkyscraperHero: React.FC<SkyscraperHeroProps> = ({
           {/* CTA card */}
           <form
             onSubmit={handleSubmit}
-            className="border-border/60 bg-card/50 mx-auto mb-14 w-full max-w-2xl rounded-2xl border p-4 shadow-2xl backdrop-blur-sm"
+            className="border-border/60 bg-background/50 mx-auto mb-14 w-full max-w-2xl rounded-2xl border p-4 shadow-2xl backdrop-blur-sm"
             aria-label="Name and email capture form"
           >
             <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
