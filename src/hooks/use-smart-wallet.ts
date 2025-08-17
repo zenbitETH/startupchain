@@ -1,7 +1,12 @@
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useState, useCallback, useEffect } from 'react'
 import { Address, parseEther, formatEther } from 'viem'
-import { baseSepolia } from 'viem/chains'
+import { baseSepolia, sepolia, mainnet } from 'viem/chains'
+import { useEnsRegistration } from './use-ens-registration'
+
+// Get current environment
+const isDevelopment = process.env.NODE_ENV === 'development'
+const currentChain = isDevelopment ? sepolia : mainnet
 
 export interface BusinessAccount {
   smartAccountAddress: Address
@@ -18,6 +23,14 @@ export function useSmartWallet() {
   const [businessAccount, setBusinessAccount] = useState<BusinessAccount | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [transactionHashes, setTransactionHashes] = useState<{
+    commitTx?: string
+    registrationTx?: string
+  }>({})
+  const [showCongratulations, setShowCongratulations] = useState(false)
+
+  // Get ENS registration functionality
+  const ensRegistration = useEnsRegistration()
 
   // Get smart wallet from user's linked accounts
   const getSmartWallet = useCallback(() => {
@@ -85,14 +98,64 @@ export function useSmartWallet() {
         walletType: smartWallet ? 'Smart Wallet (Safe)' : 'Embedded Wallet',
       })
 
-      // For testing: Mock the business setup process
-      // In production, this would:
-      // 1. Register ENS name to the business wallet
-      // 2. Deploy revenue splitting contracts
-      // 3. Configure multi-sig if needed
+      // ENS Registration on Sepolia (Real transactions!)
+      console.log('📝 Starting real ENS registration on Sepolia...')
+      console.log('💧 Make sure you have Sepolia ETH: https://sepoliafaucet.com/')
       
-      // Simulate deployment time
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      try {
+        // Real ENS registration on Sepolia
+        try {
+          console.log(`🔍 Checking availability for "${ensName}"...`)
+          const isAvailable = await ensRegistration.checkAvailability(ensName)
+          if (!isAvailable) {
+            throw new Error(`ENS name "${ensName}" is not available for registration`)
+          }
+          console.log(`✅ "${ensName}" is available for registration!`)
+
+          console.log('🔐 Making ENS commitment...')
+          const commitTxHash = await ensRegistration.makeCommitment({
+            name: ensName,
+            durationYears: 1,
+            reverseRecord: true,
+          })
+
+          console.log('⏳ Waiting for commitment period (61 seconds)...')
+          console.log('⚠️ You can close this and check back later - the process will continue')
+          
+          // Wait 61 seconds for commitment period
+          for (let i = 61; i > 0; i--) {
+            console.log(`⏳ ${i} seconds remaining...`)
+            await new Promise(resolve => setTimeout(resolve, 1000))
+          }
+          console.log('✅ Commitment period complete!')
+
+          console.log('📝 Registering ENS name...')
+          const registrationTxHash = await ensRegistration.register({
+            name: ensName,
+            durationYears: 1,
+            reverseRecord: true,
+          })
+          
+          // Store transaction hashes
+          setTransactionHashes({
+            commitTx: commitTxHash,
+            registrationTx: registrationTxHash
+          })
+
+          console.log('✅ ENS name registered successfully!')
+        } catch (ensError) {
+          console.error('ENS registration failed:', ensError)
+          console.log('⚠️ Continuing with business creation without ENS...')
+          // Continue without ENS registration
+        }
+      } catch (ensError) {
+        console.error('ENS registration failed:', ensError)
+        console.log('⚠️ Continuing with business creation without ENS...')
+      }
+
+      // Step 5: Deploy business contracts (future implementation)
+      // TODO: Deploy revenue splitting contracts
+      // TODO: Configure multi-sig if needed
       
       const account: BusinessAccount = {
         smartAccountAddress: businessWalletAddress,
@@ -112,6 +175,9 @@ export function useSmartWallet() {
         `business-${user.id}`,
         JSON.stringify(account)
       )
+      
+      // Show congratulations modal
+      setShowCongratulations(true)
 
       return account
     } catch (err) {
@@ -121,7 +187,7 @@ export function useSmartWallet() {
     } finally {
       setIsCreating(false)
     }
-  }, [authenticated, user, getSmartWallet, getEmbeddedWallet])
+  }, [authenticated, user, getSmartWallet, getEmbeddedWallet, ensRegistration])
 
   // Send transaction from business wallet
   const sendFromBusinessWallet = useCallback(async (
@@ -218,5 +284,19 @@ export function useSmartWallet() {
     hasSmartWallet: !!smartWallet,
     hasEmbeddedWallet: !!embeddedWallet,
     isWalletReady: !!(smartWallet || embeddedWallet),
+    transactionHashes,
+    showCongratulations,
+    setShowCongratulations,
+    // ENS registration functionality
+    ensRegistration: {
+      checkAvailability: ensRegistration.checkAvailability,
+      getRegistrationCost: ensRegistration.getRegistrationCost,
+      checkWalletBalance: ensRegistration.checkWalletBalance,
+      isCommitting: ensRegistration.isCommitting,
+      isRegistering: ensRegistration.isRegistering,
+      commitment: ensRegistration.commitment,
+      canRegister: ensRegistration.canRegister,
+      error: ensRegistration.error,
+    },
   }
 }
