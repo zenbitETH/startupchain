@@ -84,26 +84,10 @@ export function HeroSection() {
           <h1 className="text-foreground mb-6 text-4xl font-bold tracking-tight md:text-6xl lg:text-7xl">
             Build your business
             <br />
-            <span className="from-primary via-accent to-primary animate-gradient-x bg-gradient-to-r bg-clip-text text-transparent">
+            <span className="from-primary via-secondary to-primary animate-gradient-x bg-gradient-to-r bg-clip-text text-transparent">
               on-chain
             </span>
           </h1>
-
-          {/* Subheadline */}
-          <p className="text-muted-foreground mx-auto mb-6 max-w-3xl text-xl leading-relaxed md:text-2xl">
-            Register ENS names, split revenue transparently, and build with the
-            security of blockchain technology.
-          </p>
-
-          {/* Email emphasis */}
-          <div className="mx-auto mb-12 max-w-2xl lg:mx-0">
-            <div className="from-primary/10 via-accent/10 to-primary/10 border-primary/20 rounded-xl border bg-gradient-to-r p-4">
-              <p className="text-foreground text-lg font-medium">
-                ✨ Start with just your email address - we&apos;ll handle the
-                crypto magic
-              </p>
-            </div>
-          </div>
 
           {/* ENS Name Checker */}
           <div className="mx-auto mb-16 max-w-2xl lg:mx-0">
@@ -113,7 +97,7 @@ export function HeroSection() {
                 className={`absolute top-6 right-6 left-6 transition-all duration-300 ${isFocused ? '-translate-y-2 opacity-0' : 'translate-y-0 opacity-100'}`}
               >
                 <h3 className="text-foreground text-center text-xl font-semibold">
-                  <span className="from-primary via-accent to-primary bg-gradient-to-r bg-clip-text text-transparent">
+                  <span className="from-primary via-secondary to-primary bg-gradient-to-r bg-clip-text text-transparent">
                     Enter your business name
                   </span>
                 </h3>
@@ -134,7 +118,7 @@ export function HeroSection() {
                   }
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => !ensName && setIsFocused(false)}
-                  className="bg-background border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-xl border px-6 py-4 pr-16 text-lg transition-all duration-200 focus:ring-2"
+                  className="bg-white text-black border-border focus:ring-primary focus:border-primary  w-full rounded-xl border px-6 py-4 pr-16 text-lg transition-all duration-200 focus:ring-2"
                 />
                 <div className="text-muted-foreground absolute top-1/2 right-4 -translate-y-1/2 font-medium">
                   .eth
@@ -201,7 +185,7 @@ export function HeroSection() {
                           <button
                             onClick={handleProceed}
                             disabled={isAuthenticating}
-                            className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="cursor-pointer bg-gray-500 hover:bg-primary text-white hover:bg-primary/90 flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {isAuthenticating ? (
                               <>
@@ -242,12 +226,10 @@ export function HeroSection() {
 
           {/* Social Proof */}
           <div className="flex flex-wrap items-center justify-center gap-8 opacity-60 lg:justify-start">
-            <div className="text-muted-foreground text-sm">Trusted by</div>
+            <div className="text-muted-foreground text-sm">Powered by</div>
             <div className="flex items-center gap-6">
               <div className="text-lg font-semibold">ENS</div>
-              <div className="text-lg font-semibold">Safe</div>
               <div className="text-lg font-semibold">Privy</div>
-              <div className="text-lg font-semibold">Ethereum</div>
             </div>
           </div>
         </div>
