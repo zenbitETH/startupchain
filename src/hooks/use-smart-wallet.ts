@@ -1,6 +1,6 @@
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useState, useCallback, useEffect } from 'react'
-import { Address, parseEther } from 'viem'
+import { Address, parseEther, formatEther } from 'viem'
 import { baseSepolia } from 'viem/chains'
 
 export interface BusinessAccount {
@@ -14,29 +14,37 @@ export interface BusinessAccount {
 export function useSmartWallet() {
   const { user, authenticated, ready } = usePrivy()
   const { wallets } = useWallets()
-
+  
   const [businessAccount, setBusinessAccount] = useState<BusinessAccount | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Get the user's smart wallet (Safe account)
-  const getSmartWalletAddress = useCallback(async () => {
-    // When using Privy with Smart Wallets enabled,
-    // the first wallet in the array is the Smart Account
-    const smartWallet = wallets.find(w => 
+  // Get smart wallet from user's linked accounts
+  const getSmartWallet = useCallback(() => {
+    if (!user) return null
+    
+    // Find smart wallet in linked accounts (configured in Privy dashboard)
+    const smartWallet = user.linkedAccounts?.find(
+      account => account.type === 'smart_wallet'
+    )
+    
+    // Type guard to check if it's a smart wallet with address
+    if (smartWallet && 'address' in smartWallet && smartWallet.address) {
+      return {
+        address: smartWallet.address as Address,
+        smartWalletType: ('smartWalletType' in smartWallet ? smartWallet.smartWalletType : 'safe') || 'safe'
+      }
+    }
+    
+    return null
+  }, [user])
+
+  // Get embedded wallet for signing
+  const getEmbeddedWallet = useCallback(() => {
+    return wallets.find(w => 
       w.walletClientType === 'privy' && 
       w.connectorType === 'embedded'
     )
-    
-    if (!smartWallet) return null
-    
-    try {
-      await smartWallet.switchChain(baseSepolia.id)
-      return smartWallet.address as Address
-    } catch (err) {
-      console.error('Failed to get smart wallet address:', err)
-      return null
-    }
   }, [wallets])
 
   // Create business account (associates ENS with smart wallet)
@@ -44,7 +52,7 @@ export function useSmartWallet() {
     ensName: string,
     founders: { address: string; equity: string }[]
   ) => {
-    if (!authenticated || !user || !wallets.length) {
+    if (!authenticated || !user) {
       throw new Error('User must be authenticated')
     }
 
@@ -52,28 +60,42 @@ export function useSmartWallet() {
     setError(null)
 
     try {
-      // Get the smart wallet address
-      const smartWalletAddress = await getSmartWalletAddress()
-      if (!smartWalletAddress) {
-        throw new Error('Could not get smart wallet address')
+      // Check if user has a smart wallet or embedded wallet
+      const smartWallet = getSmartWallet()
+      const embeddedWallet = getEmbeddedWallet()
+
+      let businessWalletAddress: Address
+
+      if (smartWallet) {
+        // User has a smart wallet (Safe) - use it as business wallet
+        businessWalletAddress = smartWallet.address
+        console.log('🏦 Using existing Smart Wallet (Safe) as business wallet:', businessWalletAddress)
+      } else if (embeddedWallet) {
+        // User has embedded wallet - use it as business wallet for now
+        businessWalletAddress = embeddedWallet.address as Address
+        console.log('👤 Using embedded wallet as business wallet:', businessWalletAddress)
+      } else {
+        throw new Error('No wallet found. Please ensure you are logged in.')
       }
 
       console.log('🏢 Creating business account:', {
-        smartWallet: smartWalletAddress,
+        businessWallet: businessWalletAddress,
         ensName,
         founders,
+        walletType: smartWallet ? 'Smart Wallet (Safe)' : 'Embedded Wallet',
       })
 
       // For testing: Mock the business setup process
       // In production, this would:
-      // 1. Register ENS name to the smart wallet
+      // 1. Register ENS name to the business wallet
       // 2. Deploy revenue splitting contracts
       // 3. Configure multi-sig if needed
-
-      await new Promise(resolve => setTimeout(resolve, 1500))
-
+      
+      // Simulate deployment time
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
       const account: BusinessAccount = {
-        smartAccountAddress: smartWalletAddress,
+        smartAccountAddress: businessWalletAddress,
         ensName: `${ensName}.eth`,
         owners: founders.map(f => f.address),
         ownerEquity: founders.reduce((acc, f) => {
@@ -84,7 +106,7 @@ export function useSmartWallet() {
       }
 
       setBusinessAccount(account)
-
+      
       // Persist to localStorage
       localStorage.setItem(
         `business-${user.id}`,
@@ -99,32 +121,43 @@ export function useSmartWallet() {
     } finally {
       setIsCreating(false)
     }
-  }, [authenticated, user, wallets, getSmartWalletAddress])
+  }, [authenticated, user, getSmartWallet, getEmbeddedWallet])
 
-  // Send transaction from smart wallet
-  const sendFromSmartWallet = useCallback(async (
+  // Send transaction from business wallet
+  const sendFromBusinessWallet = useCallback(async (
     to: Address,
     value: string
   ) => {
-    const smartWallet = wallets.find(w => 
-      w.walletClientType === 'privy' && 
-      w.connectorType === 'embedded'
-    )
+    const embeddedWallet = getEmbeddedWallet()
     
-    if (!smartWallet) {
-      throw new Error('Smart wallet not available')
+    if (!embeddedWallet) {
+      throw new Error('Business wallet not available')
     }
 
     try {
-      // Get wallet client from the smart wallet
-      const provider = await smartWallet.getEthereumProvider()
-      const walletClient = await smartWallet.getWalletClient()
+      const businessWallet = getSmartWallet()
       
-      // Send transaction (will be gasless with Biconomy paymaster)
-      const txHash = await walletClient.sendTransaction({
+      console.log('💸 Sending from business wallet:', {
+        from: businessWallet?.address || embeddedWallet.address,
         to,
-        value: parseEther(value),
-        chain: baseSepolia,
+        value: `${value} ETH`,
+        walletType: businessWallet ? 'Smart Wallet' : 'Embedded Wallet',
+      })
+
+      // Switch to correct chain
+      await embeddedWallet.switchChain(baseSepolia.id)
+      
+      // Get Ethereum provider
+      const provider = await embeddedWallet.getEthereumProvider()
+      
+      // Send transaction using the provider
+      const txHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: embeddedWallet.address,
+          to,
+          value: `0x${parseEther(value).toString(16)}`,
+        }]
       })
 
       console.log('✅ Transaction sent:', txHash)
@@ -133,7 +166,33 @@ export function useSmartWallet() {
       console.error('Failed to send transaction:', err)
       throw err
     }
-  }, [wallets])
+  }, [getSmartWallet, getEmbeddedWallet])
+
+  // Get business wallet balance
+  const getBusinessWalletBalance = useCallback(async () => {
+    const smartWallet = getSmartWallet()
+    const embeddedWallet = getEmbeddedWallet()
+    
+    const businessAddress = smartWallet?.address || embeddedWallet?.address
+    if (!businessAddress) return null
+
+    try {
+      if (!embeddedWallet) return null
+      
+      await embeddedWallet.switchChain(baseSepolia.id)
+      const provider = await embeddedWallet.getEthereumProvider()
+      
+      const balance = await provider.request({
+        method: 'eth_getBalance',
+        params: [businessAddress, 'latest']
+      })
+
+      return formatEther(BigInt(balance as string))
+    } catch (err) {
+      console.error('Failed to get balance:', err)
+      return null
+    }
+  }, [getSmartWallet, getEmbeddedWallet])
 
   // Load existing business account
   useEffect(() => {
@@ -145,12 +204,19 @@ export function useSmartWallet() {
     }
   }, [user, ready])
 
+  const smartWallet = getSmartWallet()
+  const embeddedWallet = getEmbeddedWallet()
+
   return {
     businessAccount,
+    businessWalletAddress: smartWallet?.address || embeddedWallet?.address || null,
     createBusinessAccount,
-    sendFromSmartWallet,
+    sendFromBusinessWallet,
+    getBusinessWalletBalance,
     isCreating,
     error,
-    isSmartWalletReady: wallets.some(w => w.walletClientType === 'privy'),
+    hasSmartWallet: !!smartWallet,
+    hasEmbeddedWallet: !!embeddedWallet,
+    isWalletReady: !!(smartWallet || embeddedWallet),
   }
 }
