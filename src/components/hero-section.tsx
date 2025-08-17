@@ -81,22 +81,39 @@ export function HeroSection() {
       <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="text-center lg:max-w-3xl lg:text-left">
           {/* Main Headline */}
-          <h1 className="text-foreground mb-6 text-4xl font-semibold tracking-tight md:text-6xl lg:text-7xl">
+          <h1 className="text-foreground mb-6 text-4xl font-bold tracking-tight md:text-6xl lg:text-7xl">
             Build your business
             <br />
-            <span className="from-primary via-secondary to-primary animate-gradient-x bg-gradient-to-r bg-clip-text text-transparent">
-              onchain
+            <span className="from-primary via-accent to-primary animate-gradient-x bg-gradient-to-r bg-clip-text text-transparent">
+              on-chain
             </span>
           </h1>
+
+          {/* Subheadline */}
+          <p className="text-muted-foreground mx-auto mb-6 max-w-3xl text-xl leading-relaxed md:text-2xl">
+            Register ENS names, split revenue transparently, and build with the
+            security of blockchain technology.
+          </p>
+
+          {/* Email emphasis */}
+          <div className="mx-auto mb-12 max-w-2xl lg:mx-0">
+            <div className="from-primary/10 via-accent/10 to-primary/10 border-primary/20 rounded-xl border bg-gradient-to-r p-4">
+              <p className="text-foreground text-lg font-medium">
+                ✨ Start with just your email address - we&apos;ll handle the
+                crypto magic
+              </p>
+            </div>
+          </div>
+
           {/* ENS Name Checker */}
           <div className="mx-auto mb-16 max-w-2xl lg:mx-0">
-            <div className="bg-gray-800/50 border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
+            <div className="bg-card/50 border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
               {/* Title that disappears on focus */}
               <div
                 className={`absolute top-6 right-6 left-6 transition-all duration-300 ${isFocused ? '-translate-y-2 opacity-0' : 'translate-y-0 opacity-100'}`}
               >
                 <h3 className="text-foreground text-center text-xl font-semibold">
-                  <span className="from-primary to-secondary bg-gradient-to-r bg-clip-text text-transparent">
+                  <span className="from-primary via-accent to-primary bg-gradient-to-r bg-clip-text text-transparent">
                     Enter your business name
                   </span>
                 </h3>
@@ -117,7 +134,7 @@ export function HeroSection() {
                   }
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => !ensName && setIsFocused(false)}
-                  className="bg-white text-primary border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-2xl border px-6 py-4 pr-16 text-lg transition-all duration-200 focus:ring-2"
+                  className="bg-background border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-xl border px-6 py-4 pr-16 text-lg transition-all duration-200 focus:ring-2"
                 />
                 <div className="text-muted-foreground absolute top-1/2 right-4 -translate-y-1/2 font-medium">
                   .eth
@@ -134,7 +151,7 @@ export function HeroSection() {
                         <span>Checking availability on ENS...</span>
                       </div>
                     ) : error ? (
-                      <div className="bg-destructive/10 border-destructive/20 rounded-2xl border p-4">
+                      <div className="bg-destructive/10 border-destructive/20 rounded-xl border p-4">
                         <div className="text-destructive flex items-center gap-3">
                           <AlertCircle className="h-5 w-5" />
                           <span className="font-medium">
@@ -146,7 +163,7 @@ export function HeroSection() {
                         </p>
                       </div>
                     ) : isTaken ? (
-                      <div className="bg-destructive/10 border-destructive/20 rounded-2xl border p-4">
+                      <div className="bg-destructive/10 border-destructive/20 rounded-xl border p-4">
                         <div className="text-destructive flex items-center gap-3">
                           <AlertCircle className="h-5 w-5" />
                           <span className="font-medium">
@@ -168,7 +185,7 @@ export function HeroSection() {
                         </div>
                       </div>
                     ) : isAvailable ? (
-                      <div className="bg-primary/10 border-primary/20 rounded-2xl border p-4 ">
+                      <div className="bg-primary/10 border-primary/20 rounded-xl border p-4">
                         <div className="flex items-center justify-between">
                           <div className="text-primary flex items-center gap-3">
                             <CheckCircle className="h-5 w-5" />
@@ -177,14 +194,14 @@ export function HeroSection() {
                                 Great! {ensName}.eth is available
                               </span>
                               <p className="text-muted-foreground mt-1 text-sm">
-                                Claim it now before someone else does 
+                                Claim it now before someone else does
                               </p>
                             </div>
                           </div>
                           <button
                             onClick={handleProceed}
                             disabled={isAuthenticating}
-                            className="bg-primary cursor-pointer text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {isAuthenticating ? (
                               <>
@@ -207,7 +224,7 @@ export function HeroSection() {
                 {/* Validation Message */}
                 {ensName.length > 0 && !isValidEnsName(ensName) && (
                   <div className="animate-in fade-in duration-300">
-                    <div className="bg-muted/10 border-muted/20 rounded-2xl border p-4">
+                    <div className="bg-muted/10 border-muted/20 rounded-xl border p-4">
                       <div className="text-muted-foreground flex items-center gap-3">
                         <AlertCircle className="h-5 w-5" />
                         <span className="font-medium">Invalid name format</span>
@@ -225,11 +242,12 @@ export function HeroSection() {
 
           {/* Social Proof */}
           <div className="flex flex-wrap items-center justify-center gap-8 opacity-60 lg:justify-start">
-            <div className="text-muted-foreground text-sm">Powered by</div>
+            <div className="text-muted-foreground text-sm">Trusted by</div>
             <div className="flex items-center gap-6">
               <div className="text-lg font-semibold">ENS</div>
+              <div className="text-lg font-semibold">Safe</div>
               <div className="text-lg font-semibold">Privy</div>
-              <div className="text-lg font-semibold">Uniswap</div>
+              <div className="text-lg font-semibold">Ethereum</div>
             </div>
           </div>
         </div>
