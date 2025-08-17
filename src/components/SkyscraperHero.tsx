@@ -160,7 +160,7 @@ export const SkyscraperHero: React.FC<SkyscraperHeroProps> = ({
                   placeholder="Your company name"
                   value={name}
                   onChange={handleNameChange}
-                  className="border-border bg-background focus:border-primary focus:ring-primary/40 w-full rounded-xl border px-5 py-4 pr-16 text-base transition outline-none focus:ring-2"
+                  className="border-border bg-background focus:border-primary focus:ring-primary/40 w-full rounded-2xl border px-5 py-4 pr-16 text-base transition outline-none focus:ring-2"
                 />
                 <div className="text-muted-foreground pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 select-none">
                   .eth
@@ -185,11 +185,11 @@ export const SkyscraperHero: React.FC<SkyscraperHeroProps> = ({
                   placeholder="your@email.com"
                   value={email}
                   onChange={handleEmailChange}
-                  className="border-border bg-background focus:border-primary focus:ring-primary/40 w-full rounded-xl border px-5 py-4 text-base transition outline-none focus:ring-2"
+                  className="border-border bg-background focus:border-primary focus:ring-primary/40 w-full rounded-2xl border px-5 py-4 text-base transition outline-none focus:ring-2"
                 />
                 <button
                   type="submit"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-primary rounded-xl px-6 py-4 text-sm font-semibold shadow focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-primary rounded-2xl px-6 py-4 text-sm font-semibold shadow focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 >
                   {ctaText}
                 </button>
