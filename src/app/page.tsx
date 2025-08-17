@@ -1,3 +1,4 @@
+import { CTASection } from '@/components/cta-section'
 import { FeaturesSection } from '@/components/features-section'
 import { Footer } from '@/components/footer'
 import { HeroSection } from '@/components/hero-section'
@@ -9,6 +10,7 @@ export default function Home() {
       <Navbar />
       <HeroSection />
       <FeaturesSection />
+      <CTASection />
       <Footer />
     </div>
   )

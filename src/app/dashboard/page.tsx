@@ -1,6 +1,5 @@
 'use client'
 
-import { Navbar } from '@/components/navbar'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import {
   Copy,
@@ -12,6 +11,7 @@ import {
   User,
   Wallet,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { formatEther } from 'viem'
@@ -104,8 +104,28 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <Navbar />
-
+      {/* Navigation */}
+      <nav className="border-border/40 bg-background/80 relative z-50 border-b backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-4">
+            <Link href="/" className="flex items-center space-x-2">
+              <div className="from-primary to-accent flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br">
+                <Sparkles className="text-primary-foreground h-5 w-5" />
+              </div>
+              <span className="text-foreground text-xl font-bold tracking-tight">
+                StartupChain
+              </span>
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="border-border text-foreground hover:bg-card flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          </div>
+        </div>
+      </nav>
 
       {/* Dashboard Content */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -124,7 +144,7 @@ export default function Dashboard() {
           <div className="lg:col-span-2">
             <div className="bg-card border-border rounded-2xl border p-6">
               <div className="flex items-center gap-4 mb-6">
-                <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-2xl">
+                <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-xl">
                   <User className="text-primary h-6 w-6" />
                 </div>
                 <div>
@@ -140,7 +160,7 @@ export default function Dashboard() {
               <div className="space-y-4">
                 {/* Email */}
                 {user?.email?.address && (
-                  <div className="flex items-center justify-between p-4 bg-background rounded-2xl">
+                  <div className="flex items-center justify-between p-4 bg-background rounded-lg">
                     <div className="flex items-center gap-3">
                       <Mail className="text-muted-foreground h-5 w-5" />
                       <div>
@@ -166,7 +186,7 @@ export default function Dashboard() {
 
                 {/* Wallet */}
                 {primaryWallet && (
-                  <div className="flex items-center justify-between p-4 bg-background rounded-2xl">
+                  <div className="flex items-center justify-between p-4 bg-background rounded-lg">
                     <div className="flex items-center gap-3">
                       <Wallet className="text-muted-foreground h-5 w-5" />
                       <div>
@@ -200,7 +220,7 @@ export default function Dashboard() {
                 )}
 
                 {/* User ID */}
-                <div className="flex items-center justify-between p-4 bg-background rounded-2xl">
+                <div className="flex items-center justify-between p-4 bg-background rounded-lg">
                   <div className="flex items-center gap-3">
                     <Settings className="text-muted-foreground h-5 w-5" />
                     <div>
@@ -219,7 +239,7 @@ export default function Dashboard() {
           <div className="space-y-6">
             <div className="bg-card border-border rounded-2xl border p-6">
               <div className="flex items-center gap-4 mb-6">
-                <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-2xl">
+                <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-xl">
                   <Wallet className="text-primary h-6 w-6" />
                 </div>
                 <div>
@@ -233,7 +253,7 @@ export default function Dashboard() {
               </div>
 
               <div className="space-y-4">
-                <div className="text-center p-6 bg-gradient-to-r from-primary/5 to-accent/5 rounded-2xl">
+                <div className="text-center p-6 bg-gradient-to-r from-primary/5 to-accent/5 rounded-xl">
                   <div className="text-3xl font-bold text-foreground mb-2">
                     ${balanceInUsd.toFixed(2)}
                   </div>
@@ -248,7 +268,7 @@ export default function Dashboard() {
                 </div>
 
                 {balance && balance.value === BigInt(0) && (
-                  <div className="bg-accent/10 border-accent/20 rounded-2xl border p-4 text-center">
+                  <div className="bg-accent/10 border-accent/20 rounded-lg border p-4 text-center">
                     <p className="text-accent font-medium">Get started!</p>
                     <p className="text-muted-foreground text-sm mt-1">
                       Fund your wallet to start building on-chain
@@ -262,13 +282,13 @@ export default function Dashboard() {
             <div className="bg-card border-border rounded-2xl border p-6">
               <h3 className="text-foreground font-semibold mb-4">Quick Actions</h3>
               <div className="space-y-3">
-                <button className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-2xl px-4 py-3 font-medium transition-colors">
+                <button className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-lg px-4 py-3 font-medium transition-colors">
                   Register ENS Name
                 </button>
-                <button className="border-border text-foreground hover:bg-card/50 w-full rounded-2xl border px-4 py-3 font-medium transition-colors">
+                <button className="border-border text-foreground hover:bg-card/50 w-full rounded-lg border px-4 py-3 font-medium transition-colors">
                   Create Company
                 </button>
-                <button className="border-border text-foreground hover:bg-card/50 w-full rounded-2xl border px-4 py-3 font-medium transition-colors">
+                <button className="border-border text-foreground hover:bg-card/50 w-full rounded-lg border px-4 py-3 font-medium transition-colors">
                   Fund Wallet
                 </button>
               </div>
