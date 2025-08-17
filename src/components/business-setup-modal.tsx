@@ -20,7 +20,7 @@ interface BusinessSetupModalProps {
 export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupModalProps) {
   const { login, authenticated, user } = usePrivy()
   const { createBusinessAccount, isCreating, error } = useSmartWallet()
-  
+
   const [isMultipleFounders, setIsMultipleFounders] = useState(false)
   const [founders, setFounders] = useState<Founder[]>([
     { id: '1', address: '', equity: '100' }
@@ -99,7 +99,7 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
     try {
       // Create business account with smart wallet
       await createBusinessAccount(ensName, founders)
-      
+
       // Success - close modal and redirect to dashboard
       onClose()
       // TODO: Navigate to dashboard
@@ -270,7 +270,7 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
             <div className="bg-muted/10 border-border mb-8 rounded-xl border p-4">
               <h4 className="text-foreground mb-2 text-sm font-semibold">What happens next?</h4>
               <ul className="text-muted-foreground space-y-1 text-sm">
-                <li>• You'll sign in with email to create your account</li>
+                <li>• You&apos;ll sign in with email to create your account</li>
                 <li>• A Smart Wallet (Safe) will be created for your business</li>
                 <li>• Your ENS name will be registered to the Smart Wallet</li>
                 {isMultipleFounders && (
