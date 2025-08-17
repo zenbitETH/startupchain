@@ -65,7 +65,7 @@ export function FeaturesSection() {
             <div key={index} className="group relative">
               <div className="from-primary/20 to-accent/20 absolute inset-0 rounded-2xl bg-gradient-to-r opacity-25 blur transition-opacity group-hover:opacity-40"></div>
               <div className="bg-card border-border hover:border-primary/50 relative rounded-2xl border p-8 transition-all duration-300">
-                <div className="bg-primary/10 mb-6 flex h-12 w-12 items-center justify-center rounded-2xl">
+                <div className="bg-primary/10 mb-6 flex h-12 w-12 items-center justify-center rounded-xl">
                   {feature.icon}
                 </div>
                 <h3 className="text-foreground mb-4 text-xl font-semibold">
