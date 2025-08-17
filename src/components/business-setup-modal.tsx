@@ -4,6 +4,8 @@ import { Plus, Trash2, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { useSmartWallet } from '@/hooks/use-smart-wallet'
+import { ENSCostEstimate } from './ens-cost-estimate'
+import { CongratulationsModal } from './congratulations-modal'
 
 interface Founder {
   id: string
@@ -19,7 +21,16 @@ interface BusinessSetupModalProps {
 
 export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupModalProps) {
   const { login, authenticated, user } = usePrivy()
-  const { createBusinessAccount, isCreating, error } = useSmartWallet()
+  const { 
+    createBusinessAccount, 
+    isCreating, 
+    error, 
+    businessAccount,
+    transactionHashes,
+    showCongratulations, 
+    setShowCongratulations 
+  } = useSmartWallet()
+  const [showCostEstimate, setShowCostEstimate] = useState(false)
 
   const [isMultipleFounders, setIsMultipleFounders] = useState(false)
   const [founders, setFounders] = useState<Founder[]>([
@@ -96,23 +107,29 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
       return
     }
 
+    // Show cost estimate modal first
+    setShowCostEstimate(true)
+  }
+  
+  const handleProceedWithRegistration = async () => {
+    setShowCostEstimate(false)
+    
     try {
       // Create business account with smart wallet
       await createBusinessAccount(ensName, founders)
-
-      // Success - close modal and redirect to dashboard
-      onClose()
-      // TODO: Navigate to dashboard
-      window.location.href = '/dashboard'
+      // Success - congratulations modal will be shown automatically
+      // The hook sets showCongratulations to true
     } catch (err) {
       console.error('Failed to create business:', err)
       // Error is handled by the hook
     }
   }
 
-  if (!isOpen) return null
+  if (!isOpen && !showCongratulations) return null
 
   return (
+    <>
+    {isOpen && (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop with blur effect */}
       <div
@@ -319,5 +336,32 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
         </div>
       </div>
     </div>
+    )}
+    
+    {/* Congratulations Modal */}
+    {businessAccount && (
+      <CongratulationsModal
+        isOpen={showCongratulations}
+        onClose={() => setShowCongratulations(false)}
+        ensName={businessAccount.ensName.replace('.eth', '')}
+        smartWalletAddress={businessAccount.smartAccountAddress}
+        commitTxHash={transactionHashes.commitTx}
+        registrationTxHash={transactionHashes.registrationTx}
+        onContinue={() => {
+          setShowCongratulations(false)
+          onClose()
+          window.location.href = '/dashboard'
+        }}
+      />
+    )}
+    
+    {/* ENS Cost Estimate Modal */}
+    <ENSCostEstimate
+      ensName={ensName}
+      isOpen={showCostEstimate}
+      onProceed={handleProceedWithRegistration}
+      onCancel={() => setShowCostEstimate(false)}
+    />
+    </>
   )
 }
