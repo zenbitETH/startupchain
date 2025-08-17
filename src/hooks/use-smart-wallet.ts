@@ -1,6 +1,6 @@
-import { usePrivy, useWallets, useSmartWallets } from '@privy-io/react-auth'
+import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useState, useCallback, useEffect } from 'react'
-import { Address, encodeFunctionData, parseEther } from 'viem'
+import { Address, parseEther } from 'viem'
 import { baseSepolia } from 'viem/chains'
 
 export interface BusinessAccount {
@@ -14,33 +14,38 @@ export interface BusinessAccount {
 export function useSmartWallet() {
   const { user, authenticated, ready } = usePrivy()
   const { wallets } = useWallets()
-  const { client } = useSmartWallets()
-  
+
   const [businessAccount, setBusinessAccount] = useState<BusinessAccount | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Get the user's smart wallet address
+  // Get the user's smart wallet (Safe account)
   const getSmartWalletAddress = useCallback(async () => {
-    if (!client) return null
+    // When using Privy with Smart Wallets enabled,
+    // the first wallet in the array is the Smart Account
+    const smartWallet = wallets.find(w => 
+      w.walletClientType === 'privy' && 
+      w.connectorType === 'embedded'
+    )
+    
+    if (!smartWallet) return null
     
     try {
-      // The smart wallet client provides the account address
-      const address = await client.account?.address
-      return address as Address
+      await smartWallet.switchChain(baseSepolia.id)
+      return smartWallet.address as Address
     } catch (err) {
       console.error('Failed to get smart wallet address:', err)
       return null
     }
-  }, [client])
+  }, [wallets])
 
   // Create business account (associates ENS with smart wallet)
   const createBusinessAccount = useCallback(async (
     ensName: string,
     founders: { address: string; equity: string }[]
   ) => {
-    if (!authenticated || !user || !client) {
-      throw new Error('User must be authenticated with smart wallet')
+    if (!authenticated || !user || !wallets.length) {
+      throw new Error('User must be authenticated')
     }
 
     setIsCreating(true)
@@ -64,9 +69,9 @@ export function useSmartWallet() {
       // 1. Register ENS name to the smart wallet
       // 2. Deploy revenue splitting contracts
       // 3. Configure multi-sig if needed
-      
+
       await new Promise(resolve => setTimeout(resolve, 1500))
-      
+
       const account: BusinessAccount = {
         smartAccountAddress: smartWalletAddress,
         ensName: `${ensName}.eth`,
@@ -79,7 +84,7 @@ export function useSmartWallet() {
       }
 
       setBusinessAccount(account)
-      
+
       // Persist to localStorage
       localStorage.setItem(
         `business-${user.id}`,
@@ -94,21 +99,29 @@ export function useSmartWallet() {
     } finally {
       setIsCreating(false)
     }
-  }, [authenticated, user, client, getSmartWalletAddress])
+  }, [authenticated, user, wallets, getSmartWalletAddress])
 
   // Send transaction from smart wallet
   const sendFromSmartWallet = useCallback(async (
     to: Address,
     value: string
   ) => {
-    if (!client) {
+    const smartWallet = wallets.find(w => 
+      w.walletClientType === 'privy' && 
+      w.connectorType === 'embedded'
+    )
+    
+    if (!smartWallet) {
       throw new Error('Smart wallet not available')
     }
 
     try {
-      // Use the smart wallet client to send transaction
-      // This will be gasless if you have paymaster configured
-      const txHash = await client.sendTransaction({
+      // Get wallet client from the smart wallet
+      const provider = await smartWallet.getEthereumProvider()
+      const walletClient = await smartWallet.getWalletClient()
+      
+      // Send transaction (will be gasless with Biconomy paymaster)
+      const txHash = await walletClient.sendTransaction({
         to,
         value: parseEther(value),
         chain: baseSepolia,
@@ -120,7 +133,7 @@ export function useSmartWallet() {
       console.error('Failed to send transaction:', err)
       throw err
     }
-  }, [client])
+  }, [wallets])
 
   // Load existing business account
   useEffect(() => {
@@ -138,6 +151,6 @@ export function useSmartWallet() {
     sendFromSmartWallet,
     isCreating,
     error,
-    isSmartWalletReady: !!client,
+    isSmartWalletReady: wallets.some(w => w.walletClientType === 'privy'),
   }
 }
