@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useWallets } from '@privy-io/react-auth'
-import { Address, parseUnits } from 'viem'
+import { Address, createWalletClient, custom, encodeFunctionData } from 'viem'
 import { sepolia } from 'viem/chains'
 
 // StartUpChain contract deployed address
@@ -104,8 +104,8 @@ export function useStartUpChain() {
 
   // Get embedded wallet for signing transactions
   const getEmbeddedWallet = useCallback(() => {
-    return wallets.find(w => 
-      w.walletClientType === 'privy' && 
+    return wallets.find(w =>
+      w.walletClientType === 'privy' &&
       w.connectorType === 'embedded'
     )
   }, [wallets])
@@ -122,7 +122,7 @@ export function useStartUpChain() {
     foundersOwnershipPercent: number
   ) => {
     const embeddedWallet = getEmbeddedWallet()
-    
+
     if (!embeddedWallet) {
       throw new Error('No embedded wallet found. Please ensure you are logged in.')
     }
@@ -133,10 +133,10 @@ export function useStartUpChain() {
     try {
       // Switch to Sepolia network
       await embeddedWallet.switchChain(sepolia.id)
-      
+
       // Get Ethereum provider
       const provider = await embeddedWallet.getEthereumProvider()
-      
+
       console.log('📋 Registering company on StartUpChain contract:', {
         contract: STARTUP_CHAIN_ADDRESS,
         companyName,
@@ -145,34 +145,38 @@ export function useStartUpChain() {
         foundersOwnershipPercent
       })
 
-      // 1. Register company name
-      const registerCompanyData = {
-        to: STARTUP_CHAIN_ADDRESS,
-        data: encodeFunctionCall('registerCompany', [companyName])
-      }
+      // Create viem wallet client for contract interactions
+      const walletClient = createWalletClient({
+        chain: sepolia,
+        transport: custom(provider)
+      })
 
-      const registerTxHash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [{ 
-          from: embeddedWallet.address,
-          ...registerCompanyData
-        }]
+      // 1. Register company name
+      const registerData = encodeFunctionData({
+        abi: STARTUP_CHAIN_ABI,
+        functionName: 'registerCompany',
+        args: [companyName]
+      })
+
+      const registerTxHash = await walletClient.sendTransaction({
+        account: embeddedWallet.address as Address,
+        to: STARTUP_CHAIN_ADDRESS,
+        data: registerData
       })
 
       console.log('✅ Company registered:', registerTxHash)
 
       // 2. Set number of shares
-      const setSharesData = {
-        to: STARTUP_CHAIN_ADDRESS,
-        data: encodeFunctionCall('setNumberOfShares', [numberOfShares])
-      }
+      const setSharesData = encodeFunctionData({
+        abi: STARTUP_CHAIN_ABI,
+        functionName: 'setNumberOfShares',
+        args: [BigInt(numberOfShares)]
+      })
 
-      const sharesTxHash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [{ 
-          from: embeddedWallet.address,
-          ...setSharesData
-        }]
+      const sharesTxHash = await walletClient.sendTransaction({
+        account: embeddedWallet.address as Address,
+        to: STARTUP_CHAIN_ADDRESS,
+        data: setSharesData
       })
 
       console.log('✅ Number of shares set:', sharesTxHash)
@@ -180,21 +184,16 @@ export function useStartUpChain() {
       // 3. Add founders
       const founderTxHashes = []
       for (const founder of foundersData) {
-        const addFounderData = {
-          to: STARTUP_CHAIN_ADDRESS,
-          data: encodeFunctionCall('addFounder', [
-            founder.name,
-            founder.title,
-            founder.percentOwnership
-          ])
-        }
+        const addFounderData = encodeFunctionData({
+          abi: STARTUP_CHAIN_ABI,
+          functionName: 'addFounder',
+          args: [founder.name, founder.title, BigInt(founder.percentOwnership)]
+        })
 
-        const founderTxHash = await provider.request({
-          method: 'eth_sendTransaction',
-          params: [{ 
-            from: embeddedWallet.address,
-            ...addFounderData
-          }]
+        const founderTxHash = await walletClient.sendTransaction({
+          account: embeddedWallet.address as Address,
+          to: STARTUP_CHAIN_ADDRESS,
+          data: addFounderData
         })
 
         founderTxHashes.push(founderTxHash)
@@ -202,17 +201,16 @@ export function useStartUpChain() {
       }
 
       // 4. Set founders ownership percentage
-      const setOwnershipData = {
-        to: STARTUP_CHAIN_ADDRESS,
-        data: encodeFunctionCall('setFoundersOwnership', [foundersOwnershipPercent])
-      }
+      const setOwnershipData = encodeFunctionData({
+        abi: STARTUP_CHAIN_ABI,
+        functionName: 'setFoundersOwnership',
+        args: [BigInt(foundersOwnershipPercent)]
+      })
 
-      const ownershipTxHash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [{ 
-          from: embeddedWallet.address,
-          ...setOwnershipData
-        }]
+      const ownershipTxHash = await walletClient.sendTransaction({
+        account: embeddedWallet.address as Address,
+        to: STARTUP_CHAIN_ADDRESS,
+        data: setOwnershipData
       })
 
       console.log('✅ Founders ownership percentage set:', ownershipTxHash)
@@ -237,7 +235,7 @@ export function useStartUpChain() {
   // Create shares contract
   const createSharesContract = useCallback(async (initialValue: number = 1000000) => {
     const embeddedWallet = getEmbeddedWallet()
-    
+
     if (!embeddedWallet) {
       throw new Error('No embedded wallet found. Please ensure you are logged in.')
     }
@@ -248,18 +246,22 @@ export function useStartUpChain() {
     try {
       await embeddedWallet.switchChain(sepolia.id)
       const provider = await embeddedWallet.getEthereumProvider()
-      
-      const createSharesData = {
-        to: STARTUP_CHAIN_ADDRESS,
-        data: encodeFunctionCall('createStartUpSharesContract', [initialValue])
-      }
 
-      const txHash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [{ 
-          from: embeddedWallet.address,
-          ...createSharesData
-        }]
+      const walletClient = createWalletClient({
+        chain: sepolia,
+        transport: custom(provider)
+      })
+      
+      const createSharesData = encodeFunctionData({
+        abi: STARTUP_CHAIN_ABI,
+        functionName: 'createStartUpSharesContract',
+        args: [BigInt(initialValue)]
+      })
+
+      const txHash = await walletClient.sendTransaction({
+        account: embeddedWallet.address as Address,
+        to: STARTUP_CHAIN_ADDRESS,
+        data: createSharesData
       })
 
       console.log('✅ Shares contract created:', txHash)
@@ -284,16 +286,3 @@ export function useStartUpChain() {
   }
 }
 
-// Helper function to encode function calls
-function encodeFunctionCall(functionName: string, params: any[]) {
-  // This is a simplified encoding - in a real app you'd use ethers or viem properly
-  // For now, we'll rely on the provider to handle the encoding
-  const functionAbi = STARTUP_CHAIN_ABI.find(f => f.name === functionName)
-  if (!functionAbi) {
-    throw new Error(`Function ${functionName} not found in ABI`)
-  }
-  
-  // Since we're using the provider directly, we'll construct the data manually
-  // This would normally be done with a proper library like viem or ethers
-  return `0x${functionName}` // Placeholder - the provider should handle proper encoding
-}
