@@ -63,7 +63,8 @@ export function useSmartWallet() {
   // Create business account (associates ENS with smart wallet)
   const createBusinessAccount = useCallback(async (
     ensName: string,
-    founders: { address: string; equity: string }[]
+    founders: { address: string; equity: string }[],
+    registrationAddress?: string
   ) => {
     if (!authenticated || !user) {
       throw new Error('User must be authenticated')
@@ -117,6 +118,7 @@ export function useSmartWallet() {
             name: ensName,
             durationYears: 1,
             reverseRecord: true,
+            owner: registrationAddress as Address,
           })
 
           console.log('⏳ Waiting for commitment period (61 seconds)...')
@@ -134,6 +136,7 @@ export function useSmartWallet() {
             name: ensName,
             durationYears: 1,
             reverseRecord: true,
+            owner: registrationAddress as Address,
           })
           
           // Store transaction hashes
