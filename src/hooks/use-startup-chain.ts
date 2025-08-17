@@ -3,8 +3,8 @@ import { useWallets } from '@privy-io/react-auth'
 import { Address, createWalletClient, custom, encodeFunctionData } from 'viem'
 import { sepolia } from 'viem/chains'
 
-// StartUpChain contract deployed address
-const STARTUP_CHAIN_ADDRESS = '0x18B03f36f0219aDF0eC2d3BCaF13F11EacB13Dba' as const
+// StartUpChain contract deployed address (new version with fixed isOwner)
+const STARTUP_CHAIN_ADDRESS = '0xd2AaDf8F0a74Ad7995fB33CC09f2E4a3a765A575' as const
 
 // StartUpChain contract ABI (only the functions we need)
 const STARTUP_CHAIN_ABI = [
@@ -161,7 +161,8 @@ export function useStartUpChain() {
       const registerTxHash = await walletClient.sendTransaction({
         account: embeddedWallet.address as Address,
         to: STARTUP_CHAIN_ADDRESS,
-        data: registerData
+        data: registerData,
+        gas: BigInt(500000) // Set sufficient gas limit
       })
 
       console.log('✅ Company registered:', registerTxHash)
@@ -176,7 +177,8 @@ export function useStartUpChain() {
       const sharesTxHash = await walletClient.sendTransaction({
         account: embeddedWallet.address as Address,
         to: STARTUP_CHAIN_ADDRESS,
-        data: setSharesData
+        data: setSharesData,
+        gas: BigInt(500000)
       })
 
       console.log('✅ Number of shares set:', sharesTxHash)
@@ -193,7 +195,8 @@ export function useStartUpChain() {
         const founderTxHash = await walletClient.sendTransaction({
           account: embeddedWallet.address as Address,
           to: STARTUP_CHAIN_ADDRESS,
-          data: addFounderData
+          data: addFounderData,
+          gas: BigInt(500000)
         })
 
         founderTxHashes.push(founderTxHash)
@@ -210,7 +213,8 @@ export function useStartUpChain() {
       const ownershipTxHash = await walletClient.sendTransaction({
         account: embeddedWallet.address as Address,
         to: STARTUP_CHAIN_ADDRESS,
-        data: setOwnershipData
+        data: setOwnershipData,
+        gas: BigInt(500000)
       })
 
       console.log('✅ Founders ownership percentage set:', ownershipTxHash)
@@ -261,7 +265,8 @@ export function useStartUpChain() {
       const txHash = await walletClient.sendTransaction({
         account: embeddedWallet.address as Address,
         to: STARTUP_CHAIN_ADDRESS,
-        data: createSharesData
+        data: createSharesData,
+        gas: BigInt(500000)
       })
 
       console.log('✅ Shares contract created:', txHash)
