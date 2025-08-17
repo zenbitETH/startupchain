@@ -81,7 +81,7 @@ export function HeroSection() {
       <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="text-center lg:max-w-3xl lg:text-left">
           {/* Main Headline */}
-          <h1 className="text-foreground mb-6 text-4xl font-bold tracking-tight md:text-6xl lg:text-7xl">
+          <h1 className="text-foreground mb-6 text-4xl font-semibold tracking-tight md:text-6xl lg:text-7xl">
             Build your business
             <br />
             <span className="from-primary via-secondary to-primary animate-gradient-x bg-gradient-to-r bg-clip-text text-transparent">

@@ -103,7 +103,7 @@ export function ENSCostEstimate({ ensName, onProceed, onCancel, isOpen }: ENSCos
             ) : (
               <>
                 {/* ENS Name */}
-                <div className="bg-primary/10 border-primary/20 rounded-xl border p-4 mb-6">
+                <div className="bg-primary/10 border-primary/20 rounded-full border p-4 mb-6">
                   <div className="flex items-center gap-3">
                     <div className="from-primary to-accent flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br">
                       <span className="text-primary-foreground text-lg font-bold">
@@ -138,7 +138,7 @@ export function ENSCostEstimate({ ensName, onProceed, onCancel, isOpen }: ENSCos
                 </div>
 
                 {/* Process Info */}
-                <div className="bg-muted/20 rounded-xl p-4 mb-6">
+                <div className="bg-muted/20 rounded-full p-4 mb-6">
                   <div className="flex items-start gap-3">
                     <Clock className="h-5 w-5 text-primary mt-0.5" />
                     <div>
@@ -154,7 +154,7 @@ export function ENSCostEstimate({ ensName, onProceed, onCancel, isOpen }: ENSCos
 
                 {/* Insufficient Balance Warning */}
                 {!balance?.hasEnough && (
-                  <div className="bg-destructive/10 border-destructive/20 rounded-xl border p-4 mb-6">
+                  <div className="bg-destructive/10 border-destructive/20 rounded-full border p-4 mb-6">
                     <div className="flex items-start gap-3">
                       <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
                       <div>
@@ -179,14 +179,14 @@ export function ENSCostEstimate({ ensName, onProceed, onCancel, isOpen }: ENSCos
                 <div className="flex gap-3">
                   <button
                     onClick={onCancel}
-                    className="flex-1 bg-muted hover:bg-muted/80 text-foreground py-3 px-4 rounded-lg font-medium transition-colors"
+                    className="cursor-pointer flex-1 bg-gray-500 hover:bg-secondary text-foreground py-3 px-4 rounded-full font-medium transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={onProceed}
                     disabled={!balance?.hasEnough}
-                    className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground py-3 px-4 rounded-lg font-medium transition-colors"
+                    className="cursor-pointer flex-1 bg-gray-500 hover:bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-white py-3 px-4 rounded-full font-medium transition-colors"
                   >
                     {balance?.hasEnough ? 'Proceed' : 'Need More ETH'}
                   </button>
