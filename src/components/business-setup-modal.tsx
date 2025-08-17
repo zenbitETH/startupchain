@@ -37,6 +37,7 @@ export function BusinessSetupModal({
     showCongratulations,
     setShowCongratulations,
     commitmentCountdown,
+    startupChainProgress,
   } = useSmartWallet()
   const [showCostEstimate, setShowCostEstimate] = useState(false)
 
