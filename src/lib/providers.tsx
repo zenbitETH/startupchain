@@ -22,13 +22,6 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
-          requireUserPasswordOnCreate: false,
-          showWalletUIs: true,
-        },
-        // Smart wallet configuration (Safe)
-        smartWallets: {
-          enabled: true,
-          provider: 'SAFE',
         },
       }}
     >
