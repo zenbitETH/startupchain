@@ -4,6 +4,7 @@ import { Address, parseEther, formatEther } from 'viem'
 import { baseSepolia, sepolia, mainnet } from 'viem/chains'
 import { useEnsRegistration } from './use-ens-registration'
 import { useStartUpChain } from './use-startup-chain'
+import { useBondingCurve } from './use-bonding-curve'
 
 // Get current environment
 const isDevelopment = process.env.NODE_ENV === 'development'
@@ -48,6 +49,9 @@ export function useSmartWallet() {
   
   // Get StartUpChain contract functionality
   const startUpChain = useStartUpChain()
+  
+  // Get Bonding Curve functionality
+  const bondingCurve = useBondingCurve()
 
   // Get smart wallet from user's linked accounts
   const getSmartWallet = useCallback(() => {
@@ -247,7 +251,53 @@ export function useSmartWallet() {
         // Continue without StartUpChain registration - this is optional
       }
 
-      // Step 6: Deploy additional contracts (future implementation)
+      // Step 6: Create bonding curve for share trading
+      try {
+        console.log('📈 Creating bonding curve for share trading...')
+        
+        setStartupChainProgress({
+          step: 'Setting up trading mechanism...',
+          completed: [
+            '✅ Company registered',
+            '✅ Shares allocated',
+            `✅ ${startupChainFounders.length} founders added`,
+            '✅ Ownership percentages set'
+          ],
+          current: 'Creating bonding curve'
+        })
+        
+        // For now, we'll use the business wallet address as both shares token and treasury
+        // In production, this would be the actual shares token from StartUpSharesContract
+        const sharesTokenAddress = businessWalletAddress
+        const treasuryAddress = businessWalletAddress
+        
+        const startupId = await bondingCurve.createStartupWithCurve(
+          sharesTokenAddress,
+          ensName,
+          treasuryAddress
+        )
+        
+        console.log('✅ Bonding curve created! Startup ID:', startupId)
+        
+        setStartupChainProgress({
+          step: 'All blockchain setup complete!',
+          completed: [
+            '✅ Company registered',
+            '✅ Shares allocated',
+            `✅ ${startupChainFounders.length} founders added`,
+            '✅ Ownership percentages set',
+            '✅ Bonding curve created for trading'
+          ],
+          current: undefined
+        })
+        
+      } catch (bondingCurveError) {
+        console.error('Bonding curve creation failed:', bondingCurveError)
+        console.log('⚠️ Continuing without bonding curve...')
+        // Continue without bonding curve - this is optional
+      }
+
+      // Step 7: Deploy additional contracts (future implementation)
       // TODO: Deploy revenue splitting contracts
       // TODO: Configure multi-sig if needed
       
@@ -281,7 +331,7 @@ export function useSmartWallet() {
     } finally {
       setIsCreating(false)
     }
-  }, [authenticated, user, getSmartWallet, getEmbeddedWallet, ensRegistration, startUpChain])
+  }, [authenticated, user, getSmartWallet, getEmbeddedWallet, ensRegistration, startUpChain, bondingCurve])
 
   // Send transaction from business wallet
   const sendFromBusinessWallet = useCallback(async (
