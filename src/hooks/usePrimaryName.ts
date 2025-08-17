@@ -2,10 +2,10 @@
 // Caveats: propogation is slow, which can lead to a confusing UX and suboptimal DX during hackathons.
 // See the other files in this directory for alternative approaches.
 import { type Address, parseAbi } from 'viem'
-import { holesky, mainnet, sepolia } from 'viem/chains'
+import { mainnet, sepolia } from 'viem/chains'
 import { useReadContract } from 'wagmi'
 
-const l1ChainIds = [mainnet.id, sepolia.id, holesky.id] as const
+const l1ChainIds = [mainnet.id, sepolia.id] as const
 type L1ChainId = (typeof l1ChainIds)[number]
 
 export const usePrimaryName = ({
