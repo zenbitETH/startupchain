@@ -2,6 +2,8 @@
 
 import { Plus, Trash2, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
+import { usePrivy } from '@privy-io/react-auth'
+import { useSmartWallet } from '@/hooks/use-smart-wallet'
 
 interface Founder {
   id: string
@@ -16,6 +18,9 @@ interface BusinessSetupModalProps {
 }
 
 export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupModalProps) {
+  const { login, authenticated, user } = usePrivy()
+  const { createBusinessAccount, isCreating, error } = useSmartWallet()
+  
   const [isMultipleFounders, setIsMultipleFounders] = useState(false)
   const [founders, setFounders] = useState<Founder[]>([
     { id: '1', address: '', equity: '100' }
@@ -83,19 +88,26 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
 
   const totalEquity = founders.reduce((sum, founder) => sum + (parseFloat(founder.equity) || 0), 0)
 
-  const handleCreateBusiness = () => {
-    // TODO: Integrate with smart contracts
-    // - Register ENS name via ENS registrar
-    // - Create Safe multisig if multiple founders
-    // - Set up revenue splitting contract
-    // - Store company metadata in CompanyRegistry
-    console.log('Creating business:', {
-      ensName,
-      isMultipleFounders,
-      founders,
-      totalEquity
-    })
-    onClose()
+  const handleCreateBusiness = async () => {
+    // Check if user is authenticated
+    if (!authenticated) {
+      // Trigger Privy login flow
+      await login()
+      return
+    }
+
+    try {
+      // Create business account with smart wallet
+      await createBusinessAccount(ensName, founders)
+      
+      // Success - close modal and redirect to dashboard
+      onClose()
+      // TODO: Navigate to dashboard
+      window.location.href = '/dashboard'
+    } catch (err) {
+      console.error('Failed to create business:', err)
+      // Error is handled by the hook
+    }
   }
 
   if (!isOpen) return null
@@ -258,14 +270,23 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
             <div className="bg-muted/10 border-border mb-8 rounded-xl border p-4">
               <h4 className="text-foreground mb-2 text-sm font-semibold">What happens next?</h4>
               <ul className="text-muted-foreground space-y-1 text-sm">
-                <li>• Your ENS name will be registered to your business</li>
+                <li>• You'll sign in with email to create your account</li>
+                <li>• A Smart Wallet (Safe) will be created for your business</li>
+                <li>• Your ENS name will be registered to the Smart Wallet</li>
                 {isMultipleFounders && (
-                  <li>• A Safe multisig wallet will be created for shared ownership</li>
+                  <li>• Co-founders can be added as signers to the Safe</li>
                 )}
-                <li>• Revenue splitting contract will be deployed automatically</li>
+                <li>• All transactions will be gasless (we pay the fees)</li>
                 <li>• You can start receiving payments immediately</li>
               </ul>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="bg-destructive/10 border-destructive/20 mb-4 rounded-lg border p-3">
+                <p className="text-destructive text-sm font-medium">{error}</p>
+              </div>
+            )}
           </div>
 
           {/* Footer */}
@@ -284,12 +305,13 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
                 <button
                   onClick={handleCreateBusiness}
                   disabled={
-                    founders.some(f => !f.address.trim()) ||
+                    isCreating ||
+                    (!authenticated && founders.some(f => !f.address.trim())) ||
                     (isMultipleFounders && Math.abs(totalEquity - 100) > 0.01)
                   }
                   className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg px-6 py-2 text-sm font-semibold transition-all duration-200"
                 >
-                  Create business
+                  {isCreating ? 'Creating...' : !authenticated ? 'Sign in & Create' : 'Create business'}
                 </button>
               </div>
             </div>
