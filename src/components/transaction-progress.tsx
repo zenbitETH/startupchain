@@ -11,7 +11,7 @@ const ProgressOverlay = styled.div<{ $isVisible: boolean }>`
   padding: 20px;
   min-width: 350px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
+  z-index: 9999;
   transform: translateX(${props => props.$isVisible ? '0' : '400px'});
   opacity: ${props => props.$isVisible ? '1' : '0'};
   transition: all 0.3s ease-in-out;
@@ -119,7 +119,10 @@ export function TransactionProgress({ status, companyName, numberOfShares, found
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
-    setIsVisible(status.step !== 'idle' && status.step !== 'complete')
+    console.log('TransactionProgress status update:', status)
+    const shouldShow = status.step !== 'idle' && status.step !== 'complete'
+    console.log('Should show progress:', shouldShow)
+    setIsVisible(shouldShow)
     
     if (status.step === 'complete') {
       setTimeout(() => setIsVisible(false), 3000)
