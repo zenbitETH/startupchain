@@ -76,7 +76,7 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
   }
 
   const updateFounder = (id: string, field: 'address' | 'equity', value: string) => {
-    setFounders(founders.map(founder => 
+    setFounders(founders.map(founder =>
       founder.id === id ? { ...founder, [field]: value } : founder
     ))
   }
@@ -103,11 +103,11 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop with blur effect */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-md"
         onClick={onClose}
       />
-      
+
       {/* Modal Content */}
       <div className="relative mx-4 w-full max-w-2xl">
         <div className="bg-card border-border relative overflow-hidden rounded-2xl border shadow-2xl">
@@ -175,8 +175,8 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
                 </h3>
                 {isMultipleFounders && (
                   <div className={`text-sm font-medium ${
-                    Math.abs(totalEquity - 100) < 0.01 
-                      ? 'text-primary' 
+                    Math.abs(totalEquity - 100) < 0.01
+                      ? 'text-primary'
                       : 'text-destructive'
                   }`}>
                     Total: {totalEquity.toFixed(1)}%
