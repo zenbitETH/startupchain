@@ -38,6 +38,7 @@ export function BusinessSetupModal({
     setShowCongratulations,
     commitmentCountdown,
     startupChainProgress,
+    setStartupChainProgress,
   } = useSmartWallet()
   const [showCostEstimate, setShowCostEstimate] = useState(false)
 
@@ -57,13 +58,17 @@ export function BusinessSetupModal({
       setFounders([{ id: '1', address: userAddress, equity: '100' }])
       setRegisterToDifferentAddress(false)
       setCustomAddress('')
+      // Clear previous progress
+      setStartupChainProgress(null)
     } else if (isOpen) {
       setIsMultipleFounders(false)
       setFounders([{ id: '1', address: '', equity: '100' }])
       setRegisterToDifferentAddress(false)
       setCustomAddress('')
+      // Clear previous progress
+      setStartupChainProgress(null)
     }
-  }, [isOpen, authenticated, user])
+  }, [isOpen, authenticated, user, setStartupChainProgress])
 
   // Handle keyboard events for modal
   useEffect(() => {
@@ -444,6 +449,9 @@ export function BusinessSetupModal({
                           ? 'the Smart Wallet'
                           : 'your account'}
                     </li>
+                    <li>
+                      • Company details will be registered on StartUpChain contract
+                    </li>
                     {isMultipleFounders && (
                       <li>• Co-founders can be added as signers to the Safe</li>
                     )}
@@ -453,6 +461,47 @@ export function BusinessSetupModal({
                     <li>• You can start receiving payments immediately</li>
                   </ul>
                 </div>
+
+                {/* StartUpChain Progress */}
+                {startupChainProgress && (
+                  <div className="bg-primary/10 border-primary/20 mb-4 rounded-lg border p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="from-primary to-accent flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br">
+                        <div className="text-primary-foreground text-sm font-bold">
+                          📋
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-foreground text-sm font-semibold">
+                          {startupChainProgress.step}
+                        </p>
+                        {startupChainProgress.current && (
+                          <p className="text-muted-foreground text-xs">
+                            {startupChainProgress.current}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {startupChainProgress.completed.length > 0 && (
+                      <div className="space-y-1">
+                        {startupChainProgress.completed.map((item, index) => (
+                          <p key={index} className="text-primary text-xs">
+                            {item}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {startupChainProgress.error && (
+                      <div className="bg-destructive/10 border-destructive/20 mt-3 rounded-lg border p-2">
+                        <p className="text-destructive text-xs">
+                          ❌ {startupChainProgress.error}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Error Message */}
                 {error && (
