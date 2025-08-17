@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useRef } from 'react'
 import { useWallets } from '@privy-io/react-auth'
 import { Address, createWalletClient, custom, encodeFunctionData } from 'viem'
 import { sepolia } from 'viem/chains'
@@ -119,7 +119,7 @@ export function useStartUpChain() {
     step: 'idle',
     message: ''
   })
-  const [onTransactionUpdate, setOnTransactionUpdate] = useState<((status: TransactionStatus) => void) | null>(null)
+  const onTransactionUpdateRef = useRef<((status: TransactionStatus) => void) | null>(null)
 
   // Get embedded wallet for signing transactions
   const getEmbeddedWallet = useCallback(() => {
@@ -131,15 +131,21 @@ export function useStartUpChain() {
 
   // Set callback for transaction updates
   const setTransactionCallback = useCallback((callback: (status: TransactionStatus) => void) => {
-    setOnTransactionUpdate(() => callback)
+    onTransactionUpdateRef.current = callback
   }, [])
 
   // Update transaction status and notify UI
   const updateStatus = useCallback((step: TransactionStep, message: string, currentFounder?: string) => {
     const status: TransactionStatus = { step, message, currentFounder }
+    console.log('UpdateStatus called:', status)
     setTransactionStatus(status)
-    onTransactionUpdate?.(status)
-  }, [onTransactionUpdate])
+    if (onTransactionUpdateRef.current) {
+      console.log('Calling callback with status:', status)
+      onTransactionUpdateRef.current(status)
+    } else {
+      console.log('No callback registered')
+    }
+  }, [])
 
   // Register company on StartUpChain contract
   const registerCompanyOnChain = useCallback(async (
