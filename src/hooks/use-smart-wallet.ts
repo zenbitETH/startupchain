@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { Address, parseEther, formatEther } from 'viem'
 import { baseSepolia, sepolia, mainnet } from 'viem/chains'
 import { useEnsRegistration } from './use-ens-registration'
-import { useStartUpChain } from './use-startup-chain'
+import { useStartUpChain, TransactionStatus } from './use-startup-chain'
 import { useBondingCurve } from './use-bonding-curve'
 
 // Get current environment
@@ -43,12 +43,21 @@ export function useSmartWallet() {
     current?: string
     error?: string
   } | null>(null)
+  const [currentTransactionStatus, setCurrentTransactionStatus] = useState<TransactionStatus>({
+    step: 'idle',
+    message: ''
+  })
 
   // Get ENS registration functionality
   const ensRegistration = useEnsRegistration()
   
   // Get StartUpChain contract functionality
   const startUpChain = useStartUpChain()
+  
+  // Set up transaction status callback
+  useEffect(() => {
+    startUpChain.setTransactionCallback(setCurrentTransactionStatus)
+  }, [startUpChain])
   
   // Get Bonding Curve functionality
   const bondingCurve = useBondingCurve()
@@ -181,6 +190,16 @@ export function useSmartWallet() {
       }
 
       // Step 5: Register company on StartUpChain contract (fixed version)
+      // Calculate total founder ownership percentage
+      const totalFounderOwnership = founders.reduce((sum, f) => sum + parseFloat(f.equity), 0)
+      
+      // Convert founders data to the format expected by StartUpChain
+      const startupChainFounders = founders.map((founder, index) => ({
+        name: `Founder ${index + 1}`, // Using generic names as we don't have names in the current form
+        title: 'Founder', // Generic title
+        percentOwnership: Math.round(parseFloat(founder.equity))
+      }))
+      
       try {
         console.log('🔗 Registering company on StartUpChain contract...')
         
@@ -190,16 +209,6 @@ export function useSmartWallet() {
           completed: [],
           current: 'Preparing data'
         })
-        
-        // Calculate total founder ownership percentage
-        const totalFounderOwnership = founders.reduce((sum, f) => sum + parseFloat(f.equity), 0)
-        
-        // Convert founders data to the format expected by StartUpChain
-        const startupChainFounders = founders.map((founder, index) => ({
-          name: `Founder ${index + 1}`, // Using generic names as we don't have names in the current form
-          title: 'Founder', // Generic title
-          percentOwnership: Math.round(parseFloat(founder.equity))
-        }))
         
         // Default number of shares (can be made configurable later)
         const numberOfShares = 1000000
@@ -434,6 +443,7 @@ export function useSmartWallet() {
     commitmentCountdown,
     startupChainProgress,
     setStartupChainProgress,
+    currentTransactionStatus,
     // ENS registration functionality
     ensRegistration: {
       checkAvailability: ensRegistration.checkAvailability,
