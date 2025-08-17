@@ -2,6 +2,10 @@
 
 import { Plus, Trash2, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
+import { usePrivy } from '@privy-io/react-auth'
+import { useSmartWallet } from '@/hooks/use-smart-wallet'
+import { ENSCostEstimate } from './ens-cost-estimate'
+import { CongratulationsModal } from './congratulations-modal'
 
 interface Founder {
   id: string
@@ -16,6 +20,18 @@ interface BusinessSetupModalProps {
 }
 
 export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupModalProps) {
+  const { login, authenticated, user } = usePrivy()
+  const { 
+    createBusinessAccount, 
+    isCreating, 
+    error, 
+    businessAccount,
+    transactionHashes,
+    showCongratulations, 
+    setShowCongratulations 
+  } = useSmartWallet()
+  const [showCostEstimate, setShowCostEstimate] = useState(false)
+
   const [isMultipleFounders, setIsMultipleFounders] = useState(false)
   const [founders, setFounders] = useState<Founder[]>([
     { id: '1', address: '', equity: '100' }
@@ -76,38 +92,51 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
   }
 
   const updateFounder = (id: string, field: 'address' | 'equity', value: string) => {
-    setFounders(founders.map(founder => 
+    setFounders(founders.map(founder =>
       founder.id === id ? { ...founder, [field]: value } : founder
     ))
   }
 
   const totalEquity = founders.reduce((sum, founder) => sum + (parseFloat(founder.equity) || 0), 0)
 
-  const handleCreateBusiness = () => {
-    // TODO: Integrate with smart contracts
-    // - Register ENS name via ENS registrar
-    // - Create Safe multisig if multiple founders
-    // - Set up revenue splitting contract
-    // - Store company metadata in CompanyRegistry
-    console.log('Creating business:', {
-      ensName,
-      isMultipleFounders,
-      founders,
-      totalEquity
-    })
-    onClose()
+  const handleCreateBusiness = async () => {
+    // Check if user is authenticated
+    if (!authenticated) {
+      // Trigger Privy login flow
+      await login()
+      return
+    }
+
+    // Show cost estimate modal first
+    setShowCostEstimate(true)
+  }
+  
+  const handleProceedWithRegistration = async () => {
+    setShowCostEstimate(false)
+    
+    try {
+      // Create business account with smart wallet
+      await createBusinessAccount(ensName, founders)
+      // Success - congratulations modal will be shown automatically
+      // The hook sets showCongratulations to true
+    } catch (err) {
+      console.error('Failed to create business:', err)
+      // Error is handled by the hook
+    }
   }
 
-  if (!isOpen) return null
+  if (!isOpen && !showCongratulations) return null
 
   return (
+    <>
+    {isOpen && (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop with blur effect */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-md"
         onClick={onClose}
       />
-      
+
       {/* Modal Content */}
       <div className="relative mx-4 w-full max-w-2xl">
         <div className="bg-card border-border relative overflow-hidden rounded-2xl border shadow-2xl">
@@ -175,8 +204,8 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
                 </h3>
                 {isMultipleFounders && (
                   <div className={`text-sm font-medium ${
-                    Math.abs(totalEquity - 100) < 0.01 
-                      ? 'text-primary' 
+                    Math.abs(totalEquity - 100) < 0.01
+                      ? 'text-primary'
                       : 'text-destructive'
                   }`}>
                     Total: {totalEquity.toFixed(1)}%
@@ -258,14 +287,23 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
             <div className="bg-muted/10 border-border mb-8 rounded-xl border p-4">
               <h4 className="text-foreground mb-2 text-sm font-semibold">What happens next?</h4>
               <ul className="text-muted-foreground space-y-1 text-sm">
-                <li>• Your ENS name will be registered to your business</li>
+                <li>• You&apos;ll sign in with email to create your account</li>
+                <li>• A Smart Wallet (Safe) will be created for your business</li>
+                <li>• Your ENS name will be registered to the Smart Wallet</li>
                 {isMultipleFounders && (
-                  <li>• A Safe multisig wallet will be created for shared ownership</li>
+                  <li>• Co-founders can be added as signers to the Safe</li>
                 )}
-                <li>• Revenue splitting contract will be deployed automatically</li>
+                <li>• All transactions will be gasless (we pay the fees)</li>
                 <li>• You can start receiving payments immediately</li>
               </ul>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="bg-destructive/10 border-destructive/20 mb-4 rounded-lg border p-3">
+                <p className="text-destructive text-sm font-medium">{error}</p>
+              </div>
+            )}
           </div>
 
           {/* Footer */}
@@ -284,12 +322,13 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
                 <button
                   onClick={handleCreateBusiness}
                   disabled={
-                    founders.some(f => !f.address.trim()) ||
+                    isCreating ||
+                    (!authenticated && founders.some(f => !f.address.trim())) ||
                     (isMultipleFounders && Math.abs(totalEquity - 100) > 0.01)
                   }
                   className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg px-6 py-2 text-sm font-semibold transition-all duration-200"
                 >
-                  Create business
+                  {isCreating ? 'Creating...' : !authenticated ? 'Sign in & Create' : 'Create business'}
                 </button>
               </div>
             </div>
@@ -297,5 +336,32 @@ export function BusinessSetupModal({ isOpen, onClose, ensName }: BusinessSetupMo
         </div>
       </div>
     </div>
+    )}
+    
+    {/* Congratulations Modal */}
+    {businessAccount && (
+      <CongratulationsModal
+        isOpen={showCongratulations}
+        onClose={() => setShowCongratulations(false)}
+        ensName={businessAccount.ensName.replace('.eth', '')}
+        smartWalletAddress={businessAccount.smartAccountAddress}
+        commitTxHash={transactionHashes.commitTx}
+        registrationTxHash={transactionHashes.registrationTx}
+        onContinue={() => {
+          setShowCongratulations(false)
+          onClose()
+          window.location.href = '/dashboard'
+        }}
+      />
+    )}
+    
+    {/* ENS Cost Estimate Modal */}
+    <ENSCostEstimate
+      ensName={ensName}
+      isOpen={showCostEstimate}
+      onProceed={handleProceedWithRegistration}
+      onCancel={() => setShowCostEstimate(false)}
+    />
+    </>
   )
 }
