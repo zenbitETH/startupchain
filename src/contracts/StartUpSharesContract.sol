@@ -7,7 +7,7 @@ contract StartUpSharesContract is ERC20 {
     address public owner;
     uint public value;
 
-    constructor(uint _initialSupply) ERC20("BensonSoft", "BENS") { 
+    constructor(uint _initialSupply) ERC20("StartUpChain", "SCHN") { 
        owner = msg.sender;
 	_mint(msg.sender, _initialSupply * 10 ** decimals()); 
        value = _initialSupply;

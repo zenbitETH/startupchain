@@ -40,7 +40,7 @@ contract StartUpChain {
      * @notice register your company by creating an ENS name.
      * @param _companyName name of new company.
      */
-    function registerCompany(string memory _companyName) external isOwner {
+    function registerCompany(string memory _companyName) external {
         companyName  = _companyName;
     } 
 
@@ -48,7 +48,7 @@ contract StartUpChain {
      * @notice set the number of shares.
      * @param _numberOfShares number of shares.
      */
-    function setNumberOfShares(uint _numberOfShares) external isOwner {
+    function setNumberOfShares(uint _numberOfShares) external {
         numberOfShares = _numberOfShares;
     } 
 
@@ -58,7 +58,7 @@ contract StartUpChain {
      * @param _title founder's title.
      * @param _percentOwnership founder's ownership as a percent.
      */
-    function addFounder(string memory _name, string memory _title, uint _percentOwnership) external isOwner {
+    function addFounder(string memory _name, string memory _title, uint _percentOwnership) external {
         founders.push(Founder(_name, _title, _percentOwnership));
 	numberOfFounders++;
     } 
@@ -72,7 +72,7 @@ contract StartUpChain {
      * @notice set the number of shares.
      * @param _percentFoundersOwnership.
      */
-    function setFoundersOwnership(uint _percentFoundersOwnership) external isOwner {
+    function setFoundersOwnership(uint _percentFoundersOwnership) external {
         percentFoundersOwnership = _percentFoundersOwnership; // the public owns the remaining percentage.
     } 
 
