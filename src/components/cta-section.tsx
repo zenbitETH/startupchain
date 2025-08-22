@@ -12,11 +12,11 @@ export function CTASection() {
           Join thousands of builders creating unstoppable businesses on Ethereum
         </p>
         <div className="flex flex-col justify-center gap-4 sm:flex-row">
-          <button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2 rounded-xl px-8 py-4 text-lg font-semibold transition-all duration-200">
+          <button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-lg font-semibold transition-all duration-200">
             Start building
             <ChevronRight className="h-5 w-5" />
           </button>
-          <button className="border-border text-foreground hover:bg-card rounded-xl border px-8 py-4 text-lg font-semibold transition-all duration-200">
+          <button className="border-border text-foreground hover:bg-card rounded-2xl border px-8 py-4 text-lg font-semibold transition-all duration-200">
             View documentation
           </button>
         </div>
