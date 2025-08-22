@@ -531,7 +531,7 @@ export function BusinessSetupModal({
         onProceed={handleProceedWithRegistration}
         onCancel={() => setShowCostEstimate(false)}
       />
-      
+
       {/* Countdown Modal */}
       <CountdownModal
         isOpen={commitmentCountdown !== null}
