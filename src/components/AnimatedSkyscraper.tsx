@@ -55,7 +55,7 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
 
     const handleScroll = () => {
       if (timeoutId) return // Already scheduled
-      
+
       timeoutId = setTimeout(() => {
         const scrollY = window.scrollY
         const effectStart = 100 // Start effects after 100px scroll
@@ -92,48 +92,139 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
     if (nonEmpty && !prefersReducedMotion) setHasTypedOnce(true)
   }, [nonEmpty, prefersReducedMotion])
 
-
   // Windows that follow the actual building shape
   const windowGrid = useMemo(() => {
-    const windows: { x: number; y: number; width: number; height: number }[] = []
-    
+    const windows: { x: number; y: number; width: number; height: number }[] =
+      []
+
     // Building tiers with 50% bigger windows and proper positioning
     const buildingTiers = [
       // Extended base level 1: x 50-470, y 720-800
-      { leftX: 70, rightX: 450, topY: 740, bottomY: 780, windowWidth: 6, windowHeight: 12 },
+      {
+        leftX: 70,
+        rightX: 450,
+        topY: 740,
+        bottomY: 780,
+        windowWidth: 6,
+        windowHeight: 12,
+      },
       // Extended base level 2: x 50-470, y 640-720
-      { leftX: 70, rightX: 450, topY: 660, bottomY: 700, windowWidth: 6, windowHeight: 12 },
+      {
+        leftX: 70,
+        rightX: 450,
+        topY: 660,
+        bottomY: 700,
+        windowWidth: 6,
+        windowHeight: 12,
+      },
       // Extended base level 3: x 50-470, y 560-640
-      { leftX: 70, rightX: 450, topY: 580, bottomY: 620, windowWidth: 6, windowHeight: 12 },
+      {
+        leftX: 70,
+        rightX: 450,
+        topY: 580,
+        bottomY: 620,
+        windowWidth: 6,
+        windowHeight: 12,
+      },
       // Original base level: x 50-470, y 520-560
-      { leftX: 70, rightX: 450, topY: 540, bottomY: 560, windowWidth: 6, windowHeight: 12 },
-      // Level 2: x 70-450, y 480-520  
-      { leftX: 90, rightX: 430, topY: 490, bottomY: 510, windowWidth: 6, windowHeight: 9 },
+      {
+        leftX: 70,
+        rightX: 450,
+        topY: 540,
+        bottomY: 560,
+        windowWidth: 6,
+        windowHeight: 12,
+      },
+      // Level 2: x 70-450, y 480-520
+      {
+        leftX: 90,
+        rightX: 430,
+        topY: 490,
+        bottomY: 510,
+        windowWidth: 6,
+        windowHeight: 9,
+      },
       // Level 3: x 90-430, y 440-480
-      { leftX: 110, rightX: 410, topY: 450, bottomY: 470, windowWidth: 6, windowHeight: 9 },
+      {
+        leftX: 110,
+        rightX: 410,
+        topY: 450,
+        bottomY: 470,
+        windowWidth: 6,
+        windowHeight: 9,
+      },
       // Level 4: x 110-410, y 400-440
-      { leftX: 130, rightX: 390, topY: 410, bottomY: 430, windowWidth: 5, windowHeight: 9 },
+      {
+        leftX: 130,
+        rightX: 390,
+        topY: 410,
+        bottomY: 430,
+        windowWidth: 5,
+        windowHeight: 9,
+      },
       // Level 5: x 130-390, y 360-400
-      { leftX: 150, rightX: 370, topY: 370, bottomY: 390, windowWidth: 5, windowHeight: 8 },
+      {
+        leftX: 150,
+        rightX: 370,
+        topY: 370,
+        bottomY: 390,
+        windowWidth: 5,
+        windowHeight: 8,
+      },
       // Level 6: x 150-370, y 320-360
-      { leftX: 170, rightX: 350, topY: 330, bottomY: 350, windowWidth: 5, windowHeight: 8 },
+      {
+        leftX: 170,
+        rightX: 350,
+        topY: 330,
+        bottomY: 350,
+        windowWidth: 5,
+        windowHeight: 8,
+      },
       // Level 7: x 170-350, y 280-320
-      { leftX: 190, rightX: 330, topY: 290, bottomY: 310, windowWidth: 4, windowHeight: 8 },
+      {
+        leftX: 190,
+        rightX: 330,
+        topY: 290,
+        bottomY: 310,
+        windowWidth: 4,
+        windowHeight: 8,
+      },
       // Level 8: x 190-330, y 240-280
-      { leftX: 210, rightX: 310, topY: 250, bottomY: 270, windowWidth: 4, windowHeight: 6 },
+      {
+        leftX: 210,
+        rightX: 310,
+        topY: 250,
+        bottomY: 270,
+        windowWidth: 4,
+        windowHeight: 6,
+      },
       // Level 9: x 210-310, y 200-240
-      { leftX: 230, rightX: 290, topY: 210, bottomY: 230, windowWidth: 3, windowHeight: 6 },
+      {
+        leftX: 230,
+        rightX: 290,
+        topY: 210,
+        bottomY: 230,
+        windowWidth: 3,
+        windowHeight: 6,
+      },
       // Level 10: x 230-290, y 160-200
-      { leftX: 250, rightX: 270, topY: 170, bottomY: 190, windowWidth: 3, windowHeight: 6 },
+      {
+        leftX: 250,
+        rightX: 270,
+        topY: 170,
+        bottomY: 190,
+        windowWidth: 3,
+        windowHeight: 6,
+      },
     ]
 
     buildingTiers.forEach((tier) => {
       const tierWidth = tier.rightX - tier.leftX - 20 // Leave margins
       const tierHeight = tier.bottomY - tier.topY - 6
-      
+
       const cols = Math.floor(tierWidth / (tier.windowWidth + 8))
       const rows = Math.floor(tierHeight / (tier.windowHeight + 3))
-      
+
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
           windows.push({
@@ -347,28 +438,6 @@ export const AnimatedSkyscraper: React.FC<AnimatedSkyscraperProps> = ({
           )}
         </g>
       </svg>
-
-      {/* ETH Logo as separate element */}
-      <Image
-        src="/eth-logo.svg"
-        alt="Ethereum Logo"
-        className="floating-eth-logo"
-        width={40}
-        height={40}
-        style={{
-          position: 'fixed',
-          bottom: '40px',
-          right: '40px',
-          width: '40px',
-          height: '40px',
-          opacity: 0.8,
-          zIndex: 1,
-          pointerEvents: 'none',
-          mixBlendMode: 'multiply',
-          filter:
-            'brightness(0) saturate(100%) invert(70%) sepia(100%) saturate(1500%) hue-rotate(200deg) brightness(120%) contrast(110%)',
-        }}
-      />
 
       <style jsx>{`
         :global(.neon-text) {
