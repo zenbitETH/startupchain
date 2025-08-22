@@ -39,7 +39,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-sans: Geist, sans-serif;
+  --font-sans: var(--font-fredoka), sans-serif;
   --font-mono: "Fira Code", "Courier New", monospace;
   --font-serif: "Lora", Georgia, serif;
   --radius: 0.5rem;
@@ -125,15 +125,15 @@
 }
 
 .dark {
-  --background: oklch(0.2166 0.0215 292.8474);
+  --background: oklch(0.3112 0.0182 258.37);
   --foreground: oklch(0.9053 0.0245 293.5570);
   --card: oklch(0.2544 0.0301 292.7315);
   --card-foreground: oklch(0.9053 0.0245 293.5570);
   --popover: oklch(0.2544 0.0301 292.7315);
   --popover-foreground: oklch(0.9053 0.0245 293.5570);
-  --primary: oklch(0.7058 0.0777 302.0489);
+  --primary: oklch(0.7213 0.1066 217.67);
   --primary-foreground: oklch(0.2166 0.0215 292.8474);
-  --secondary: oklch(0.4604 0.0472 295.5578);
+  --secondary: oklch(0.6253 0.1408 35.39);
   --secondary-foreground: oklch(0.9053 0.0245 293.5570);
   --muted: oklch(0.2560 0.0320 294.8380);
   --muted-foreground: oklch(0.6974 0.0282 300.0614);
@@ -221,7 +221,7 @@
 }
 
 .animate-gradient-x {
-  animation: gradient-x 15s ease infinite;
+  animation: gradient-x 5s ease infinite;
   background-size: 200% 200%;
 }
 
@@ -239,7 +239,7 @@
     background-size: 400% 400%;
     animation: gradient-x 3s ease infinite;
   }
-  
+
   @keyframes gradient-x {
     0%, 100% {
       background-position: 0% 50%;
@@ -248,20 +248,20 @@
       background-position: 100% 50%;
     }
   }
-  
+
   /* Blob animations for background */
   .animate-blob {
     animation: blob 7s infinite;
   }
-  
+
   .animation-delay-2000 {
     animation-delay: 2s;
   }
-  
+
   .animation-delay-4000 {
     animation-delay: 4s;
   }
-  
+
   @keyframes blob {
     0% {
       transform: translate(0px, 0px) scale(1);
@@ -276,32 +276,32 @@
       transform: translate(0px, 0px) scale(1);
     }
   }
-  
+
   /* Glassmorphism backdrop blur enhancement */
   .backdrop-blur-xl {
     backdrop-filter: blur(24px);
   }
-  
+
   /* Smooth hover transitions for cards */
   .hover-lift {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
-  
+
   .hover-lift:hover {
     transform: translateY(-4px);
     box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.25);
   }
-  
+
   /* Pulse animation for status indicators */
   .animate-pulse-slow {
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
-  
+
   /* Web3 glow effects */
   .glow-primary {
     box-shadow: 0 0 20px rgba(var(--primary), 0.3);
   }
-  
+
   .glow-accent {
     box-shadow: 0 0 20px rgba(var(--accent), 0.3);
   }
