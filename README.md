@@ -1,5 +1,5 @@
 # StartupChain
-🚀 Live Demo: [startupchain-deploy.vercel.app](https://startupchain-deploy.vercel.app/)
+🚀 Live Demo: [startupchain.io](https://startupchain.io)
 
 ENS Company Registry dApp - A decentralized application that allows users to register ENS names for companies, choose single or multi-owner structures, and set revenue split percentages.
 
