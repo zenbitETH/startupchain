@@ -273,6 +273,13 @@ export default function Dashboard() {
                 <button className="border-border text-foreground hover:bg-card/50 w-full rounded-2xl border px-4 py-3 font-medium transition-colors">
                   Fund Wallet
                 </button>
+                <button 
+                  onClick={handleLogout}
+                  className="border-red-500/20 text-red-500 hover:bg-red-500/10 w-full rounded-2xl border px-4 py-3 font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Log Out
+                </button>
               </div>
             </div>
           </div>
