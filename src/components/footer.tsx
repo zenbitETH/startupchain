@@ -18,18 +18,19 @@ export function Footer() {
             </span>
           </Link>
           <div className="text-muted-foreground flex items-center space-x-6 text-sm">
-            <a href="#" className="hover:text-foreground transition-colors">
+           {/*<a href="#" className="hover:text-foreground transition-colors">
               Privacy
             </a>
             <a href="#" className="hover:text-foreground transition-colors">
               Terms
             </a>
             <a href="#" className="hover:text-foreground transition-colors">
+              Twitter
+            </a>*/}
+            <a href="#" className="hover:text-foreground transition-colors">
               Discord
             </a>
-            <a href="#" className="hover:text-foreground transition-colors">
-              Twitter
-            </a>
+ 
           </div>
         </div>
       </div>
