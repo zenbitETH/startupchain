@@ -141,21 +141,7 @@ export const AnimatedRocket: React.FC<AnimatedRocketProps> = ({
           </filter>
         </defs>
 
-        {/* Background stars - fixed positions with individual twinkle animations */}
-        <g className="stars">
-          {Array.from({ length: 150 }).map((_, i) => (
-            <circle
-              key={`star-${i}`}
-              cx={Math.random() * 1200}
-              cy={Math.random() * 1000}
-              r={Math.random() * 2 + 0.5}
-              fill="#ffffff"
-              opacity="0.6"
-              className="star"
-              style={{ animationDelay: `${Math.random() * 5}s` }}
-            />
-          ))}
-        </g>
+
 
         {/* Speed lines effect - diagonal lines parallel to rocket trajectory */}
         <g className="speed-lines">
@@ -224,9 +210,7 @@ export const AnimatedRocket: React.FC<AnimatedRocketProps> = ({
         
 
         
-        .effects-active .star {
-          animation: starTwinkle 3s ease-in-out infinite;
-        }
+
 
         @keyframes rocketHeat {
           0%, 100% {
@@ -278,23 +262,13 @@ export const AnimatedRocket: React.FC<AnimatedRocketProps> = ({
         
 
         
-        @keyframes starTwinkle {
-          0%, 100% {
-            opacity: 0.3;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
+
 
         @media (prefers-reduced-motion: reduce) {
           .rocket-body-path,
           .heat-overlay,
           .engine-glow,
-          .speed-line,
-          .star {
+          .speed-line {
             animation: none !important;
           }
         }
