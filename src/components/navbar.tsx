@@ -11,9 +11,9 @@ export function Navbar() {
     <nav className="border-border/40 bg-background/80 relative z-50 h-16 border-b backdrop-blur-xl">
       <div className="mx-auto h-full max-w-7xl px-4 sm:px-6 lg:px-8 py-5">
         <div className="flex h-full items-center justify-between ">
-          <Link href="/" className="flex items-center space-x-2 py-5">
+          <Link href="/" className="flex items-center space-x-2 py-5 hover:text-primary">
               <Image src="/logow.svg" width={35} height={35} alt="StartUpChain Logo"/>
-            <span className="text-foreground text-3xl font-normal tracking-widest">
+            <span className="text-foreground text-3xl font-normal tracking-widest hover:text-primary">
               StartUpChain
             </span>
           </Link>
