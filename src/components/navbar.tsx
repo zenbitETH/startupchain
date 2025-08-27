@@ -12,7 +12,7 @@ export function Navbar() {
       <div className="mx-auto h-full max-w-7xl px-4 sm:px-6 lg:px-8 py-5">
         <div className="flex h-full items-center justify-between ">
           <Link href="/" className="flex items-center space-x-2 py-5">
-              <Image src="/logo.svg" width={35} height={35} alt="StartUpChain Logo"/>
+              <Image src="/logow.svg" width={35} height={35} alt="StartUpChain Logo"/>
             <span className="text-foreground text-3xl font-normal tracking-widest">
               StartUpChain
             </span>
@@ -27,7 +27,7 @@ export function Navbar() {
                 </span>
                 <Link
                   href="/dashboard"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 inline-block rounded-2xl px-4 py-2 font-medium transition-all duration-200"
+                  className="bg-primary text-background hover:text-white hover:bg-primary/90 inline-block rounded-2xl px-4 py-2 font-medium transition-all duration-200"
                 >
                   Dashboard
                 </Link>
@@ -35,7 +35,7 @@ export function Navbar() {
             ) : (
               <button
                 onClick={login}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl px-4 py-2 font-medium transition-all duration-200"
+                className="cursor-pointer text-background hover:text-white bg-primary text-2xl hover:bg-primary/90 rounded-2xl px-4 py-2 font-medium transition-all duration-200"
               >
                 Login
               </button>
