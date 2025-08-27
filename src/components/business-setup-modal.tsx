@@ -189,7 +189,7 @@ export function BusinessSetupModal({
                 </h2>
                 <button
                   onClick={onClose}
-                  className="text-muted-foreground hover:text-foreground rounded-lg p-2 transition-colors"
+                  className="text-muted-foreground hover:text-foreground rounded-2xl p-2 transition-colors"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -199,10 +199,10 @@ export function BusinessSetupModal({
               <div className="max-h-[80vh] overflow-y-auto p-6">
                 {/* Business Name Display */}
                 <div className="mb-8">
-                  <div className="bg-primary/10 border-primary/20 rounded-xl border p-4">
+                  <div className="bg-white/10 border-white/20 rounded-2xl border p-4">
                     <div className="flex items-center gap-3">
-                      <div className="from-primary to-accent flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br">
-                        <div className="text-primary-foreground text-lg font-bold">
+                      <div className="from-secondary to-primary animate-gradient-x duration-50 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br">
+                        <div className="text-white text-lg font-bold">
                           {ensName.charAt(0).toUpperCase()}
                         </div>
                       </div>
@@ -220,23 +220,23 @@ export function BusinessSetupModal({
 
                 {/* Founder Mode Toggle */}
                 <div className="mb-8">
-                  <div className="bg-muted/20 flex rounded-xl p-1">
+                  <div className="bg-background flex rounded-2xl p-1">
                     <button
                       onClick={() => handleFounderModeChange(false)}
-                      className={`flex-1 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200 ${
+                      className={`cursor-pointer flex-1 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
                         !isMultipleFounders
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'text-muted-foreground hover:text-white'
                       }`}
                     >
                       Solo founder
                     </button>
                     <button
                       onClick={() => handleFounderModeChange(true)}
-                      className={`flex-1 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200 ${
+                      className={`cursor-pointer flex-1 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
                         isMultipleFounders
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'text-muted-foreground hover:text-white'
                       }`}
                     >
                       Multiple founders
@@ -271,7 +271,7 @@ export function BusinessSetupModal({
                           placeholder="Enter ETH address (0x...)"
                           value={customAddress}
                           onChange={(e) => setCustomAddress(e.target.value)}
-                          className="bg-background border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-lg border px-4 py-3 text-sm transition-all duration-200 focus:ring-2"
+                          className="bg-background border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-2xl border px-4 py-3 text-sm transition-all duration-200 focus:ring-2"
                         />
                         <p className="text-muted-foreground mt-2 text-xs">
                           The ENS name will be registered to this address
@@ -303,11 +303,11 @@ export function BusinessSetupModal({
                     )}
                   </div>
 
-                  <div className="space-y-3">
+                  <div className=" space-y-3">
                     {founders.map((founder) => (
                       <div
                         key={founder.id}
-                        className="bg-muted/10 border-border rounded-xl border p-4"
+                        className=" border-border rounded-xl border p-4"
                       >
                         <div className="flex items-center gap-3">
                           {/* Address Input */}
@@ -333,7 +333,7 @@ export function BusinessSetupModal({
                                 authenticated &&
                                 !registerToDifferentAddress
                               }
-                              className={`bg-background border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-lg border px-4 py-3 text-sm transition-all duration-200 focus:ring-2 ${
+                              className={`bg-background border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-2xl border px-4 py-3 text-sm transition-all duration-200 focus:ring-2 ${
                                 founder.id === '1' &&
                                 !isMultipleFounders &&
                                 authenticated &&
@@ -376,7 +376,7 @@ export function BusinessSetupModal({
                                       e.target.value
                                     )
                                   }
-                                  className="bg-background border-border focus:ring-primary focus:border-primary w-full rounded-lg border px-3 py-3 pr-8 text-center text-sm transition-all duration-200 focus:ring-2"
+                                  className="bg-background border-border focus:ring-primary focus:border-primary w-full rounded-2xl border px-3 py-3 pr-8 text-center text-sm transition-all duration-200 focus:ring-2"
                                 />
                                 <div className="text-muted-foreground absolute top-1/2 right-2 -translate-y-1/2 text-xs">
                                   %
@@ -389,7 +389,7 @@ export function BusinessSetupModal({
                           {isMultipleFounders && founders.length > 1 && (
                             <button
                               onClick={() => removeFounder(founder.id)}
-                              className="text-muted-foreground hover:text-destructive rounded-lg p-2 transition-colors"
+                              className="text-muted-foreground hover:text-destructive rounded-2xl p-2 transition-colors"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -412,7 +412,7 @@ export function BusinessSetupModal({
 
                   {/* Equity Warning */}
                   {isMultipleFounders && Math.abs(totalEquity - 100) > 0.01 && (
-                    <div className="bg-destructive/10 border-destructive/20 mt-4 rounded-lg border p-3">
+                    <div className="bg-destructive/10 border-destructive/20 mt-4 rounded-2xl border p-3">
                       <p className="text-destructive text-sm font-medium">
                         Equity must total 100%. Currently:{' '}
                         {totalEquity.toFixed(1)}%
@@ -455,7 +455,7 @@ export function BusinessSetupModal({
 
                 {/* Error Message */}
                 {error && (
-                  <div className="bg-destructive/10 border-destructive/20 mb-4 rounded-lg border p-3">
+                  <div className="bg-destructive/10 border-destructive/20 mb-4 rounded-2xl border p-3">
                     <p className="text-destructive text-sm font-medium">
                       {error}
                     </p>
@@ -474,7 +474,7 @@ export function BusinessSetupModal({
                   <div className="flex items-center gap-3">
                     <button
                       onClick={onClose}
-                      className="border-border hover:bg-muted/20 rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
+                      className="border-border hover:bg-muted/20 rounded-2xl border px-4 py-2 text-sm font-medium transition-colors"
                     >
                       Cancel
                     </button>
@@ -489,7 +489,7 @@ export function BusinessSetupModal({
                           Math.abs(totalEquity - 100) > 0.01) ||
                         (registerToDifferentAddress && !customAddress.trim())
                       }
-                      className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-6 py-2 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl px-6 py-2 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {commitmentCountdown !== null
                         ? `Waiting... ${commitmentCountdown}s`
