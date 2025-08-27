@@ -75,11 +75,11 @@ export function CongratulationsModal({
           {/* Content */}
           <div className="relative px-4 pb-4">
             {/* ENS Name Card */}
-            <div className="bg-primary/10 border-primary/20 mb-4 rounded-lg border p-4">
+            <div className="bg-white/10 border-white/20 mb-4 rounded-2xl border p-4">
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="from-primary to-accent flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br">
-                    <span className="text-primary-foreground text-lg font-bold">
+                  <div className="from-primary to-secondary flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br">
+                    <span className="text-white text-lg font-bold">
                       {ensName.charAt(0).toUpperCase()}
                     </span>
                   </div>
@@ -94,7 +94,7 @@ export function CongratulationsModal({
                 </div>
                 <button
                   onClick={() => copyToClipboard(`${ensName}.eth`, 'name')}
-                  className="text-muted-foreground hover:text-foreground rounded-lg p-2 transition-colors"
+                  className="text-muted-foreground hover:text-foreground rounded-2xl p-2 transition-colors"
                   title="Copy ENS name"
                 >
                   {copiedName ? (
@@ -110,7 +110,7 @@ export function CongratulationsModal({
                   href={`${ensAppBase}/${ensName}.eth`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium transition-colors hover:bg-white/20"
+                  className="flex items-center justify-center gap-1 rounded-2xl bg-white/10 px-3 py-2 text-xs font-medium transition-colors hover:bg-white/20"
                 >
                   ENS App <ExternalLink className="h-3 w-3" />
                 </a>
@@ -118,7 +118,7 @@ export function CongratulationsModal({
                   href={`${etherscanBase}/enslookup-search?search=${ensName}.eth`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium transition-colors hover:bg-white/20"
+                  className="flex items-center justify-center gap-1 rounded-2xl bg-white/10 px-3 py-2 text-xs font-medium transition-colors hover:bg-white/20"
                 >
                   {isDevelopment ? 'Sepolia ' : ''}Etherscan <ExternalLink className="h-3 w-3" />
                 </a>
@@ -126,19 +126,19 @@ export function CongratulationsModal({
             </div>
 
             {/* Smart Wallet Card */}
-            <div className="bg-muted/20 mb-4 rounded-lg p-4">
+            <div className="bg-white/10 mb-4 rounded-2xl p-4">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h4 className="text-foreground text-sm font-semibold">
+                  <h4 className="text-foreground text-lg font-semibold">
                     Business Wallet Address
                   </h4>
-                  <p className="text-muted-foreground text-xs">
+                  <p className="text-muted-foreground text-md">
                     Your smart contract wallet
                   </p>
                 </div>
                 <button
                   onClick={() => copyToClipboard(smartWalletAddress, 'address')}
-                  className="text-muted-foreground hover:text-foreground rounded-lg p-2 transition-colors"
+                  className="text-muted-foreground hover:text-foreground rounded-2xl p-2 transition-colors"
                   title="Copy wallet address"
                 >
                   {copiedAddress ? (
@@ -149,8 +149,8 @@ export function CongratulationsModal({
                 </button>
               </div>
 
-              <div className="bg-background/50 mb-3 rounded-lg p-2">
-                <code className="font-mono text-xs break-all">
+              <div className="bg-white/80 text-background mb-3 rounded-2xl p-2 text-center">
+                <code className="text-md break-all">
                   {smartWalletAddress}
                 </code>
               </div>
@@ -159,7 +159,7 @@ export function CongratulationsModal({
                 href={`${etherscanBase}/address/${smartWalletAddress}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-muted hover:bg-muted/80 flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors"
+                className="bg-background hover:bg-primary hover:text-white flex items-center justify-center gap-1 rounded-2xl px-3 py-2 text-md font-medium transition-colors"
               >
                 View on {isDevelopment ? 'Sepolia ' : ''}Etherscan <ExternalLink className="h-3 w-3" />
               </a>
@@ -167,7 +167,7 @@ export function CongratulationsModal({
 
             {/* Transaction Links */}
             {(commitTxHash || registrationTxHash) && (
-              <div className="bg-muted/10 mb-4 rounded-lg p-4">
+              <div className="bg-muted/10 mb-4 rounded-2xl p-4">
                 <h4 className="text-foreground mb-3 text-sm font-semibold">
                   Transaction History
                 </h4>
@@ -177,7 +177,7 @@ export function CongratulationsModal({
                       href={`${etherscanBase}/tx/${commitTxHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="bg-background/50 hover:bg-background/70 flex items-center justify-between rounded-lg px-3 py-2 transition-colors"
+                      className="bg-background/50 hover:bg-background/70 flex items-center justify-between rounded-2xl px-3 py-2 transition-colors"
                     >
                       <div>
                         <p className="text-xs font-medium">
@@ -195,7 +195,7 @@ export function CongratulationsModal({
                       href={`${etherscanBase}/tx/${registrationTxHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="bg-background/50 hover:bg-background/70 flex items-center justify-between rounded-lg px-3 py-2 transition-colors"
+                      className="bg-background/50 hover:bg-background/70 flex items-center justify-between rounded-2xl px-3 py-2 transition-colors"
                     >
                       <div>
                         <p className="text-xs font-medium">
@@ -217,14 +217,8 @@ export function CongratulationsModal({
             {/* Action Buttons */}
             <div className="flex flex-col gap-2 sm:flex-row">
               <button
-                onClick={onClose}
-                className="bg-muted hover:bg-muted/80 text-foreground flex-1 rounded-lg px-4 py-3 text-sm font-medium transition-colors"
-              >
-                Close
-              </button>
-              <button
                 onClick={onContinue}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-colors"
+                className="cursor-pointer bg-primary/70 hover:bg-primary hover:text-white text-primary-foreground flex flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-lg font-medium transition-colors"
               >
                 Continue to Dashboard <ArrowRight className="h-4 w-4" />
               </button>
