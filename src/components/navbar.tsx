@@ -21,13 +21,13 @@ export function Navbar() {
           <div className="hidden items-center space-x-8 md:flex">
             {authenticated ? (
               <div className="flex items-center space-x-4">
-                <span className="text-muted-foreground text-sm">
+                <span className="text-muted-foreground text-xl">
                   {user?.email?.address ||
                     user?.wallet?.address?.slice(0, 6) + '...'}
                 </span>
                 <Link
                   href="/dashboard"
-                  className="bg-primary text-background hover:text-white hover:bg-primary/90 inline-block rounded-2xl px-4 py-2 font-medium transition-all duration-200"
+                  className="bg-primary text-background hover:text-white hover:bg-primary/90 text-2xl inline-block rounded-2xl px-4 py-2 font-medium transition-all duration-200"
                 >
                   Dashboard
                 </Link>

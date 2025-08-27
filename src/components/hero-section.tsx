@@ -7,7 +7,7 @@ import { useDebounce } from 'usehooks-ts'
 import { normalize } from 'viem/ens'
 import { useEnsAddress } from 'wagmi'
 
-import { AnimatedSkyscraper } from '@/components/AnimatedSkyscraper'
+import { AnimatedRocket } from '@/components/AnimatedRocket'
 import { BusinessSetupModal } from '@/components/business-setup-modal'
 import { isValidEnsName } from '@/lib/ens'
 
@@ -75,8 +75,8 @@ export function HeroSection() {
 
   return (
     <section className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden">
-      {/* Animated skyscraper background */}
-      <AnimatedSkyscraper name={ensName || 'Your company'} />
+      {/* Animated rocket background */}
+      <AnimatedRocket name={ensName || 'Your company'} />
       <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="text-center lg:max-w-3xl lg:text-left">
           {/* Main Headline */}
@@ -230,7 +230,6 @@ export function HeroSection() {
             <div className="flex items-center gap-6">
               <div className="text-lg font-semibold">ENS</div>
               <div className="text-lg font-semibold">Privy</div>
-              <div className="text-lg font-semibold">Uniswap</div>
             </div>
           </div>
         </div>
