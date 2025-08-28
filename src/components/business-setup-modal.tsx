@@ -271,9 +271,9 @@ export function BusinessSetupModal({
                           placeholder="Enter ETH address (0x...)"
                           value={customAddress}
                           onChange={(e) => setCustomAddress(e.target.value)}
-                          className="bg-background border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-2xl border px-4 py-3 text-sm transition-all duration-200 focus:ring-2"
+                          className="bg-background border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-2xl border px-4 py-3 text-lg transition-all duration-200 focus:ring-2"
                         />
-                        <p className="text-muted-foreground mt-2 text-xs">
+                        <p className="text-muted-foreground mt-2 text-md">
                           The ENS name will be registered to this address
                           instead of your wallet
                         </p>
