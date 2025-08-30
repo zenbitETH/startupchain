@@ -57,7 +57,7 @@ export function CountdownModal({
             </h2>
 
             {/* Description */}
-            <p className="text-muted-foreground mb-6 text-sm">
+            <p className="text-muted-foreground mb-6 text-md">
               {displayCountdown > 0
                 ? 'Please wait for the commitment period to complete before ENS registration can proceed'
                 : 'The commitment period is complete. Registration will begin automatically.'}
@@ -74,7 +74,7 @@ export function CountdownModal({
 
             {/* Info */}
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/20">
-              <p className="text-xs text-amber-800 dark:text-amber-200">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
                 ⚡ This is required by ENS protocol to prevent front-running
                 attacks. You can safely close this window - the process will
                 continue in the background.
