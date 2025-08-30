@@ -7,7 +7,7 @@ import { useDebounce } from 'usehooks-ts'
 import { normalize } from 'viem/ens'
 import { useEnsAddress } from 'wagmi'
 
-import { AnimatedSkyscraper } from '@/components/AnimatedSkyscraper'
+import { AnimatedRocket } from '@/components/AnimatedRocket'
 import { BusinessSetupModal } from '@/components/business-setup-modal'
 import { isValidEnsName } from '@/lib/ens'
 
@@ -75,9 +75,8 @@ export function HeroSection() {
 
   return (
     <section className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden">
-      {/* Animated skyscraper background */}
-      <AnimatedSkyscraper name={ensName || 'Your company'} />
-
+      {/* Animated rocket background */}
+      <AnimatedRocket name={ensName || 'Your company'} />
       <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="text-center lg:max-w-3xl lg:text-left">
           {/* Main Headline */}
@@ -90,12 +89,12 @@ export function HeroSection() {
           </h1>
           {/* ENS Name Checker */}
           <div className="mx-auto mb-16 max-w-2xl lg:mx-0">
-            <div className="bg-gray-800/50 border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
+            <div className="bg-card border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
               {/* Title that disappears on focus */}
               <div
-                className={`absolute top-6 right-6 left-6 transition-all duration-300 ${isFocused ? '-translate-y-2 opacity-0' : 'translate-y-0 opacity-100'}`}
+                className={`absolute top-4 right-6 left-6 transition-all duration-300 ${isFocused ? '-translate-y-2 opacity-0' : 'translate-y-0 opacity-100'}`}
               >
-                <h3 className="text-foreground text-center text-xl font-semibold">
+                <h3 className="text-foreground text-center text-3xl font-semibold">
                   <span className="from-primary to-secondary bg-gradient-to-r bg-clip-text text-transparent">
                     Enter your business name
                   </span>
@@ -184,7 +183,9 @@ export function HeroSection() {
                           <button
                             onClick={handleProceed}
                             disabled={isAuthenticating}
-                            className="bg-primary cursor-pointer text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="bg-primary cursor-pointer text-primary-foreground hover:bg-primary/90 flex 
+                            items-center gap-2 rounded-2xl px-6 py-3 text-sm font-semibold transition-all duration-200 
+                            disabled:cursor-not-allowed disabled:opacity-50 hover:text-white"
                           >
                             {isAuthenticating ? (
                               <>
@@ -229,11 +230,11 @@ export function HeroSection() {
             <div className="flex items-center gap-6">
               <div className="text-lg font-semibold">ENS</div>
               <div className="text-lg font-semibold">Privy</div>
-              <div className="text-lg font-semibold">Uniswap</div>
             </div>
           </div>
         </div>
       </div>
+
 
       {/* Business Setup Modal */}
       <BusinessSetupModal
