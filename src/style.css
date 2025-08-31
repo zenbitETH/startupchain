@@ -306,3 +306,91 @@
     box-shadow: 0 0 20px rgba(var(--accent), 0.3);
   }
 }
+
+@layer utilities {
+  /* AnimatedRocket Component Animation Utilities */
+  
+  /* Animation classes that can be used directly in component className */
+  .animate-rocket-heat {
+    animation: rocket-heat 2s ease-in-out infinite;
+  }
+  
+  .animate-heat-distortion {
+    animation: heat-distortion 3s ease-in-out infinite;
+  }
+  
+  .animate-engine-pulse {
+    animation: engine-pulse 1.5s ease-in-out infinite;
+  }
+  
+  .animate-speed-line {
+    animation: speed-line-move 2s linear infinite;
+  }
+
+  /* Keyframe definitions */
+  @keyframes rocket-heat {
+    0%, 100% {
+      filter: brightness(1) saturate(1);
+    }
+    50% {
+      filter: brightness(1.2) saturate(1.3);
+    }
+  }
+  
+  @keyframes heat-distortion {
+    0%, 100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(1.02);
+    }
+  }
+  
+  @keyframes engine-pulse {
+    0%, 100% {
+      opacity: 0.6;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.9;
+      transform: scale(1.1);
+    }
+  }
+  
+  @keyframes speed-line-move {
+    0% {
+      opacity: 0;
+      transform: translate(0, 0);
+    }
+    20% {
+      opacity: 1;
+    }
+    80% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-300px, 200px);
+    }
+  }
+
+  /* GPU-accelerated transforms for better performance */
+  .gpu-accelerated {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+  }
+
+  /* Respect reduced motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    .motion-reduce\:animate-none {
+      animation: none !important;
+    }
+    
+    .motion-reduce\:static {
+      will-change: auto !important;
+      transform: none !important;
+    }
+  }
+}
