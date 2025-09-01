@@ -35,7 +35,7 @@ export const AnimatedRocket: React.FC<AnimatedRocketProps> = ({
 
   return (
     <div
-      className={`pointer-events-none fixed inset-0 z-0 transition-all duration-300 ${className || ''} `}
+      className={`gpu-accelerated pointer-events-none fixed inset-0 z-0 transition-all duration-300 ${className || ''} `}
       aria-hidden="true"
       style={{
         filter: `blur(${scrollBlur}px)`,
@@ -43,7 +43,7 @@ export const AnimatedRocket: React.FC<AnimatedRocketProps> = ({
       }}
     >
       <svg
-        className={`h-full w-full transition-opacity duration-300 ${showEffects ? 'opacity-100' : 'opacity-90'} ${prefersReducedMotion ? 'motion-reduce:transition-none' : ''} border-2 border-red-500`}
+        className={`h-full w-full transition-opacity duration-300 ${showEffects ? 'opacity-100' : 'opacity-90'} ${prefersReducedMotion ? 'motion-reduce:transition-none' : ''}`}
         viewBox="0 0 1200 800"
         preserveAspectRatio="xMidYMid meet"
         role="img"
