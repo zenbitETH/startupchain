@@ -383,7 +383,10 @@
   @keyframes speed-line-move {
     0% {
       opacity: 0;
-      transform: translate(200px, -200px); /* start much further from top-right */
+      transform: translate(
+        200px,
+        -200px
+      ); /* start much further from top-right */
     }
     5% {
       opacity: 0.9;
@@ -395,26 +398,29 @@
     }
     100% {
       opacity: 0;
-      transform: translate(-200px, 200px); /* exit much further to bottom-left */
+      transform: translate(
+        -200px,
+        200px
+      ); /* exit much further to bottom-left */
     }
   }
 
   /* Unified space travel animation for rocket and stars */
   @keyframes space-travel {
     0% {
-      transform: translate(500px, 0) scale(0.8);
+      transform: translate(0px, 0) scale(0.8);
     }
     25% {
-      transform: translate(510px, -5px) scale(0.8);
+      transform: translate(10px, -5px) scale(0.8);
     }
     50% {
-      transform: translate(505px, 3px) scale(0.8);
+      transform: translate(5px, 3px) scale(0.8);
     }
     75% {
-      transform: translate(495px, -2px) scale(0.8);
+      transform: translate(-5px, -2px) scale(0.8);
     }
     100% {
-      transform: translate(500px, 0) scale(0.8);
+      transform: translate(0px, 0) scale(0.8);
     }
   }
 
