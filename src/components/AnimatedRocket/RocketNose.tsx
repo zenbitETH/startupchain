@@ -9,7 +9,6 @@ import { ROCKET_NOSE_PATH } from './constants';
 export const RocketNose: React.FC<RocketBodyProps> = ({
   showEffects,
   prefersReducedMotion,
-  screenSize,
 }) => {
   return (
     <path
