@@ -77,7 +77,7 @@ export function HeroSection() {
     <section className="relative flex min-h-[calc(100vh-4rem)] items-end overflow-hidden lg:items-center">
       {/* Animated rocket background */}
       <AnimatedRocket name={ensName || 'Your company'} />
-      <div className="relative mx-auto w-full max-w-7xl px-4 py-12 pb-32 sm:px-6 sm:pb-36 md:pb-40 lg:px-8 lg:py-20">
+      <div className="relative mx-auto w-full max-w-7xl px-4 py-12 pb-32 sm:px-6 sm:pb-36 md:pb-15 lg:px-8 lg:py-20">
         <div className="text-center lg:max-w-3xl lg:text-left">
           {/* Main Headline */}
           <h1 className="text-foreground mb-6 text-4xl font-semibold tracking-tight md:text-6xl lg:text-7xl">
