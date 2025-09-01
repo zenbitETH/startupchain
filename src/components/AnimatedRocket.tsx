@@ -27,7 +27,7 @@ export const AnimatedRocket: React.FC<AnimatedRocketProps> = ({
   // Use composed hooks for cleaner logic
   const { prefersReducedMotion } = useReducedMotion()
   const { scrollBlur, scrollOpacity } = useScrollEffect(scrollConfig)
-  const { screenSize } = useResponsive()
+  const { windowDimensions } = useResponsive()
   const { showEffects } = useAnimationLifecycle(
     autoStart,
     animationConfig?.initialDelay
@@ -56,11 +56,7 @@ export const AnimatedRocket: React.FC<AnimatedRocketProps> = ({
 
         {/* Unified Animation Group - Rocket and Speed Lines move together */}
         <g
-          className={`unified-animation-group ${showEffects && !prefersReducedMotion ? 'animate-space-travel' : ''} ${prefersReducedMotion ? 'motion-reduce:animate-none' : ''} `}
-          style={{
-            transform: 'translate(200px, 0) scale(0.8)',
-            transformOrigin: 'center'
-          }}
+          className={`animate-space-travel origin-center translate-x-50 -translate-y-180 scale-[1.2] sm:-translate-y-90 sm:scale-[0.8] md:translate-x-30 md:-translate-y-70 md:scale-[0.7] lg:translate-x-[500px] lg:translate-y-0 lg:scale-[0.8]`}
         >
           {/* Speed Lines Effect - positioned relative to rocket */}
           <SpeedLines
