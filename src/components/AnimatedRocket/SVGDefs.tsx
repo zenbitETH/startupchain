@@ -1,6 +1,7 @@
-import React from 'react';
-import type { SVGDefsProps } from './types';
-import { GRADIENT_DEFINITIONS, FILTER_DEFINITIONS } from './constants';
+import React from 'react'
+
+import { FILTER_DEFINITIONS, GRADIENT_DEFINITIONS } from './constants'
+import type { SVGDefsProps } from './types'
 
 /**
  * SVG definitions component containing all gradients and filters
@@ -22,7 +23,6 @@ export const SVGDefs: React.FC<SVGDefsProps> = ({ includeFilters = true }) => {
             key={index}
             offset={stop.offset}
             stopColor={stop.stopColor}
-            {...(stop.stopOpacity && { stopOpacity: stop.stopOpacity })}
           />
         ))}
       </linearGradient>
@@ -39,7 +39,6 @@ export const SVGDefs: React.FC<SVGDefsProps> = ({ includeFilters = true }) => {
             key={index}
             offset={stop.offset}
             stopColor={stop.stopColor}
-            {...(stop.stopOpacity && { stopOpacity: stop.stopOpacity })}
           />
         ))}
       </linearGradient>
@@ -56,7 +55,7 @@ export const SVGDefs: React.FC<SVGDefsProps> = ({ includeFilters = true }) => {
             key={index}
             offset={stop.offset}
             stopColor={stop.stopColor}
-            {...(stop.stopOpacity && { stopOpacity: stop.stopOpacity })}
+            stopOpacity={stop.stopOpacity}
           />
         ))}
       </linearGradient>
@@ -72,7 +71,7 @@ export const SVGDefs: React.FC<SVGDefsProps> = ({ includeFilters = true }) => {
             key={index}
             offset={stop.offset}
             stopColor={stop.stopColor}
-            {...(stop.stopOpacity && { stopOpacity: stop.stopOpacity })}
+            stopOpacity={stop.stopOpacity}
           />
         ))}
       </radialGradient>
@@ -110,5 +109,5 @@ export const SVGDefs: React.FC<SVGDefsProps> = ({ includeFilters = true }) => {
         </>
       )}
     </defs>
-  );
-};
+  )
+}
