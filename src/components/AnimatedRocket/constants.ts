@@ -46,11 +46,11 @@ export const ANIMATION_CONFIG = {
   
   // Rocket positioning and scaling
   ROCKET: {
-    TRANSFORM: "translate(800, 200) scale(0.8)",
+    TRANSFORM: "translate(1000, 200) scale(0.8)",
     POSITION: {
-      MOBILE: "translate(300, 150) scale(0.4)",
-      TABLET: "translate(500, 175) scale(0.6)",
-      DESKTOP: "translate(800, 200) scale(0.8)",
+      MOBILE: "translate(400, 150) scale(0.4)",
+      TABLET: "translate(600, 175) scale(0.6)",
+      DESKTOP: "translate(1000, 200) scale(0.8)",
     },
   },
 } as const;
