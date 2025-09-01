@@ -20,47 +20,49 @@ export function useScrollEffect(config: Partial<ScrollEffectConfig> = {}): UseSc
   const [isScrolling, setIsScrolling] = useState<boolean>(false);
   
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const lastScrollY = useRef<number>(0);
   
-  const effectConfig = {
-    effectStart: config.effectStart ?? ANIMATION_CONFIG.SCROLL.EFFECT_START,
-    effectComplete: config.effectComplete ?? ANIMATION_CONFIG.SCROLL.EFFECT_COMPLETE,
-    maxBlur: config.maxBlur ?? ANIMATION_CONFIG.SCROLL.MAX_BLUR,
-    minOpacity: config.minOpacity ?? ANIMATION_CONFIG.SCROLL.MIN_OPACITY,
-    throttleDelay: config.throttleDelay ?? ANIMATION_CONFIG.THROTTLE_DELAY,
-  };
+  // Store config in refs to avoid re-creating the effect
+  const effectStart = config.effectStart ?? ANIMATION_CONFIG.SCROLL.EFFECT_START;
+  const effectComplete = config.effectComplete ?? ANIMATION_CONFIG.SCROLL.EFFECT_COMPLETE;
+  const maxBlur = config.maxBlur ?? ANIMATION_CONFIG.SCROLL.MAX_BLUR;
+  const minOpacity = config.minOpacity ?? ANIMATION_CONFIG.SCROLL.MIN_OPACITY;
 
-  const updateScrollEffects = useCallback((scrollY: number) => {
-    const { effectStart, effectComplete, maxBlur, minOpacity } = effectConfig;
+  useEffect(() => {
+    let rafId: number | null = null;
+    let lastScrollY = 0;
     
-    if (scrollY <= effectStart) {
-      setScrollBlur(0);
-      setScrollOpacity(1);
-    } else if (scrollY >= effectComplete) {
-      setScrollBlur(maxBlur);
-      setScrollOpacity(minOpacity);
-    } else {
-      const progress = (scrollY - effectStart) / (effectComplete - effectStart);
-      
-      // Use easing function for smoother transitions
-      const easedProgress = progress * progress * (3.0 - 2.0 * progress); // smoothstep
-      
-      setScrollBlur(easedProgress * maxBlur);
-      setScrollOpacity(1 - easedProgress * (1 - minOpacity));
-    }
-  }, [effectConfig]);
-
-  const handleScroll = useCallback(() => {
-    if (rafRef.current) return; // Already scheduled
+    const updateScrollEffects = (scrollY: number) => {
+      if (scrollY <= effectStart) {
+        setScrollBlur(0);
+        setScrollOpacity(1);
+      } else if (scrollY >= effectComplete) {
+        setScrollBlur(maxBlur);
+        setScrollOpacity(minOpacity);
+      } else {
+        const progress = (scrollY - effectStart) / (effectComplete - effectStart);
+        
+        // Use easing function for smoother transitions
+        const easedProgress = progress * progress * (3.0 - 2.0 * progress); // smoothstep
+        
+        const newBlur = easedProgress * maxBlur;
+        const newOpacity = 1 - easedProgress * (1 - minOpacity);
+        
+        setScrollBlur(newBlur);
+        setScrollOpacity(newOpacity);
+      }
+    };
     
-    rafRef.current = requestAnimationFrame(() => {
-      const scrollY = window.scrollY;
+    const handleScroll = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
       
-      // Only update if scroll position changed significantly
-      if (Math.abs(scrollY - lastScrollY.current) > 1) {
+      rafId = requestAnimationFrame(() => {
+        const scrollY = window.scrollY;
+        
+        // Always update, remove the threshold check for now
         updateScrollEffects(scrollY);
-        lastScrollY.current = scrollY;
+        lastScrollY = scrollY;
         
         setIsScrolling(true);
         
@@ -73,15 +75,13 @@ export function useScrollEffect(config: Partial<ScrollEffectConfig> = {}): UseSc
         scrollTimeoutRef.current = setTimeout(() => {
           setIsScrolling(false);
         }, 150);
-      }
-      
-      rafRef.current = null;
-    });
-  }, [updateScrollEffects]);
-
-  useEffect(() => {
+        
+        rafId = null;
+      });
+    };
+    
     // Set initial state
-    handleScroll();
+    updateScrollEffects(window.scrollY);
     
     // Use passive listener for better performance
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -93,11 +93,11 @@ export function useScrollEffect(config: Partial<ScrollEffectConfig> = {}): UseSc
         clearTimeout(scrollTimeoutRef.current);
       }
       
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
       }
     };
-  }, [handleScroll]);
+  }, [effectStart, effectComplete, maxBlur, minOpacity]);
 
   return { scrollBlur, scrollOpacity, isScrolling };
 }
