@@ -74,10 +74,10 @@ export function HeroSection() {
   }
 
   return (
-    <section className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden">
+    <section className="relative flex min-h-[calc(100vh-4rem)] items-end overflow-hidden lg:items-center">
       {/* Animated rocket background */}
       <AnimatedRocket name={ensName || 'Your company'} />
-      <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+      <div className="relative mx-auto w-full max-w-7xl px-4 py-12 pb-32 sm:px-6 sm:pb-36 md:pb-40 lg:px-8 lg:py-20">
         <div className="text-center lg:max-w-3xl lg:text-left">
           {/* Main Headline */}
           <h1 className="text-foreground mb-6 text-4xl font-semibold tracking-tight md:text-6xl lg:text-7xl">
@@ -94,10 +94,8 @@ export function HeroSection() {
               <div
                 className={`absolute top-4 right-6 left-6 transition-all duration-300 ${isFocused ? '-translate-y-2 opacity-0' : 'translate-y-0 opacity-100'}`}
               >
-                <h3 className="text-foreground text-center text-3xl font-semibold">
-                  <span className="from-primary to-secondary bg-gradient-to-r bg-clip-text text-transparent">
-                    Enter your business name
-                  </span>
+                <h3 className="text-foreground text-center text-xl font-medium">
+                  Enter your business name
                 </h3>
               </div>
 
@@ -116,7 +114,7 @@ export function HeroSection() {
                   }
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => !ensName && setIsFocused(false)}
-                  className="bg-white text-primary border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-2xl border px-6 py-4 pr-16 text-lg transition-all duration-200 focus:ring-2"
+                  className="text-primary border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-2xl border bg-white px-6 py-4 pr-16 text-lg transition-all duration-200 focus:ring-2"
                 />
                 <div className="text-muted-foreground absolute top-1/2 right-4 -translate-y-1/2 font-medium">
                   .eth
@@ -167,7 +165,7 @@ export function HeroSection() {
                         </div>
                       </div>
                     ) : isAvailable ? (
-                      <div className="bg-primary/10 border-primary/20 rounded-2xl border p-4 ">
+                      <div className="bg-primary/10 border-primary/20 rounded-2xl border p-4">
                         <div className="flex items-center justify-between">
                           <div className="text-primary flex items-center gap-3">
                             <CheckCircle className="h-5 w-5" />
@@ -183,9 +181,7 @@ export function HeroSection() {
                           <button
                             onClick={handleProceed}
                             disabled={isAuthenticating}
-                            className="bg-primary cursor-pointer text-primary-foreground hover:bg-primary/90 flex 
-                            items-center gap-2 rounded-2xl px-6 py-3 text-sm font-semibold transition-all duration-200 
-                            disabled:cursor-not-allowed disabled:opacity-50 hover:text-white"
+                            className="bg-primary text-primary-foreground hover:bg-primary/90 flex cursor-pointer items-center gap-2 rounded-2xl px-6 py-3 text-sm font-semibold transition-all duration-200 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {isAuthenticating ? (
                               <>
@@ -234,7 +230,6 @@ export function HeroSection() {
           </div>
         </div>
       </div>
-
 
       {/* Business Setup Modal */}
       <BusinessSetupModal
