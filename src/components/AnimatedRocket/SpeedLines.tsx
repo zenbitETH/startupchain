@@ -10,20 +10,48 @@ export const SpeedLines: React.FC<SpeedLinesProps> = ({
   prefersReducedMotion,
   config,
 }) => {
-  const { count, spacing, verticalOffset, strokeWidth, animationDelayStep } = config;
+  const { count, animationDelayStep } = config;
 
-  // Generate speed lines array
-  const speedLines = Array.from({ length: count }, (_, i) => ({
-    key: `speed-${i}`,
-    x1: 1000 + i * spacing,
-    y1: 150 + i * verticalOffset,
-    x2: 900 + i * spacing,
-    y2: 250 + i * verticalOffset,
-    delay: i * animationDelayStep,
-  }));
+  // Generate speed lines that flow from 1 o'clock to 7 o'clock direction
+  const speedLines = Array.from({ length: count }, (_, i) => {
+    // Multiple random seeds for more variation
+    const seed1 = (i * 137.5) % 100;
+    const seed2 = (i * 213.7) % 100;
+    const seed3 = (i * 89.3) % 100;
+
+    // Spread lines across a much wider area around rocket
+    const baseX = 200 + (seed1 * 8) % 800; // Much wider spread
+    const baseY = 100 + (seed2 * 6) % 500; // Higher spread
+    
+    // More varied line lengths for depth
+    const lineLength = 20 + (seed1 * 1.2) % 80; // Bigger variation
+    
+    // Lines pointing toward 7-8 o'clock direction
+    const deltaX = -lineLength * 0.707;
+    const deltaY = lineLength * 0.707;
+
+    // Much more random delays and faster overall speed
+    const randomDelay = (seed3 * 12) % 600; // More stagger
+    const speedMultiplier = 0.6 + (seed2 % 40) / 100; // Varying speeds
+
+    // More varied opacity for better depth
+    const baseOpacity = 0.15 + (seed1 % 70) / 100;
+
+    return {
+      key: `speed-line-${i}`,
+      x1: baseX,
+      y1: baseY,
+      x2: baseX + deltaX,
+      y2: baseY + deltaY,
+      delay: randomDelay + (i * animationDelayStep * 0.05), // Less uniform timing
+      opacity: baseOpacity,
+      width: 0.3 + (seed2 % 6) * 0.4, // More width variation
+      speed: speedMultiplier, // Individual speed control
+    };
+  });
 
   return (
-    <g 
+    <g
       className="speed-lines"
       role="presentation"
       aria-hidden="true"
@@ -36,7 +64,8 @@ export const SpeedLines: React.FC<SpeedLinesProps> = ({
           x2={line.x2}
           y2={line.y2}
           stroke="url(#speedLines)"
-          strokeWidth={strokeWidth}
+          strokeWidth={line.width}
+          strokeLinecap="round"
           className={`
             speed-line
             transition-opacity duration-300
@@ -45,7 +74,8 @@ export const SpeedLines: React.FC<SpeedLinesProps> = ({
           `}
           style={{
             animationDelay: `${line.delay}ms`,
-            opacity: showEffects && prefersReducedMotion ? 0.5 : 0,
+            animationDuration: `${800 * line.speed}ms`, // Individual speed control
+            opacity: showEffects ? (prefersReducedMotion ? line.opacity * 0.5 : line.opacity) : 0,
           }}
         />
       ))}
