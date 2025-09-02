@@ -35,11 +35,12 @@ export const AnimatedRocket: React.FC<AnimatedRocketProps> = ({
 
   return (
     <div
-      className={`gpu-accelerated pointer-events-none fixed inset-0 z-0 transition-all duration-300 ${className || ''} `}
+      className={`gpu-accelerated pointer-events-none fixed top-10 right-0 bottom-0 left-0 z-0 transition-all duration-300 ${className || ''} `}
       aria-hidden="true"
       style={{
         filter: `blur(${scrollBlur}px)`,
         opacity: scrollOpacity,
+        height: 'calc(100vh - 4rem)',
       }}
     >
       <svg
