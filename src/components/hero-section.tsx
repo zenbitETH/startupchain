@@ -45,9 +45,7 @@ export function HeroSection() {
   } = useEnsAddress({
     name: normalizedName,
     chainId: 1, // mainnet
-    query: {
-      enabled: !!normalizedName,
-    },
+    query: { enabled: !!normalizedName },
   })
 
   // Determine availability based on whether the name resolves to an address
@@ -88,7 +86,7 @@ export function HeroSection() {
             </span>
           </h1>
           {/* ENS Name Checker */}
-          <div className="mx-auto mb-16 max-w-2xl lg:mx-0">
+          <div className="mx-auto mb-13 max-w-2xl md:mb-15 lg:mx-0">
             <div className="bg-card border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
               {/* Title that disappears on focus */}
               <div
