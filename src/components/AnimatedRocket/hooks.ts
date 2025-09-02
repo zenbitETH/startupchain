@@ -21,11 +21,26 @@ export function useScrollEffect(config: Partial<ScrollEffectConfig> = {}): UseSc
   
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Detect mobile for different scroll thresholds
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= RESPONSIVE_CONFIG.MOBILE_MAX);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  // Use mobile thresholds if on mobile, otherwise use desktop
+  const scrollConfig = isMobile ? ANIMATION_CONFIG.SCROLL.MOBILE : ANIMATION_CONFIG.SCROLL;
+  
   // Store config in refs to avoid re-creating the effect
-  const effectStart = config.effectStart ?? ANIMATION_CONFIG.SCROLL.EFFECT_START;
-  const effectComplete = config.effectComplete ?? ANIMATION_CONFIG.SCROLL.EFFECT_COMPLETE;
-  const maxBlur = config.maxBlur ?? ANIMATION_CONFIG.SCROLL.MAX_BLUR;
-  const minOpacity = config.minOpacity ?? ANIMATION_CONFIG.SCROLL.MIN_OPACITY;
+  const effectStart = config.effectStart ?? scrollConfig.EFFECT_START;
+  const effectComplete = config.effectComplete ?? scrollConfig.EFFECT_COMPLETE;
+  const maxBlur = config.maxBlur ?? scrollConfig.MAX_BLUR;
+  const minOpacity = config.minOpacity ?? scrollConfig.MIN_OPACITY;
 
   useEffect(() => {
     let rafId: number | null = null;
