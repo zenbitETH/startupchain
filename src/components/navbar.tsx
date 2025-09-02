@@ -1,29 +1,24 @@
 'use client'
 
 import { usePrivy } from '@privy-io/react-auth'
-import Image from 'next/image'
 import Link from 'next/link'
 
+import { ChainLogo } from './ui/chain-logo'
 import { LoadingSpinner } from './ui/loading-spinner'
 
 export function Navbar() {
   const { login, authenticated, user, ready } = usePrivy()
 
   return (
-    <nav className="relative z-50 h-16 py-4 backdrop-blur-xl">
+    <nav className="sticky top-0 z-50 h-16 w-full py-4 backdrop-blur-sm">
       <div className="mx-auto h-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex h-full items-center justify-between">
           <Link
             href="/"
-            className="hover:text-primary flex items-center space-x-2 py-5"
+            className="hover:text-primary group flex items-center space-x-2 py-5 text-white"
           >
-            <Image
-              src="/logow.svg"
-              width={35}
-              height={35}
-              alt="StartUpChain Logo"
-            />
-            <span className="text-foreground hover:text-primary text-3xl font-normal tracking-widest">
+            <ChainLogo className="text-foreground transition-all duration-200" />
+            <span className="text-foreground group-hover:text-primary text-3xl font-normal tracking-widest">
               StartUpChain
             </span>
           </Link>
@@ -31,20 +26,20 @@ export function Navbar() {
           {/* Mobile version */}
           <div className="flex items-center md:hidden">
             {!ready ? (
-              <div className="bg-primary/50 flex items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium w-16">
+              <div className="bg-primary/50 flex w-16 items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium">
                 <LoadingSpinner size="sm" className="text-background" />
               </div>
             ) : authenticated ? (
               <Link
                 href="/dashboard"
-                className="bg-primary text-background hover:bg-primary/90 inline-block rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-200 hover:text-white"
+                className="bg-primary text-background inline-block rounded-lg px-3 py-1 text-sm font-medium transition-all duration-200 hover:bg-gradient-to-r hover:from-[#46B5D1] hover:to-[#CE6449] hover:text-white"
               >
                 Dashboard
               </Link>
             ) : (
               <button
                 onClick={login}
-                className="text-background bg-primary hover:bg-primary/90 cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-200 hover:text-white"
+                className="text-background bg-primary cursor-pointer rounded-lg px-3 py-1 text-sm font-medium transition-all duration-200 hover:bg-gradient-to-r hover:from-[#46B5D1] hover:to-[#CE6449] hover:text-white"
               >
                 Login
               </button>
@@ -54,7 +49,7 @@ export function Navbar() {
           {/* Desktop version */}
           <div className="hidden items-center space-x-8 md:flex">
             {!ready ? (
-              <div className="bg-primary/50 flex items-center justify-center rounded-2xl px-4 py-2 text-2xl font-medium w-24">
+              <div className="bg-primary/50 flex w-24 items-center justify-center rounded-2xl px-4 py-2 text-2xl font-medium">
                 <LoadingSpinner size="lg" className="text-background" />
               </div>
             ) : authenticated ? (
@@ -65,7 +60,7 @@ export function Navbar() {
                 </span>
                 <Link
                   href="/dashboard"
-                  className="bg-primary text-background hover:bg-primary/90 inline-block rounded-2xl px-4 py-2 text-2xl font-medium transition-all duration-200 hover:text-white"
+                  className="bg-primary text-background inline-block rounded-2xl px-4 py-1 text-2xl font-medium transition-all duration-200 hover:bg-gradient-to-r hover:from-[#46B5D1] hover:to-[#CE6449] hover:text-white"
                 >
                   Dashboard
                 </Link>
@@ -73,7 +68,7 @@ export function Navbar() {
             ) : (
               <button
                 onClick={login}
-                className="text-background bg-primary hover:bg-primary/90 cursor-pointer rounded-2xl px-4 py-2 text-2xl font-medium transition-all duration-200 hover:text-white"
+                className="text-background bg-primary cursor-pointer rounded-2xl px-4 py-1.5 text-2xl font-medium shadow-md shadow-gray-300 transition-all duration-200 hover:bg-gradient-to-r hover:from-[#46B5D1] hover:to-[#CE6449] hover:shadow-lg"
               >
                 Login
               </button>
