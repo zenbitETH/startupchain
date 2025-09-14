@@ -1,86 +1,69 @@
-'use client'
-
 import React from 'react'
 
-import { RocketBody } from './AnimatedRocket/RocketBody'
-import { RocketNose } from './AnimatedRocket/RocketNose'
-import { SVGDefs } from './AnimatedRocket/SVGDefs'
-import { SpeedLines } from './AnimatedRocket/SpeedLines'
-import { ANIMATION_CONFIG, RESPONSIVE_CONFIG } from './AnimatedRocket/constants'
 import {
-  useAnimationLifecycle,
-  useReducedMotion,
-  useResponsive,
-  useScrollEffect,
-} from './AnimatedRocket/hooks'
-import type { AnimatedRocketProps } from './AnimatedRocket/types'
+  ANIMATION_CONFIG,
+  ROCKET_BODY_PATH,
+  ROCKET_NOSE_PATH,
+} from './AnimatedRocket/constants'
+import { SpeedLines } from './AnimatedRocket/SpeedLines'
+import { SVGDefs } from './AnimatedRocket/SVGDefs'
 
-const DEFAULT_NAME = 'Your company'
+type RocketProps = {
+  animated?: boolean
+  speedLines?: boolean
+} & React.SVGProps<SVGSVGElement>
 
-export const AnimatedRocket: React.FC<AnimatedRocketProps> = ({
-  name = DEFAULT_NAME,
+export default function AnimatedRocket({
+  animated = false,
+  speedLines = false,
   className,
-  autoStart = true,
-  scrollConfig,
-  animationConfig,
-}) => {
-  // Use composed hooks for cleaner logic
-  const { prefersReducedMotion } = useReducedMotion()
-  const { scrollBlur, scrollOpacity } = useScrollEffect(scrollConfig)
-  const { windowDimensions } = useResponsive()
-  const { showEffects } = useAnimationLifecycle(
-    autoStart,
-    animationConfig?.initialDelay
-  )
-
+  ...svgProps
+}: RocketProps) {
   return (
-    <div
-      className={`gpu-accelerated pointer-events-none fixed top-10 right-0 bottom-0 left-0 z-0 h-[calc(100vh-4rem)] transition-all duration-300 ${className || ''} `}
+    <svg
+      className={className}
+      {...svgProps}
+      viewBox="0 0 800 800"
       aria-hidden="true"
-      style={{
-        '--scroll-blur': `${scrollBlur}px`,
-        '--scroll-opacity': scrollOpacity,
-        filter: 'blur(var(--scroll-blur))',
-        opacity: 'var(--scroll-opacity)',
-      } as React.CSSProperties}
+      focusable="false"
+      preserveAspectRatio="xMidYMid meet"
     >
-      <svg
-        className={`h-full w-full transition-opacity duration-300 ${showEffects ? 'opacity-100' : 'opacity-90'} ${prefersReducedMotion ? 'motion-reduce:transition-none' : ''}`}
-        viewBox="0 0 1200 800"
-        preserveAspectRatio="xMidYMid meet"
-        role="img"
-        aria-label="Animated rocket background illustration"
-      >
-        <title>Animated rocket background - {name}</title>
+      {/* SVG Definitions - Gradients and Filters */}
+      <SVGDefs />
 
-        {/* SVG Definitions - Gradients and Filters */}
-        <SVGDefs includeFilters={!prefersReducedMotion} />
+      {/* Unified Animation Group - Rocket and Speed Lines move together */}
+      <g className="animate-space-travel origin-center">
+        {/* Speed Lines Effect - positioned relative to rocket */}
+        {speedLines && <SpeedLines config={ANIMATION_CONFIG.SPEED_LINES} />}
 
-        {/* Unified Animation Group - Rocket and Speed Lines move together */}
+        {/* Main Rocket Container */}
         <g
-          className={`animate-space-travel origin-center translate-x-50 -translate-y-180 scale-[1.2] sm:-translate-y-90 sm:scale-[0.8] md:translate-x-30 md:-translate-y-70 md:scale-[0.7] lg:translate-x-[500px] lg:translate-y-0 lg:scale-[0.8]`}
+          className={`rocket-group opacity-100 transition-transform duration-500 ease-out`}
         >
-          {/* Speed Lines Effect - positioned relative to rocket */}
-          <SpeedLines
-            showEffects={showEffects}
-            prefersReducedMotion={prefersReducedMotion}
-            config={ANIMATION_CONFIG.SPEED_LINES}
-          />
-
-          {/* Main Rocket Container */}
-          <RocketBody
-            showEffects={showEffects}
-            prefersReducedMotion={prefersReducedMotion}
-          >
-            <RocketNose
-              showEffects={showEffects}
-              prefersReducedMotion={prefersReducedMotion}
+          {/* Rocket body (lower gradient section) with heat effects */}
+          <g className="rocket-body-group">
+            <path
+              d={ROCKET_BODY_PATH}
+              fill="url(#rocketBody)"
+              className={`rocket-body-path animate-rocket-heat transition-all duration-300`}
             />
-          </RocketBody>
+
+            {/* Heat distortion overlay - only show with effects active */}
+            <path
+              d={ROCKET_BODY_PATH}
+              fill="url(#engineGlow)"
+              className={`heat-overlay animate-heat-distortion' transition-opacity duration-500`}
+            />
+          </g>
+
+          {/* Render children within the same transform group */}
+          <path
+            d={ROCKET_NOSE_PATH}
+            fill="url(#rocketNose)"
+            className={`rocket-nose drop-shadow-sm transition-all duration-300 ease-out`}
+          />
         </g>
-      </svg>
-    </div>
+      </g>
+    </svg>
   )
 }
-
-export default AnimatedRocket
