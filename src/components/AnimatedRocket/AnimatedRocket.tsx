@@ -8,11 +8,8 @@ import {
 } from './constants'
 import { SpeedLines } from './SpeedLines'
 import { SVGDefs } from './SVGDefs'
+import { ScrollEffect } from './ScrollEffect'
 
-const ScrollEffect = dynamic(
-  () => import('./ScrollEffect').then(mod => mod.ScrollEffect),
-  { ssr: false }
-)
 
 type RocketProps = {
   animated?: boolean
