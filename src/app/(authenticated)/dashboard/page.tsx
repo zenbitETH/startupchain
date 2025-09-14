@@ -1,6 +1,6 @@
 'use client'
 
-import { Navbar } from '@/components/navbar'
+import { Navbar } from '@/components/navigation/navbar'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import {
   AlertCircle,

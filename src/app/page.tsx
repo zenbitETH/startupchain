@@ -1,8 +1,8 @@
-import AnimatedRocket from '@/components/AnimatedRocket/AnimatedRocket'
-import { FeaturesSection } from '@/components/features-section'
-import { Footer } from '@/components/footer'
-import { HeroSection } from '@/components/hero-section'
-import { NavbarServer } from '@/components/navbar-server'
+import AnimatedRocket from '@/components/home/AnimatedRocket/AnimatedRocket'
+import { FeaturesSection } from '@/components/home/features-section'
+import { Footer } from '@/components/home/footer'
+import { HeroSection } from '@/components/home/hero-section'
+import { NavbarServer } from '@/components/navigation/navbar-server'
 
 export default function Home() {
   return (

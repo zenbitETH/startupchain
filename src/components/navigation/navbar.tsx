@@ -3,8 +3,8 @@
 import { usePrivy } from '@privy-io/react-auth'
 import Link from 'next/link'
 
-import { ChainLogo } from './ui/chain-logo'
-import { LoadingSpinner } from './ui/loading-spinner'
+import { ChainLogo } from '../ui/chain-logo'
+import { LoadingSpinner } from '../ui/loading-spinner'
 
 export function Navbar() {
   const { login, authenticated, user, ready } = usePrivy()

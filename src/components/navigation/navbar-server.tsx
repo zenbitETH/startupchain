@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-import { ChainLogo } from './ui/chain-logo'
+import { ChainLogo } from '../ui/chain-logo'
 
 export function NavbarServer() {
   return (

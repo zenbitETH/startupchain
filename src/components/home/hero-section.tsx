@@ -1,4 +1,4 @@
-import { GetStartedButton } from './get-started-button'
+import { GetStartedButton } from '../auth/get-started-button'
 
 export function HeroSection() {
   return (
