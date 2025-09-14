@@ -1,13 +1,12 @@
 import React from 'react'
 
 import { FILTER_DEFINITIONS, GRADIENT_DEFINITIONS } from './constants'
-import type { SVGDefsProps } from './types'
 
 /**
  * SVG definitions component containing all gradients and filters
  * Separated for better organization and reusability
  */
-export const SVGDefs: React.FC<SVGDefsProps> = ({ includeFilters = true }) => {
+export const SVGDefs = () => {
   return (
     <defs>
       {/* Gradient Definitions */}
@@ -19,11 +18,7 @@ export const SVGDefs: React.FC<SVGDefsProps> = ({ includeFilters = true }) => {
         y2={GRADIENT_DEFINITIONS.rocketBody.y2}
       >
         {GRADIENT_DEFINITIONS.rocketBody.stops.map((stop, index) => (
-          <stop
-            key={index}
-            offset={stop.offset}
-            stopColor={stop.stopColor}
-          />
+          <stop key={index} offset={stop.offset} stopColor={stop.stopColor} />
         ))}
       </linearGradient>
 
@@ -35,11 +30,7 @@ export const SVGDefs: React.FC<SVGDefsProps> = ({ includeFilters = true }) => {
         y2={GRADIENT_DEFINITIONS.rocketNose.y2}
       >
         {GRADIENT_DEFINITIONS.rocketNose.stops.map((stop, index) => (
-          <stop
-            key={index}
-            offset={stop.offset}
-            stopColor={stop.stopColor}
-          />
+          <stop key={index} offset={stop.offset} stopColor={stop.stopColor} />
         ))}
       </linearGradient>
 
@@ -77,37 +68,34 @@ export const SVGDefs: React.FC<SVGDefsProps> = ({ includeFilters = true }) => {
       </radialGradient>
 
       {/* Filter Definitions - Only include if requested for performance */}
-      {includeFilters && (
-        <>
-          <filter
-            id={FILTER_DEFINITIONS.speedGlow.id}
-            x={FILTER_DEFINITIONS.speedGlow.x}
-            y={FILTER_DEFINITIONS.speedGlow.y}
-            width={FILTER_DEFINITIONS.speedGlow.width}
-            height={FILTER_DEFINITIONS.speedGlow.height}
-          >
-            <feGaussianBlur stdDeviation="3" result="glow1" />
-            <feGaussianBlur stdDeviation="6" result="glow2" />
-            <feGaussianBlur stdDeviation="12" result="glow3" />
-            <feMerge>
-              <feMergeNode in="glow3" />
-              <feMergeNode in="glow2" />
-              <feMergeNode in="glow1" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
 
-          <filter
-            id={FILTER_DEFINITIONS.particleGlow.id}
-            x={FILTER_DEFINITIONS.particleGlow.x}
-            y={FILTER_DEFINITIONS.particleGlow.y}
-            width={FILTER_DEFINITIONS.particleGlow.width}
-            height={FILTER_DEFINITIONS.particleGlow.height}
-          >
-            <feGaussianBlur stdDeviation="2" />
-          </filter>
-        </>
-      )}
+      <filter
+        id={FILTER_DEFINITIONS.speedGlow.id}
+        x={FILTER_DEFINITIONS.speedGlow.x}
+        y={FILTER_DEFINITIONS.speedGlow.y}
+        width={FILTER_DEFINITIONS.speedGlow.width}
+        height={FILTER_DEFINITIONS.speedGlow.height}
+      >
+        <feGaussianBlur stdDeviation="3" result="glow1" />
+        <feGaussianBlur stdDeviation="6" result="glow2" />
+        <feGaussianBlur stdDeviation="12" result="glow3" />
+        <feMerge>
+          <feMergeNode in="glow3" />
+          <feMergeNode in="glow2" />
+          <feMergeNode in="glow1" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+
+      <filter
+        id={FILTER_DEFINITIONS.particleGlow.id}
+        x={FILTER_DEFINITIONS.particleGlow.x}
+        y={FILTER_DEFINITIONS.particleGlow.y}
+        width={FILTER_DEFINITIONS.particleGlow.width}
+        height={FILTER_DEFINITIONS.particleGlow.height}
+      >
+        <feGaussianBlur stdDeviation="2" />
+      </filter>
     </defs>
   )
 }

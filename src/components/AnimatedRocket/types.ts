@@ -137,14 +137,8 @@ export interface FilterDef {
  * Props for the main AnimatedRocket component
  */
 export interface AnimatedRocketProps {
-  /** Company name to display (optional) */
-  name?: string
   /** Additional CSS classes */
   className?: string
-  /** Whether to start animations immediately */
-  autoStart?: boolean
-  /** Custom scroll effect configuration */
-  scrollConfig?: Partial<ScrollEffectConfig>
   /** Custom animation timing */
   animationConfig?: Partial<AnimationTiming>
 }
@@ -161,19 +155,7 @@ export interface RocketBodyProps {
   children?: React.ReactNode
 }
 
-export interface SpeedLinesProps {
-  /** Whether effects are active */
-  showEffects: boolean
-  /** Whether user prefers reduced motion */
-  prefersReducedMotion: boolean
-  /** Configuration for speed lines */
-  config: SpeedLinesConfig
-}
 
-export interface SVGDefsProps {
-  /** Whether to include performance-heavy filters */
-  includeFilters?: boolean
-}
 
 /**
  * Animation phase states

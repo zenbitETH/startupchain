@@ -11,9 +11,36 @@ const fredoka = Fredoka({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://startupchain.io'),
   title: 'StartupChain - Build your business on-chain',
   description:
     'Register ENS names, split revenue transparently, and build with the security of blockchain technology. No wallet required to start.',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' }, // modern browsers
+      { url: '/favicon.ico' }, // fallback for old browsers
+    ],
+  },
+  openGraph: {
+    title: 'StartupChain - Build your business on-chain',
+    type: 'website',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'StartupChain - Build your business on-chain',
+        type: 'image/png',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'StartupChain - Build your business on-chain',
+    description:
+      'Register ENS names, split revenue transparently, and build with the security of blockchain technology. No wallet required to start.',
+    images: ['/og-image.png'],
+  },
 }
 
 export default function RootLayout({
