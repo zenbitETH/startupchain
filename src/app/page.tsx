@@ -12,7 +12,7 @@ export default function Home() {
         animated={true}
         speedLines={true}
         scrollEffect={true}
-        className="scroll-effect pointer-events-none fixed top-7 left-1/2 z-0 size-80 -translate-x-1/2 opacity-90 sm:size-150 lg:top-1/2 lg:right-0 lg:left-auto lg:size-160 lg:translate-x-20 lg:-translate-y-1/2 xl:size-200"
+        className="scroll-effect pointer-events-none fixed top-7 left-1/2 z-0 size-80 -translate-x-1/2 sm:size-150 lg:top-1/2 lg:right-0 lg:left-auto lg:size-160 lg:translate-x-20 lg:-translate-y-1/2 xl:size-200"
       />
       <HeroSection />
       <FeaturesSection />
