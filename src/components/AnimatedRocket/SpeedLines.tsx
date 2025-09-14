@@ -1,6 +1,19 @@
 import React from 'react'
 
-import type { SpeedLinesConfig } from './types'
+
+
+interface SpeedLinesConfig {
+  /** Number of speed lines to render */
+  count: number
+  /** Horizontal spacing between lines */
+  spacing: number
+  /** Vertical offset between lines */
+  verticalOffset: number
+  /** Stroke width of speed lines */
+  strokeWidth: number
+  /** Animation delay step between lines */
+  animationDelayStep: number
+}
 
 type SpeedLinesProps = {
   /** Configuration for speed lines */
