@@ -67,7 +67,15 @@ export default function AnimatedRocket({
             <path
               d={ROCKET_BODY_PATH}
               fill="url(#engineGlow)"
-              className={`heat-overlay animate-heat-distortion' transition-opacity duration-500`}
+              className={`heat-overlay animate-heat-distortion transition-opacity duration-500`}
+            />
+
+            {/* Engine pulse effect - subtle glow at engine */}
+            <circle
+              cx="400"
+              cy="720"
+              fill="url(#engineGlow)"
+              className="animate-engine-pulse opacity-60"
             />
           </g>
 
