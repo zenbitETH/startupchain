@@ -53,7 +53,7 @@ export default function AnimatedRocket({
 
         {/* Main Rocket Container */}
         <g
-          className={`rocket-group opacity-100 transition-transform duration-500 ease-out`}
+          className={`rocket-group opacity-85 transition-transform duration-500 ease-out`}
         >
           {/* Rocket body (lower gradient section) with heat effects */}
           <g className="rocket-body-group">
