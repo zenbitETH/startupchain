@@ -5,7 +5,7 @@ import { normalize } from 'viem/ens'
 
 const client = createPublicClient({
   chain: sepolia,
-  transport: http(),
+  transport: http(process.env.ALCHEMY_API_KEY || ''),
 })
 
 export async function GET(request: NextRequest) {
