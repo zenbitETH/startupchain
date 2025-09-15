@@ -1,5 +1,5 @@
 import { GetStartedButton } from '../auth/get-started-button'
-import { EnsNameChecker } from './ens-name-checker'
+import { EnsNameChecker } from '../ens-name-checker'
 
 export function HeroSection() {
   return (
