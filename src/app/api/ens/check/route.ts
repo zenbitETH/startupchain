@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPublicClient, http } from 'viem'
-import { mainnet } from 'viem/chains'
+import { mainnet, sepolia } from 'viem/chains'
 import { normalize } from 'viem/ens'
 
 const client = createPublicClient({
-  chain: mainnet,
+  chain: sepolia,
   transport: http(),
 })
 
