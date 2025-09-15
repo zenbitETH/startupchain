@@ -24,6 +24,7 @@
     "react-dom": "^18.3.1",
     "react-transition-state": "1.1.5",
     "styled-components": "^6.1.11",
+    "swr": "^2.3.6",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.11",
     "usehooks-ts": "^2.9.5",
