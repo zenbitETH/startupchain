@@ -2,12 +2,14 @@
 
 import { useState } from 'react'
 
+import { useDebounce } from '../../hooks/use-debounce'
 import { EnsInput } from './EnsInput'
 import { EnsStatus } from './EnsStatus'
 import { useEnsCheck } from './useEnsCheck'
 
 export function EnsNameChecker() {
   const [ensName, setEnsName] = useState('')
+  const debouncedEnsName = useDebounce(ensName, 500)
 
   const {
     normalizedName,
@@ -16,7 +18,7 @@ export function EnsNameChecker() {
     isTaken,
     isAvailable,
     resolvedAddress,
-  } = useEnsCheck(ensName)
+  } = useEnsCheck(debouncedEnsName)
 
   const handleProceed = () => {
     console.log('Proceeding with ENS name:', normalizedName)
