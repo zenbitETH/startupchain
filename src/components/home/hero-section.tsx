@@ -1,4 +1,5 @@
 import { GetStartedButton } from '../auth/get-started-button'
+import { EnsNameChecker } from './ens-name-checker'
 
 export function HeroSection() {
   return (
@@ -13,6 +14,8 @@ export function HeroSection() {
               onchain
             </span>
           </h1>
+
+          <EnsNameChecker />
 
           {/* Social Proof */}
           <div className="flex flex-wrap items-center justify-center gap-8 opacity-60 lg:justify-start">
