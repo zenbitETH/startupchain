@@ -14,19 +14,6 @@ export function HeroSection() {
             </span>
           </h1>
 
-          {/* Call to Action */}
-          <div className="mx-auto mb-13 max-w-2xl md:mb-15 lg:mx-0">
-            <div className="bg-card border-border/50 rounded-2xl border p-8 shadow-2xl backdrop-blur-sm">
-              <h3 className="text-foreground mb-4 text-xl font-medium">
-                Ready to register your business name?
-              </h3>
-              <p className="text-muted-foreground mb-6 text-sm">
-                Search for available ENS names and register your business on the Ethereum blockchain
-              </p>
-              <GetStartedButton />
-            </div>
-          </div>
-
           {/* Social Proof */}
           <div className="flex flex-wrap items-center justify-center gap-8 opacity-60 lg:justify-start">
             <div className="text-muted-foreground text-sm">Powered by</div>
