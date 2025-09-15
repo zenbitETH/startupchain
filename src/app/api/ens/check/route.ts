@@ -8,11 +8,12 @@ const client = createPublicClient({
   transport: http(),
 })
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const { name } = await request.json()
+    const { searchParams } = new URL(request.url)
+    const name = searchParams.get('name')
 
-    if (!name || typeof name !== 'string') {
+    if (!name) {
       return NextResponse.json(
         { error: 'Invalid name parameter' },
         { status: 400 }
