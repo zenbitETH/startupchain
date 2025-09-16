@@ -16,8 +16,8 @@ export const metadata: Metadata = {
     'Register ENS names, split revenue transparently, and build with the security of blockchain technology. No wallet required to start.',
   icons: {
     icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' }, // modern browsers
-      { url: '/favicon.ico' }, // fallback for old browsers
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico' },
     ],
   },
   openGraph: {
@@ -49,10 +49,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${fredoka.variable} dark antialiased`}>
-      <head></head>
-      <body>
-        {children}
-      </body>
+      <head />
+      <body>{children}</body>
     </html>
   )
 }
