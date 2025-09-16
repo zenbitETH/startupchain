@@ -1,6 +1,5 @@
 'use client'
 
-import { Navbar } from '@/components/navigation/navbar'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import {
   AlertCircle,
@@ -115,11 +114,7 @@ export default function Dashboard() {
 
   try {
     normalizedName = shouldCheck
-      ? normalize(
-          ensName.endsWith('.eth')
-            ? ensName
-            : `${ensName}.eth`
-        )
+      ? normalize(ensName.endsWith('.eth') ? ensName : `${ensName}.eth`)
       : undefined
   } catch {
     normalizedName = undefined
@@ -150,10 +145,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <Navbar />
-
-
+    <div className="from-background via-background to-primary/5 min-h-screen bg-gradient-to-br">
       {/* Dashboard Content */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
@@ -167,8 +159,8 @@ export default function Dashboard() {
         </div>
 
         {/* ENS Search Section */}
-        <div className="bg-card border-border rounded-2xl border p-6 mb-8">
-          <div className="flex items-center gap-4 mb-6">
+        <div className="bg-card border-border mb-8 rounded-2xl border p-6">
+          <div className="mb-6 flex items-center gap-4">
             <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-2xl">
               <Search className="text-primary h-6 w-6" />
             </div>
@@ -236,8 +228,7 @@ export default function Dashboard() {
                         </p>
                       )}
                       <p className="text-muted-foreground text-sm">
-                        Try adding your industry or location (e.g.,{' '}
-                        {ensName}
+                        Try adding your industry or location (e.g., {ensName}
                         tech, {ensName}dao)
                       </p>
                     </div>
@@ -275,8 +266,8 @@ export default function Dashboard() {
                     <span className="font-medium">Invalid name format</span>
                   </div>
                   <p className="text-muted-foreground mt-2 text-sm">
-                    Name must be 3-63 characters, contain only letters,
-                    numbers, and hyphens
+                    Name must be 3-63 characters, contain only letters, numbers,
+                    and hyphens
                   </p>
                 </div>
               </div>
@@ -288,7 +279,7 @@ export default function Dashboard() {
           {/* User Info Card */}
           <div className="lg:col-span-2">
             <div className="bg-card border-border rounded-2xl border p-6">
-              <div className="flex items-center gap-4 mb-6">
+              <div className="mb-6 flex items-center gap-4">
                 <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-2xl">
                   <User className="text-primary h-6 w-6" />
                 </div>
@@ -305,7 +296,7 @@ export default function Dashboard() {
               <div className="space-y-4">
                 {/* Email */}
                 {user?.email?.address && (
-                  <div className="flex items-center justify-between p-4 bg-background rounded-2xl">
+                  <div className="bg-background flex items-center justify-between rounded-2xl p-4">
                     <div className="flex items-center gap-3">
                       <Mail className="text-muted-foreground h-5 w-5" />
                       <div>
@@ -331,7 +322,7 @@ export default function Dashboard() {
 
                 {/* Wallet */}
                 {primaryWallet && (
-                  <div className="flex items-center justify-between p-4 bg-background rounded-2xl">
+                  <div className="bg-background flex items-center justify-between rounded-2xl p-4">
                     <div className="flex items-center gap-3">
                       <Wallet className="text-muted-foreground h-5 w-5" />
                       <div>
@@ -365,7 +356,7 @@ export default function Dashboard() {
                 )}
 
                 {/* User ID */}
-                <div className="flex items-center justify-between p-4 bg-background rounded-2xl">
+                <div className="bg-background flex items-center justify-between rounded-2xl p-4">
                   <div className="flex items-center gap-3">
                     <Settings className="text-muted-foreground h-5 w-5" />
                     <div>
@@ -383,7 +374,7 @@ export default function Dashboard() {
           {/* Wallet Balance Card */}
           <div className="space-y-6">
             <div className="bg-card border-border rounded-2xl border p-6">
-              <div className="flex items-center gap-4 mb-6">
+              <div className="mb-6 flex items-center gap-4">
                 <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-2xl">
                   <Wallet className="text-primary h-6 w-6" />
                 </div>
@@ -398,8 +389,8 @@ export default function Dashboard() {
               </div>
 
               <div className="space-y-4">
-                <div className="text-center p-6 bg-gradient-to-r from-primary/5 to-accent/5 rounded-2xl">
-                  <div className="text-3xl font-bold text-foreground mb-2">
+                <div className="from-primary/5 to-accent/5 rounded-2xl bg-gradient-to-r p-6 text-center">
+                  <div className="text-foreground mb-2 text-3xl font-bold">
                     ${balanceInUsd.toFixed(2)}
                   </div>
                   <div className="text-muted-foreground">
@@ -431,10 +422,15 @@ export default function Dashboard() {
               <div className="space-y-3">
                 <button
                   onClick={() => {
-                    const ensInput = document.querySelector('input[placeholder="Enter your business name"]') as HTMLInputElement
+                    const ensInput = document.querySelector(
+                      'input[placeholder="Enter your business name"]'
+                    ) as HTMLInputElement
                     if (ensInput) {
                       ensInput.focus()
-                      ensInput.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                      ensInput.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                      })
                     }
                   }}
                   className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-2xl px-4 py-3 font-medium transition-colors"
@@ -449,7 +445,7 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="border-red-500/20 text-red-500 hover:bg-red-500/10 w-full rounded-2xl border px-4 py-3 font-medium transition-colors flex items-center justify-center gap-2"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-500/20 px-4 py-3 font-medium text-red-500 transition-colors hover:bg-red-500/10"
                 >
                   <LogOut className="h-4 w-4" />
                   Log Out
