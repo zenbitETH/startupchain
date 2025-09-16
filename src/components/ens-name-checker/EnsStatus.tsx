@@ -11,6 +11,7 @@ interface EnsStatusProps {
   isAvailable: boolean
   resolvedAddress: string | null
   onProceed: () => void
+  isAuthenticating: boolean
 }
 
 export function EnsStatus({
@@ -22,9 +23,8 @@ export function EnsStatus({
   isAvailable,
   resolvedAddress,
   onProceed,
+  isAuthenticating,
 }: EnsStatusProps) {
-  const isAuthenticating = false
-
   return (
     <div className="mt-4 min-h-[120px]">
       {normalizedName && isValidEnsName(ensName) && (
@@ -100,7 +100,6 @@ export function EnsStatus({
         </div>
       )}
 
-      {/* Validation Message */}
       {ensName.length > 0 && !isValidEnsName(ensName) && (
         <div className="animate-in fade-in duration-300">
           <div className="bg-muted/10 border-muted/20 rounded-2xl border p-4">
