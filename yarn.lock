@@ -22,6 +22,30 @@
   resolved "https://registry.npmjs.org/@adraffy/ens-normalize/-/ens-normalize-1.11.0.tgz"
   integrity sha512-/3DDPKHqqIqxUULp8yP4zODUY1i+2xvVWsv8A79xGWdCAG+8sb0hRh0Rk2QyOJUnnbyPUAZYcpBuRe3nS2OIUg==
 
+"@ai-sdk/gateway@1.0.23":
+  version "1.0.23"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/gateway/-/gateway-1.0.23.tgz#284a7de5bf7c9e80ac68416f19cf3644d7bb2db6"
+  integrity sha512-ynV7WxpRK2zWLGkdOtrU2hW22mBVkEYVS3iMg1+ZGmAYSgzCqzC74bfOJZ2GU1UdcrFWUsFI9qAYjsPkd+AebA==
+  dependencies:
+    "@ai-sdk/provider" "2.0.0"
+    "@ai-sdk/provider-utils" "3.0.9"
+
+"@ai-sdk/provider-utils@3.0.9":
+  version "3.0.9"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/provider-utils/-/provider-utils-3.0.9.tgz#ac35a11eaafb5943a6c1bb024b4d2fdda6a8a0a3"
+  integrity sha512-Pm571x5efqaI4hf9yW4KsVlDBDme8++UepZRnq+kqVBWWjgvGhQlzU8glaFq0YJEB9kkxZHbRRyVeHoV2sRYaQ==
+  dependencies:
+    "@ai-sdk/provider" "2.0.0"
+    "@standard-schema/spec" "^1.0.0"
+    eventsource-parser "^3.0.5"
+
+"@ai-sdk/provider@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/provider/-/provider-2.0.0.tgz#b853c739d523b33675bc74b6c506b2c690bc602b"
+  integrity sha512-6o7Y2SeO9vFKB8lArHXehNuusnpddKPk7xqL7T2/b+OvXMRIXUO1rR4wcv1hAFUAT9avGZshty3Wlua/XA7TvA==
+  dependencies:
+    json-schema "^0.4.0"
+
 "@alloc/quick-lru@^5.2.0":
   version "5.2.0"
   resolved "https://registry.npmjs.org/@alloc/quick-lru/-/quick-lru-5.2.0.tgz"
@@ -1279,6 +1303,11 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@opentelemetry/api@1.9.0":
+  version "1.9.0"
+  resolved "https://registry.yarnpkg.com/@opentelemetry/api/-/api-1.9.0.tgz#d03eba68273dc0f7509e2a3d5cba21eae10379fe"
+  integrity sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==
+
 "@parcel/watcher-android-arm64@2.4.0":
   version "2.4.0"
   resolved "https://registry.yarnpkg.com/@parcel/watcher-android-arm64/-/watcher-android-arm64-2.4.0.tgz#9c93763794153e4f76920994a423b6ea3257059d"
@@ -1993,6 +2022,11 @@
     "@solana/wallet-standard-wallet-adapter-base" "^1.1.4"
     "@wallet-standard/app" "^1.1.0"
     "@wallet-standard/base" "^1.1.0"
+
+"@standard-schema/spec@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@standard-schema/spec/-/spec-1.0.0.tgz#f193b73dc316c4170f2e82a881da0f550d551b9c"
+  integrity sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==
 
 "@swc/counter@^0.1.3":
   version "0.1.3"
@@ -2837,6 +2871,16 @@ acorn@^8.9.0:
   version "8.10.0"
   resolved "https://registry.npmjs.org/acorn/-/acorn-8.10.0.tgz"
   integrity sha512-F0SAmZ8iUtS//m8DmCTA0jlh6TDKkHQyK6xc6V4KDTyZKA9dnvX9/3sRTVQrWm79glUAZbnmmNcdYwUIHWVybw==
+
+ai@^5.0.44:
+  version "5.0.44"
+  resolved "https://registry.yarnpkg.com/ai/-/ai-5.0.44.tgz#a4503c2fbcc54329a5e59381f0c144e91eb71311"
+  integrity sha512-l/rdoM4LcRpsRBVvZQBwSU73oNoFGlWj+PcH86QRzxDGJgZqgGItWO0QcKjBNcLDmUjGN1VYd/8J0TAXHJleRQ==
+  dependencies:
+    "@ai-sdk/gateway" "1.0.23"
+    "@ai-sdk/provider" "2.0.0"
+    "@ai-sdk/provider-utils" "3.0.9"
+    "@opentelemetry/api" "1.9.0"
 
 ajv@^6.12.4:
   version "6.12.6"
@@ -4455,6 +4499,11 @@ events@3.3.0, events@^3.3.0:
   resolved "https://registry.npmjs.org/events/-/events-3.3.0.tgz"
   integrity sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==
 
+eventsource-parser@^3.0.5:
+  version "3.0.6"
+  resolved "https://registry.yarnpkg.com/eventsource-parser/-/eventsource-parser-3.0.6.tgz#292e165e34cacbc936c3c92719ef326d4aeb4e90"
+  integrity sha512-Vo1ab+QXPzZ4tCa8SwIHJFaSzy4R6SHf7BY79rFBDf0idraZWAkYrDjDj8uWaSm3S2TK+hJ7/t1CEmZ7jXw+pg==
+
 evp_bytestokey@^1.0.3:
   version "1.0.3"
   resolved "https://registry.npmjs.org/evp_bytestokey/-/evp_bytestokey-1.0.3.tgz"
@@ -5523,6 +5572,11 @@ json-schema-traverse@^0.4.1:
   resolved "https://registry.npmjs.org/json-schema-traverse/-/json-schema-traverse-0.4.1.tgz"
   integrity sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==
 
+json-schema@^0.4.0:
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/json-schema/-/json-schema-0.4.0.tgz#f7de4cf6efab838ebaeb3236474cbba5a1930ab5"
+  integrity sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==
+
 json-stable-stringify-without-jsonify@^1.0.1:
   version "1.0.1"
   resolved "https://registry.npmjs.org/json-stable-stringify-without-jsonify/-/json-stable-stringify-without-jsonify-1.0.1.tgz"
@@ -6210,6 +6264,11 @@ open@^9.1.0:
     define-lazy-prop "^3.0.0"
     is-inside-container "^1.0.0"
     is-wsl "^2.2.0"
+
+openai@^5.20.3:
+  version "5.20.3"
+  resolved "https://registry.yarnpkg.com/openai/-/openai-5.20.3.tgz#a3fef81a7610dabe417628185356e6f82fcffc4b"
+  integrity sha512-8V0KgAcPFppDIP8uMBOkhRrhDBuxNQYQxb9IovP4NN4VyaYGISAzYexyYYuAwVul2HB75Wpib0xDboYJqRMNow==
 
 opener@^1.5.2:
   version "1.5.2"
