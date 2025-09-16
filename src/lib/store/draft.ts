@@ -1,13 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-interface Shareholder {
+export interface Shareholder {
   id: string
   walletAddress: string
   equityPercentage: number
 }
 
-interface CompanyDraft {
+export interface CompanyDraft {
   id: string
   ensName: string
   companyName: string
@@ -26,7 +26,7 @@ interface CompanyDraft {
 interface DraftStore {
   draft: CompanyDraft | null
   initializeDraft: (ensName: string) => void
-  updateDraft: (draft: CompanyDraft) => void
+  updateDraft: (draft: Partial<CompanyDraft>) => void
 
   // Shareholder management
   addShareholder: (walletAddress: string, equityPercentage: number) => void
@@ -39,6 +39,10 @@ interface DraftStore {
 
   // Founder handling
   setFounderMode: (isMultiple: boolean) => void
+
+  // Address overrides
+  setCustomAddress: (address: string) => void
+  setRegisterToDifferentAddress: (register: boolean) => void
 
   // Cleanup
   resetDraft: () => void
@@ -70,7 +74,7 @@ export const useDraftStore = create<DraftStore>()(
         set({ draft })
       },
 
-      updateDraft: (updates: CompanyDraft) => {
+      updateDraft: (updates) => {
         const currentDraft = get().draft
         if (!currentDraft) return
 
@@ -147,6 +151,15 @@ export const useDraftStore = create<DraftStore>()(
                 updatedAt: new Date().toISOString(),
               },
             })
+          } else {
+            set({
+              draft: {
+                ...currentDraft,
+                isMultipleFounders: false,
+                shareholders: [],
+                updatedAt: new Date().toISOString(),
+              },
+            })
           }
         } else {
           const shareholders = [...currentDraft.shareholders]
@@ -172,7 +185,7 @@ export const useDraftStore = create<DraftStore>()(
         }
       },
 
-      setCustomAddress: (address: string) => {
+      setCustomAddress: (address) => {
         const current = get().draft
         if (!current) return
 
@@ -185,7 +198,7 @@ export const useDraftStore = create<DraftStore>()(
         })
       },
 
-      setRegisterToDifferentAddress: (register: boolean) => {
+      setRegisterToDifferentAddress: (register) => {
         const current = get().draft
         if (!current) return
 
@@ -207,7 +220,7 @@ export const useDraftStore = create<DraftStore>()(
             ...currentDraft,
             currentStep: Math.min(
               currentDraft.currentStep + 1,
-              currentDraft.totalSteps
+              currentDraft.totalSteps - 1
             ),
             updatedAt: new Date().toISOString(),
           },
@@ -232,7 +245,7 @@ export const useDraftStore = create<DraftStore>()(
     {
       name: 'draft-storage',
       partialize: (state) => ({
-        draft: state.draft, // ✅ corrected braces
+        draft: state.draft,
       }),
     }
   )
