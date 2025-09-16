@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
 
 import { useDebounce } from '../../hooks/use-debounce'
 import { EnsInput } from './EnsInput'
@@ -10,10 +10,6 @@ import { EnsStatus } from './EnsStatus'
 import { useEnsCheck } from './useEnsCheck'
 
 const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID
-
-if (!privyAppId) {
-  throw new Error('NEXT_PUBLIC_PRIVY_APP_ID must be set to render EnsNameChecker')
-}
 
 interface CheckerViewProps {
   ensName: string
@@ -121,6 +117,12 @@ function EnsNameCheckerWithPrivy() {
 }
 
 export function EnsNameChecker() {
+  if (!privyAppId) {
+    throw new Error(
+      'NEXT_PUBLIC_PRIVY_APP_ID must be set to render EnsNameChecker'
+    )
+  }
+
   return (
     <PrivyProvider
       appId={privyAppId}
