@@ -33,6 +33,7 @@
     "usehooks-ts": "^2.9.5",
     "viem": "^2.31.7",
     "wagmi": "^2.15.6",
+    "zod": "^4.1.9",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
