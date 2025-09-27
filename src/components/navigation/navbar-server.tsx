@@ -4,7 +4,7 @@ import { ChainLogo } from '../ui/chain-logo'
 
 export function NavbarServer() {
   return (
-    <nav className="sticky top-0 z-50 h-16 w-full py-4 backdrop-blur-sm">
+    <nav className="fixed top-0 z-50 h-16 w-full py-4 backdrop-blur-lg">
       <div className="mx-auto h-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex h-full items-center justify-between">
           <Link
