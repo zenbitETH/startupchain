@@ -1,8 +1,12 @@
 import { Metadata } from 'next'
 import { Fredoka } from 'next/font/google'
 
-import { ClientProviders } from '@/lib/providers'
 import '@/style.css'
+import { AIChatTrigger } from '@/components/ai-chat/ai-chat-trigger'
+
+export const viewport = {
+  maximumScale: 1, // Disable auto-zoom on mobile Safari
+}
 
 const fredoka = Fredoka({
   subsets: ['latin'],
@@ -17,8 +21,8 @@ export const metadata: Metadata = {
     'Register ENS names, split revenue transparently, and build with the security of blockchain technology. No wallet required to start.',
   icons: {
     icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' }, // modern browsers
-      { url: '/favicon.ico' }, // fallback for old browsers
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico' },
     ],
   },
   openGraph: {
@@ -49,10 +53,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${fredoka.variable} dark antialiased`}>
-      <head></head>
-      <body>
-        <ClientProviders>{children}</ClientProviders>
+    <html lang="en" className={`${fredoka.variable} dark`}>
+      <head />
+      <body className="antialiased">
+        {children}
+        <AIChatTrigger />
       </body>
     </html>
   )
