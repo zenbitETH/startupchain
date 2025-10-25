@@ -1,6 +1,5 @@
 'use client'
 
-import { usePrivy } from '@privy-io/react-auth'
 import { Plus, Trash2, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 
@@ -9,6 +8,8 @@ import { useSmartWallet } from '@/hooks/use-smart-wallet'
 import { CongratulationsModal } from './congratulations-modal'
 import { ENSCostEstimate } from './ens-cost-estimate'
 import { CountdownModal } from './countdown-modal'
+import { useAccount, useChainId, useSwitchChain, useConnect, useDisconnect } from 'wagmi'
+import { injected } from 'wagmi/connectors';
 
 interface Founder {
   id: string
@@ -27,7 +28,9 @@ export function BusinessSetupModal({
   onClose,
   ensName,
 }: BusinessSetupModalProps) {
-  const { login, authenticated, user } = usePrivy()
+    const { address, isConnected } = useAccount()
+    const { connect } = useConnect();
+
   const {
     createBusinessAccount,
     isCreating,
@@ -50,8 +53,8 @@ export function BusinessSetupModal({
 
   // Auto-populate user data when modal opens
   useEffect(() => {
-    if (isOpen && authenticated && user) {
-      const userAddress = user.wallet?.address || user.email?.address || user.phone?.number || ''
+    if (isOpen && address && isConnected) {
+      const userAddress = address // user.wallet?.address || user.email?.address || user.phone?.number || ''
       setIsMultipleFounders(false)
       setFounders([{ id: '1', address: userAddress, equity: '100' }])
       setRegisterToDifferentAddress(false)
@@ -62,7 +65,7 @@ export function BusinessSetupModal({
       setRegisterToDifferentAddress(false)
       setCustomAddress('')
     }
-  }, [isOpen, authenticated, user])
+  }, [isOpen, isConnected, address])
 
   // Handle keyboard events for modal
   useEffect(() => {
@@ -86,8 +89,8 @@ export function BusinessSetupModal({
   const handleFounderModeChange = (isMultiple: boolean) => {
     setIsMultipleFounders(isMultiple)
     const userAddress =
-      authenticated && user
-        ? user.wallet?.address || user.email?.address || user.phone?.number || ''
+      isConnected && address
+        ? address // user.wallet?.address || user.email?.address || user.phone?.number || ''
         : ''
     if (!isMultiple) {
       setFounders([{ id: '1', address: userAddress, equity: '100' }])
@@ -132,10 +135,11 @@ export function BusinessSetupModal({
   )
 
   const handleCreateBusiness = async () => {
-    // Check if user is authenticated
-    if (!authenticated) {
+    // Check if user is isConnected
+    if (!isConnected) {
       // Trigger Privy login flow
-      await login()
+      // await login()
+      () => connect({ connector: injected() })
       return
     }
 
@@ -330,13 +334,13 @@ export function BusinessSetupModal({
                               disabled={
                                 founder.id === '1' &&
                                 !isMultipleFounders &&
-                                authenticated &&
+                                isConnected &&
                                 !registerToDifferentAddress
                               }
                               className={`bg-background border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-2xl border px-4 py-3 text-lg transition-all duration-200 focus:ring-2 ${
                                 founder.id === '1' &&
                                 !isMultipleFounders &&
-                                authenticated &&
+                                isConnected &&
                                 !registerToDifferentAddress
                                   ? 'cursor-not-allowed opacity-60'
                                   : ''
@@ -344,11 +348,11 @@ export function BusinessSetupModal({
                             />
                             {founder.id === '1' &&
                               !isMultipleFounders &&
-                              authenticated && (
+                              isConnected && (
                                 <p className="text-muted-foreground mt-1 text-lg">
-                                  {user?.phone?.number
+                                  { address  // user?.phone?.number
                                     ? 'Registered with phone number'
-                                    : user?.email?.address
+                                    : address  // user?.email?.address
                                     ? 'Email account'
                                     : 'Wallet account'}{' '}
                                   •{' '}
@@ -427,7 +431,7 @@ export function BusinessSetupModal({
                     What happens next?
                   </h4>
                   <ul className="text-muted-foreground space-y-1 text-sm">
-                    {!authenticated && (
+                    {!isConnected && (
                       <li>
                         • You&apos;ll sign in with email to create your account
                       </li>
@@ -483,7 +487,7 @@ export function BusinessSetupModal({
                       disabled={
                         isCreating ||
                         commitmentCountdown !== null ||
-                        (!authenticated &&
+                        (!isConnected &&
                           founders.some((f) => !f.address.trim())) ||
                         (isMultipleFounders &&
                           Math.abs(totalEquity - 100) > 0.01) ||
@@ -495,7 +499,7 @@ export function BusinessSetupModal({
                         ? `Waiting... ${commitmentCountdown}s`
                         : isCreating
                         ? 'Creating...'
-                        : !authenticated
+                        : !isConnected
                           ? 'Sign in & Create'
                           : 'Create business'}
                     </button>

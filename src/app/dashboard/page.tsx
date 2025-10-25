@@ -15,20 +15,23 @@ import {
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { formatEther } from 'viem'
-import { useBalance } from 'wagmi'
+import { useBalance, useAccount, useConnect, useDisconnect  } from 'wagmi'
 
 export default function Dashboard() {
   const router = useRouter()
   const { authenticated, user, logout } = usePrivy()
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+
   const { wallets, ready } = useWallets()
   const [ethPrice, setEthPrice] = useState<number>(0)
 
   // Get the user's primary wallet
-  const primaryWallet = wallets[0]
+  // const primaryWallet = wallets[0]
 
   // Get wallet balance
   const { data: balance } = useBalance({
-    address: primaryWallet?.address as `0x${string}`,
+    address: address as `0x${string}`,
   })
 
   // Fetch ETH price for USD conversion
@@ -50,19 +53,22 @@ export default function Dashboard() {
 
   // Redirect if not authenticated (wait for Privy to be ready)
   useEffect(() => {
-    if (ready && !authenticated) {
+    if (isConnected && !address) {
       router.push('/')
     }
-  }, [authenticated, ready, router])
+  }, [address, isConnected, router])
 
   const handleLogout = async () => {
-    await logout()
-    router.push('/')
+    disconnect(undefined, {
+      onSettled: () => {
+        router.push('/')
+      }
+    })
   }
 
   const copyAddress = () => {
-    if (primaryWallet?.address) {
-      navigator.clipboard.writeText(primaryWallet.address)
+    if (address) {
+      navigator.clipboard.writeText(address)
     }
   }
 
@@ -150,7 +156,7 @@ export default function Dashboard() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    {/* <div className="flex items-center gap-2">
                       {emailVerification?.isVerified ? (
                         <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
                           ✓ Verified
@@ -160,7 +166,7 @@ export default function Dashboard() {
                           ⚠ Unverified
                         </span>
                       )}
-                    </div>
+                    </div> */}
                   </div>
                 )}
 

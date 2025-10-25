@@ -1,8 +1,8 @@
 import { Button, Profile, mq } from '@ensdomains/thorin'
-import { usePrivy } from '@privy-io/react-auth'
 import styled, { css } from 'styled-components'
-import { useAccount, useChainId, useSwitchChain } from 'wagmi'
+import { useAccount, useChainId, useSwitchChain, useConnect, useDisconnect } from 'wagmi'
 import { mainnet } from 'wagmi/chains'
+import { injected } from 'wagmi/connectors';
 
 const StyledButton = styled(Button)`
   ${({ theme }) => css`
@@ -15,12 +15,16 @@ const StyledButton = styled(Button)`
 `
 
 export function ConnectButton() {
-  const { ready, authenticated, user, login, logout } = usePrivy()
-  const { address } = useAccount()
+  // const { ready, authenticated, user, logout } = usePrivy()
+  const { address, isConnected, isConnecting, isReconnecting  } = useAccount()
+  
+  const { connect } = useConnect();
+  const { disconnect } = useDisconnect();
+
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
 
-  if (!ready) {
+  if (!isConnected) {
     return (
       <div
         aria-hidden={true}
@@ -35,9 +39,11 @@ export function ConnectButton() {
     )
   }
 
-  if (!authenticated) {
+  if (!address) {
     return (
-      <StyledButton shape="rounded" onClick={login}>
+      <StyledButton shape="rounded"
+       onClick={() => connect({ connector: injected() })}
+      >
         Connect
       </StyledButton>
     )
@@ -59,7 +65,7 @@ export function ConnectButton() {
     )
   }
 
-  const userAddress = address || user?.wallet?.address
+  const userAddress = address // || user?.wallet?.address
 
   if (!userAddress) {
     return null
@@ -77,7 +83,8 @@ export function ConnectButton() {
         {
           label: 'Disconnect',
           color: 'red',
-          onClick: logout,
+          onClick: ()  => disconnect(), // { connector: injected() }
+          // onClick={() => connect({ connector: injected() })}
         },
       ]}
     />

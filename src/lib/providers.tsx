@@ -1,35 +1,30 @@
-'use client'
+"use client";
 
-import { PrivyProvider } from '@privy-io/react-auth'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
-import { WagmiProvider } from 'wagmi'
+import "@rainbow-me/rainbowkit/styles.css";
+import {
+  Locale,
+  RainbowKitProvider,
+  getDefaultConfig,
+} from "@rainbow-me/rainbowkit";
+import { useLocale } from "next-intl";
+import { WagmiProvider } from "wagmi";
+import { mainnet } from "wagmi/chains";
 
-import { wagmiConfig } from '@/lib/web3'
+const config = getDefaultConfig({
+  appName: "My vibe coding evm starter",
+  projectId: process.env.WALLET_CONNECT_PROJECT_ID ?? "",
+  chains: [mainnet],
+  ssr: true,
+});
 
-const queryClient = new QueryClient()
-
-export function ClientProviders({ children }: { children: React.ReactNode }) {
-  const [isMounted, setIsMounted] = useState(false)
-  useEffect(() => setIsMounted(true), [])
+export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
+  const locale = useLocale();
 
   return (
-    <PrivyProvider
-      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ''}
-      config={{
-        appearance: {
-          theme: 'dark',
-        },
-        embeddedWallets: {
-          createOnLogin: 'users-without-wallets',
-        },
-      }}
-    >
-      <WagmiProvider config={wagmiConfig}>
-        <QueryClientProvider client={queryClient}>
-          {isMounted && children}
-        </QueryClientProvider>
-      </WagmiProvider>
-    </PrivyProvider>
-  )
-}
+    <WagmiProvider config={config}>
+      <RainbowKitProvider modalSize="compact" locale={locale as Locale}>
+        {children}
+      </RainbowKitProvider>
+    </WagmiProvider>
+  );
+};

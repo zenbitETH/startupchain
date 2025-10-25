@@ -1,6 +1,7 @@
 'use client'
+import { useAccount, useChainId, useSwitchChain, useConnect, useDisconnect } from 'wagmi'
+import { injected } from 'wagmi/connectors';
 
-import { usePrivy } from '@privy-io/react-auth'
 import { AlertCircle, ArrowRight, CheckCircle, Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useDebounce } from 'usehooks-ts'
@@ -15,8 +16,9 @@ export function HeroSection() {
   const [isFocused, setIsFocused] = useState(false)
   const [showSetupModal, setShowSetupModal] = useState(false)
   const [isAuthenticating, setIsAuthenticating] = useState(false)
-  const { login, authenticated } = usePrivy()
   const pendingModalRef = useRef(false)
+    const { address, isConnected } = useAccount()
+    const { connect } = useConnect();
 
   const debouncedEnsName = useDebounce(ensName, 800)
 
@@ -53,18 +55,19 @@ export function HeroSection() {
 
   // Handle authentication state change to show modal
   useEffect(() => {
-    if (authenticated && pendingModalRef.current) {
+    if (isConnected && pendingModalRef.current) {
       setShowSetupModal(true)
       setIsAuthenticating(false)
       pendingModalRef.current = false
     }
-  }, [authenticated])
+  }, [isConnected])
 
   const handleProceed = () => {
-    if (!authenticated) {
+    if (!isConnected) {
       setIsAuthenticating(true)
-      pendingModalRef.current = true
-      login()
+      pendingModalRef.current = true;
+      // login()
+      () => connect({ connector: injected() })
     } else {
       setShowSetupModal(true)
     }
