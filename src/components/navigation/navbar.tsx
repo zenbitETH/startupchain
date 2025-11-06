@@ -1,6 +1,6 @@
 'use client'
 
-import { usePrivy } from '@privy-io/react-auth'
+import { usePrivy } from '@/lib/privy'
 import Link from 'next/link'
 
 import { ChainLogo } from '../ui/chain-logo'
