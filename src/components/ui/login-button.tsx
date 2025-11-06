@@ -1,6 +1,6 @@
 'use client'
 
-import { usePrivy } from '@privy-io/react-auth'
+import { usePrivy } from '@/lib/privy'
 import { ArrowRight, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
