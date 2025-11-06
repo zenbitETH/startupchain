@@ -1,6 +1,6 @@
 'use client'
 
-import { PrivyProvider } from '@privy-io/react-auth'
+import { PrivyProvider } from '@/lib/privy'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { WagmiProvider } from 'wagmi'
