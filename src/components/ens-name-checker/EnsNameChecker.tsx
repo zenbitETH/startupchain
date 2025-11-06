@@ -1,6 +1,6 @@
 'use client'
 
-import { PrivyProvider, usePrivy } from '@privy-io/react-auth'
+import { PrivyProvider, usePrivy, isMockPrivy } from '@/lib/privy'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -117,7 +117,7 @@ function EnsNameCheckerWithPrivy() {
 }
 
 export function EnsNameChecker() {
-  if (!privyAppId) {
+  if (!privyAppId && !isMockPrivy) {
     throw new Error(
       'NEXT_PUBLIC_PRIVY_APP_ID must be set to render EnsNameChecker'
     )
@@ -125,7 +125,7 @@ export function EnsNameChecker() {
 
   return (
     <PrivyProvider
-      appId={privyAppId}
+      appId={privyAppId ?? 'mock-app'}
       config={{
         appearance: { theme: 'dark' },
         embeddedWallets: { createOnLogin: 'users-without-wallets' },
