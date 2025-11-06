@@ -1,6 +1,6 @@
 'use client'
 
-import { usePrivy, useWallets } from '@privy-io/react-auth'
+import { usePrivy, useWallets } from '@/lib/privy'
 import {
   AlertCircle,
   ArrowRight,
