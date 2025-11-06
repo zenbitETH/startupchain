@@ -1,6 +1,6 @@
 'use client'
 
-import { usePrivy } from '@privy-io/react-auth'
+import { usePrivy } from '@/lib/privy'
 import { Plus, Trash2, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 
