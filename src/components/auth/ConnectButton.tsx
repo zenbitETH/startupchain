@@ -1,5 +1,5 @@
 import { Button, Profile, mq } from '@ensdomains/thorin'
-import { usePrivy } from '@privy-io/react-auth'
+import { usePrivy } from '@/lib/privy'
 import styled, { css } from 'styled-components'
 import { useAccount, useChainId, useSwitchChain } from 'wagmi'
 import { mainnet } from 'wagmi/chains'
