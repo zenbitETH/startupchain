@@ -1,6 +1,4 @@
-import { ClientProviders } from '@/lib/providers'
-
-import { Navbar } from '../../components/navigation/navbar'
+import { Navbar } from '@/components/navigation/navbar'
 
 export default function AuthenticatedLayout({
   children,
