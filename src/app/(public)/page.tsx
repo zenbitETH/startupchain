@@ -1,16 +1,11 @@
-import dynamic from 'next/dynamic'
-
 import AnimatedRocket from '@/components/home/AnimatedRocket/AnimatedRocket'
 import { FeaturesSection } from '@/components/home/features-section'
 import { Footer } from '@/components/home/footer'
-import { NavbarServer } from '@/components/navigation/navbar-server'
-
 import { HeroSection } from '../../components/home/hero-section'
 
 export default function Home() {
   return (
     <div className="from-background via-background to-primary/5 relative min-h-screen overflow-hidden bg-gradient-to-br">
-      <NavbarServer />
       <AnimatedRocket
         animated={true}
         speedLines={true}
