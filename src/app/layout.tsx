@@ -1,8 +1,9 @@
 import { Metadata } from 'next'
 import { Fredoka } from 'next/font/google'
 
-import '@/style.css'
 import { AIChatTrigger } from '@/components/ai-chat/ai-chat-trigger'
+import { ClientProviders } from '@/lib/providers'
+import '@/style.css'
 
 export const viewport = {
   maximumScale: 1, // Disable auto-zoom on mobile Safari
@@ -56,8 +57,10 @@ export default function RootLayout({
     <html lang="en" className={`${fredoka.variable} dark`}>
       <head />
       <body className="antialiased">
-        {children}
-        <AIChatTrigger />
+        <ClientProviders>
+          {children}
+          <AIChatTrigger />
+        </ClientProviders>
       </body>
     </html>
   )
