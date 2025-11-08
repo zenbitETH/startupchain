@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import { Fredoka } from 'next/font/google'
 
 import { AIChatTrigger } from '@/components/ai-chat/ai-chat-trigger'
-import { ClientProviders } from '@/lib/providers'
+import { ProvidersShell } from '@/components/providers/providers-shell'
 import '@/style.css'
 
 export const viewport = {
@@ -57,10 +57,12 @@ export default function RootLayout({
     <html lang="en" className={`${fredoka.variable} dark`}>
       <head />
       <body className="antialiased">
-        <ClientProviders>
-          {children}
-          <AIChatTrigger />
-        </ClientProviders>
+        <>
+          <ProvidersShell>
+            {children}
+            <AIChatTrigger />
+          </ProvidersShell>
+        </>
       </body>
     </html>
   )
