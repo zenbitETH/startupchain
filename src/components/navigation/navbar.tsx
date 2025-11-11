@@ -1,13 +1,16 @@
 'use client'
 
-import { usePrivy } from '@/lib/privy'
 import Link from 'next/link'
+
+import { useProvidersReady } from '@/components/providers/providers-shell'
+import { Button } from '@/components/ui/button'
+import { useWalletAuth } from '@/hooks/use-wallet-auth'
 
 import { ChainLogo } from '../ui/chain-logo'
 import { LoadingSpinner } from '../ui/loading-spinner'
 
 export function Navbar() {
-  const { login, authenticated, user, ready } = usePrivy()
+  const providersReady = useProvidersReady()
 
   return (
     <nav className="sticky top-0 z-50 h-16 w-full py-4 backdrop-blur-sm">
@@ -23,59 +26,116 @@ export function Navbar() {
             </span>
           </Link>
 
-          {/* Mobile version */}
-          <div className="flex items-center md:hidden">
-            {!ready ? (
-              <div className="bg-primary/50 flex w-16 items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium">
-                <LoadingSpinner size="sm" className="text-background" />
-              </div>
-            ) : authenticated ? (
-              <Link
-                href="/dashboard"
-                className="bg-primary text-background inline-block rounded-lg px-3 py-1 text-sm font-medium transition-all duration-200 hover:bg-gradient-to-r hover:from-[#46B5D1] hover:to-[#CE6449] hover:text-white"
-              >
-                Dashboard
-              </Link>
-            ) : (
-              <button
-                onClick={login}
-                className="text-background bg-primary cursor-pointer rounded-lg px-3 py-1 text-sm font-medium transition-all duration-200 hover:bg-gradient-to-r hover:from-[#46B5D1] hover:to-[#CE6449] hover:text-white"
-              >
-                Login
-              </button>
-            )}
-          </div>
-
-          {/* Desktop version */}
-          <div className="hidden items-center space-x-8 md:flex">
-            {!ready ? (
-              <div className="bg-primary/50 flex w-24 items-center justify-center rounded-2xl px-4 py-2 text-2xl font-medium">
-                <LoadingSpinner size="lg" className="text-background" />
-              </div>
-            ) : authenticated ? (
-              <div className="flex items-center space-x-4">
-                <span className="text-muted-foreground text-xl">
-                  {user?.email?.address ||
-                    user?.wallet?.address?.slice(0, 6) + '...'}
-                </span>
-                <Link
-                  href="/dashboard"
-                  className="bg-primary text-background inline-block rounded-2xl px-4 py-1 text-2xl font-medium transition-all duration-200 hover:bg-gradient-to-r hover:from-[#46B5D1] hover:to-[#CE6449] hover:text-white"
-                >
-                  Dashboard
-                </Link>
-              </div>
-            ) : (
-              <button
-                onClick={login}
-                className="text-background bg-primary cursor-pointer rounded-2xl px-4 py-1.5 text-2xl font-medium shadow-md shadow-gray-300 transition-all duration-200 hover:bg-gradient-to-r hover:from-[#46B5D1] hover:to-[#CE6449] hover:shadow-lg"
-              >
-                Login
-              </button>
-            )}
-          </div>
+          <NavbarActions providersReady={providersReady} />
         </div>
       </div>
     </nav>
+  )
+}
+
+function NavbarActions({ providersReady }: { providersReady: boolean }) {
+  if (!providersReady) {
+    return <NavbarLoadingState />
+  }
+
+  return <NavbarAuthControls />
+}
+
+function NavbarAuthControls() {
+  const { connect, authenticated, displayLabel, ready } = useWalletAuth()
+
+  return (
+    <>
+      <NavbarButtonRow
+        className="flex items-center md:hidden"
+        buttonSize="sm"
+        ready={ready}
+        authenticated={authenticated}
+        onConnect={connect}
+      />
+      <NavbarButtonRow
+        className="hidden items-center space-x-4 md:flex"
+        buttonSize="lg"
+        ready={ready}
+        authenticated={authenticated}
+        onConnect={connect}
+        displayLabel={displayLabel}
+      />
+    </>
+  )
+}
+
+function NavbarLoadingState() {
+  return (
+    <>
+      <div className="flex items-center md:hidden">
+        <Button size="sm" variant="ghost" disabled className="min-w-[90px]">
+          <LoadingSpinner size="sm" className="text-foreground" />
+        </Button>
+      </div>
+      <div className="hidden items-center space-x-4 md:flex">
+        <Button size="lg" variant="ghost" disabled className="min-w-[140px]">
+          <LoadingSpinner size="lg" className="text-foreground" />
+        </Button>
+      </div>
+    </>
+  )
+}
+
+interface NavbarButtonRowProps {
+  className: string
+  buttonSize: 'sm' | 'lg'
+  ready: boolean
+  authenticated: boolean
+  onConnect: () => void
+  displayLabel?: string
+}
+
+function NavbarButtonRow({
+  className,
+  buttonSize,
+  ready,
+  authenticated,
+  onConnect,
+  displayLabel,
+}: NavbarButtonRowProps) {
+  const spinnerSize = buttonSize === 'sm' ? 'sm' : 'lg'
+
+  if (!ready) {
+    return (
+      <div className={className}>
+        <Button
+          size={buttonSize}
+          variant="ghost"
+          disabled
+          className="min-w-[90px]"
+        >
+          <LoadingSpinner size={spinnerSize} className="text-foreground" />
+        </Button>
+      </div>
+    )
+  }
+
+  if (!authenticated) {
+    return (
+      <div className={className}>
+        <Button size={buttonSize} onClick={onConnect} className="min-w-[110px]">
+          Connect wallet
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className={className}>
+      {displayLabel && (
+        <span className="text-muted-foreground hidden text-base font-medium md:inline-block">
+          {displayLabel}
+        </span>
+      )}
+      <Button asChild size={buttonSize} className="min-w-[110px]">
+        <Link href="/dashboard">Dashboard</Link>
+      </Button>
+    </div>
   )
 }
