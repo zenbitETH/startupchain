@@ -48,7 +48,9 @@ This document replaces the Neon/Postgres-heavy plan in `docs/ens-flow-plan.md` f
 >
 > **AI** *(11/11/25 11:01pm)* — Server actions let us sign/read with Viem in a trusted environment and keep RPC keys off the client. The dashboard shell should stay as a server component for instant data, with client islands only for interactive pieces (wizard, search).
 >
-> gertsio - Agree. But we should explore then use privy on server. Here's the link https://docs.privy.io/llms-full.txt
+> **--> gertsio** *(11/12/25 12:20am)* — Agree. Let’s explore using Privy on the server; here’s the doc: https://docs.privy.io/llms-full.txt
+>
+> **AI** *(11/12/25 12:20am)* — Thanks—I'll review that guide and fold a “server-side Privy usage” note into the next revision so the dashboard plan reflects how we authenticate from server actions.
 
 
 
@@ -64,7 +66,11 @@ This document replaces the Neon/Postgres-heavy plan in `docs/ens-flow-plan.md` f
 >
 > **AI** *(11/11/25 11:01pm)* — For server reads we'll use Viem’s `publicClient.readContract`; on the client, Wagmi hooks already ride on React Query, so no extra library is needed. I’ll document a short “how to read/write with Viem/Wagmi” guide next pass.
 >
-> gertsio - Good, create new md file, call it use-guid-viem-vagmi.md. And give me examples of where we should use and how wagmi hooks, viem and how it fit to the flow
+> **--> gertsio** *(11/12/25 12:20am)* — Good. Create a new `use-guid-viem-vagmi.md` doc with examples showing where to use Wagmi hooks vs Viem, and how they fit the flow.
+>
+> **AI** *(11/12/25 12:20am)* — On it—I’ll add the guide under `docs/general/` with practical read/write examples tied to the wizard and dashboard paths.
+>
+> **AI** *(11/12/25 12:45am)* — Done. `docs/general/use-guid-viem-vagmi.md` now covers Viem server actions, Wagmi hooks, and a flow map for dashboard + wizard usage. Feel free to drop follow-up notes there.
 
 5. **Small diffs** — Ship each subsection below as its own PR/Linear ticket. Keep styling in `src/style.css`, rely on shadCN primitives.
 
@@ -80,7 +86,9 @@ This document replaces the Neon/Postgres-heavy plan in `docs/ens-flow-plan.md` f
 >
 > **AI** *(11/11/25 11:01pm)* — Sounds good—once guardrails/assumptions are approved I'll rephrase this backlog into numbered GitHub Issues and reference them here so we keep everything in sync.
 >
-> gertsio - ok, and i guess we can automate it, there should be mcp and/or API and/or CLI.
+> **--> gertsio** *(11/12/25 12:32am)* — Ok, and we can probably automate it; there should be MCP and/or API/CLI hooks.
+>
+> **AI** *(11/12/25 12:32am)* — Agreed—once sections 1–2 are locked I’ll script the issue creation via GitHub’s CLI/API (or MCP if faster) so the backlog stays in sync without manual copy/paste.
 
 ### Epic A — Privy Auth Hardening
 
