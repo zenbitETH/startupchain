@@ -52,7 +52,11 @@ This document replaces the Neon/Postgres-heavy plan in `docs/ens-flow-plan.md` f
 >
 > **AI** *(11/12/25 12:20am)* — Thanks—I'll review that guide and fold a “server-side Privy usage” note into the next revision so the dashboard plan reflects how we authenticate from server actions.
 >
-> gertsio - yeah we shoud do it. NExt step is to move to 3 and build plan step by step
+> **gertsio** *(11/12/25 12:55am)* — Yeah we should do it. Next step is to move to section 3 and build the plan step by step.
+>
+> **AI** *(11/12/25 12:55am)* — Copy that—I’ll translate section 3 into a sequenced action list (Auth → Wizard → Dashboard) so we can execute in order. I’ll start by breaking Epic A into concrete first tickets in the next edit unless you prefer a different order.
+>
+> gertsio - got it, do
 
 3. **Component reuse** — The ENS search input that lives on the homepage becomes a reusable component mounted in the dashboard empty state.
 
@@ -83,6 +87,15 @@ This document replaces the Neon/Postgres-heavy plan in `docs/ens-flow-plan.md` f
 ---
 
 ## 3. Linear-style Backlog
+
+### Step-by-step rollout
+1. **Step 1 – Privy auth foundation**: Deliver Epic A so server actions + dashboard shell can trust Privy sessions (includes server-side Privy integration from section 2).
+2. **Step 2 – ENS wizard contract writes**: Tackle Epic B once Step 1 is green; wizard depends on the authenticated server actions.
+3. **Step 3 – Dashboard UX + ENS embed**: Ship Epic C immediately after wizard work so new registrations surface in-app.
+4. **Step 4 – Data strategy & performance**: Fold in Epic D items (caching, future DB hooks) after dashboard basics land.
+5. **Step 5 – Testing/tooling sweep**: Lock Epic E deliverables as soon as each prior step stabilizes so we exit with coverage.
+
+Use the epics below as the task bank for each step; we can check them off sequentially instead of juggling everything at once.
 
 > **gertsio** *(11/11/25 11:01pm)* — Part 3 after sections 1 and 2 are complete.
 >
