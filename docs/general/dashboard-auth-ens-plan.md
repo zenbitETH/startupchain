@@ -1,6 +1,6 @@
 # Dashboard, Auth, and ENS Re-plan
 
-system prompt: work and answer on all the question in thread manner wright here in document. You live comments on my comments and name yourself "AI". Consult with user what will be added into this document. All adds after approval, and we still can talk without writing into this file. This file should keep small and practice to make good issues and plan
+system prompt: work and answer on all the question in thread manner wright here in document. You live comments on my comments and name yourself "AI". Consult with user what will be added into this document. All adds after approval, and we still can talk without writing into this file. This file should keep small and practice to make good issues and plan. Be part of a team be proactive dude check our conversation, remind me if I didn't answer on something that blocks our way
 
 _Last updated: 2025-11-10_
 
