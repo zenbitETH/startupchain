@@ -8,18 +8,22 @@ This document replaces the Neon/Postgres-heavy plan in `docs/ens-flow-plan.md` f
 
 gertsio
 Use it as the and make guid how to handle it with git hub issues / project instead of linear for simplicity, or you think linear still a better choice for a small team?
+AI: I agree GitHub Projects + Issues is lighter for us now—I'll keep the structure GitHub-native and only mention Linear if we ever need personal tracking.
 
 ---
 
 ## 1. Why This Exists Now
 - New Foundry artifacts (`script/StartupChain.s.sol`, viem client, `/api/ens/register`) give us end-to-end contract writes without relying on Postgres mirrors.
 gertsio: Why do I need viem for and what the difference between viem and wagmi, how and why they needed and what i should know about them?
+AI: Viem is the lower-level RPC toolkit (server-safe clients, typed ABI helpers) and Wagmi wraps it for React hooks. We need Viem in server actions/routes, Wagmi only in client components. Knowing both lets us reuse ABI/contract configs everywhere.
 
 - Auth has drifted: Privy should be the single session authority again, RainbowKit/RPC is additive.
 gertsio: Yeah, only privy with hooks to use it in our own UI. No privy templates and UI's control is ours!
+AI: Noted—we stick to Privy hooks plus custom shadCN UI, remove any prefab Privy components.
 
 - The dashboard must surface on-chain company data immediately after registration. We can read directly from the contract and skip DB reads unless we later need analytics or complex filters.
 gertsio: Correct. I think we should nuke DBs to keep the bundle small. By the way should add to backlog, I should work on codebase and its architecture, also a lot of unused or weird stuff there
+AI: I'll note a housekeeping backlog item to audit/remove unused code + DB remnants; keeping the bundle lean aligns with the contract-first plan.
 
 ---
 
@@ -27,15 +31,18 @@ gertsio: Correct. I think we should nuke DBs to keep the bundle small. By the wa
 1. **Privy-first auth** — No mixed providers until Privy session + embedded wallet flow is stable. RainbowKit can still connect wallets, but Privy drives authorization and server actions.
 
 gertsio: Only privy with wallet connection, we'll add other sign up methods later since it changes the flow. For example If user can login / signup with anything other but wallet we'd need to handle wallet registration and then how to top it up, so a lot of questions. We'll definetely do it
+AI: Got it—we'll scope Epic A strictly around wallet-based Privy auth and leave non-wallet login as a future epic once we solve top-ups/funding.
 
 2. **Server-driven data** — ENS/company data comes from `StartupChain` reads via server components/actions. No client-side `fetch`.
 gertsio: Ouh! It's important topic. Why do we need server actions. I don't mind but my dashboard probably should be client side or server side? How's better? And from discussion on this matter
+AI: Server actions let us sign/read with Viem in a trusted environment and keep RPC keys off the client. The dashboard shell should stay as a server component for instant data, with client islands only for interactive pieces (wizard, search).
 
 3. **Component reuse** — The ENS search input that lives on the homepage becomes a reusable component mounted in the dashboard empty state.
 gertsio: Yep!
 
 4. **On-chain as source of truth** — No database writes in the wizard for now. We only persist via contracts, then derive state from chain reads plus cached request data in React state/session storage if needed.
 gertsio: Yep! Also should discuss what tool to use for data fething from contract. I don't know how it works. Is it something like react query or graphQL. Need a guid how to use it
+AI: For server reads we'll use Viem’s `publicClient.readContract` inside server components/actions; on the client, Wagmi hooks already use React Query under the hood so no extra library is needed. I’ll document a short “how to read/write with Viem/Wagmi” snippet next pass.
 
 5. **Small diffs** — Ship each subsection below as its own PR/Linear ticket. Keep styling in `src/style.css`, rely on shadCN primitives.
 gertsio: yep!
@@ -44,6 +51,7 @@ gertsio: yep!
 
 ## 3. Linear-style Backlog
 gertsio: Part 3 after 1 and 2 completion
+AI: Sounds good—once guardrails/assumptions are approved I’ll rephrase this backlog into numbered GitHub Issues and reference them here so we keep everything in sync.
 
 ### Epic A — Privy Auth Hardening
 - **A1**: Refactor providers so Privy wraps the entire app tree with SSR support (follow `docs/auth.md` guardrails). Audit that `login()` only comes from Privy hooks.
