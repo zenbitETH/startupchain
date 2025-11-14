@@ -1,14 +1,19 @@
 # Auth Plan: Privy SDK + Metamask
 
 ## Why this document exists
+
 - We are migrating the app to a *wallet-first* authentication model. Privy stays in place, but email/social flows are disabled until we deliberately re-enable them.
 - The dashboard is the first surface that must enforce this: if you cannot connect a wallet (MetaMask or compatible EOA), you cannot reach `/dashboard` nor trigger ENS flows.
 - Navbar login needs to open MetaMask directly (via Privy’s `connectWallet`) while keeping the marketing homepage fully SSG.
 - `docs/stack-docs/privy.md` currently links to Privy’s long-form docs. This file distills exactly what we need, where to put it, and how to wire it to the dashboard.
+- privy docs full privy docs: https://docs.privy.io/llms-full.txt
+
+
 
 ---
 
 ## Requirements & guardrails
+
 1. Wallet-only login: `loginMethods = ['wallet']`, `walletList = ['metamask', 'walletconnect', 'coinbase_wallet']` (MetaMask first, others optional).
 2. Privy provider stays global so `usePrivy()` and `useWallets()` work in both `(public)` and `(app)` trees.
 3. Homepage remains SSG/ISR-friendly. Only the login button hydrates on the client.
@@ -19,6 +24,7 @@
 ---
 
 ## Provider placement (current architecture)
+
 - `src/app/layout.tsx` renders the entire tree server-side (pure SSG) and wraps it with `ProvidersShell`. The shell renders children immediately, then—after `requestIdleCallback` fires—mounts `ClientProviders` (Privy + Wagmi + TanStack). Result: the home page ships HTML/CSS with zero JS blocking first paint, but the entire app hydrates in the background with a single provider boundary.
 - `ProvidersShell` exposes `useProvidersReady()` so client components know when Privy is mounted. Until it’s ready, UI renders shadcn placeholders (skeleton buttons) instead of crashing.
 - Because the shell now lives in the root layout, both `(public)` and `(app)` routes share the exact same provider instance; no more per-route wrappers or duplicate navbars.
@@ -26,6 +32,7 @@
 ---
 
 ## Configuring Privy for wallet-only login
+
 Update `src/lib/providers.tsx`:
 
 ```tsx
@@ -49,6 +56,7 @@ Update `src/lib/providers.tsx`:
 ```
 
 Key notes:
+
 - `walletList` accepts the union defined in Privy types (`metamask`, `coinbase_wallet`, etc.). Ordering controls the UI order.
 - Keep embedded wallets enabled for future gasless flows; users still sign with MetaMask but have a Privy-managed smart wallet ready.
 - `defaultChain` ensures MetaMask opens the right network (swap to Base/Sepolia in non-prod via env gate).
@@ -56,6 +64,7 @@ Key notes:
 ---
 
 ## Navbar + auth UX (current implementation)
+
 - Only one navbar exists (`src/components/navigation/navbar.tsx`) and it’s client-side. It renders immediately (static markup) but watches `useProvidersReady()` to know when Privy/Wagmi are mounted.
 - Buttons use shadcn’s `Button` component. Before providers are ready we show disabled ghost buttons with the shared spinner; once ready, the navbar calls `useWalletAuth()` (see next section) to decide between “Connect wallet” and “Dashboard.”
 - The connect action simply calls `connect()` from the hook, which wraps Privy’s `login`/`connectWallet`. When authentication succeeds, the router pushes to `/dashboard`.
@@ -64,6 +73,7 @@ Key notes:
 ---
 
 ## Auth hook (`useWalletAuth`)
+
 - Location: `src/hooks/use-wallet-auth.ts`.
 - Responsibilities:
   - Call `usePrivy()` and `useWallets()` once providers are ready.
@@ -73,6 +83,7 @@ Key notes:
 - Consumers: navbar, `LoginButton`, future onboarding flows. This keeps UI components “dumb”—they render shadcn buttons and call the hook instead of embedding Privy logic themselves.
 
 Example:
+
 ```tsx
 const { ready, authenticated, connect, displayLabel } = useWalletAuth()
 return authenticated ? (
@@ -85,6 +96,7 @@ return authenticated ? (
 ---
 
 ## Dashboard expectations
+
 1. **Route guard**: still pending—client redirect exists, but we plan to add middleware/server guard reading Privy JWT once we store it server-side.
 2. **Wallet availability**: `useWalletAuth()` already exposes `primaryAddress`; show reconnect CTA if missing.
 3. **MetaMask prompt**: reuse `connect()` for “Reconnect” or “Continue setup” CTAs in dashboard flows.
@@ -93,6 +105,7 @@ return authenticated ? (
 ---
 
 ## Implementation checklist
+
 1. **ProvidersShell** already lives in root layout; keep it as the single place to mount Privy/Wagmi/TanStack after first paint.
 2. **Privy config**: maintain wallet-only settings (MetaMask first) in `src/lib/providers.tsx`.
 3. **Use `useWalletAuth()` everywhere** for auth-aware UI controls.
@@ -106,6 +119,7 @@ return authenticated ? (
 ---
 
 ## Appendix: Helpful Privy APIs
+
 - `usePrivy()` exposes `{ ready, authenticated, user, connectWallet, login, logout }`. We prefer `connectWallet` for direct MetaMask prompts; `login` is still available if we later re-enable other methods.
 - `useWallets()` returns an ordered list of linked wallets; use this to display the active address and hook into Wagmi (`useBalance`, `useEnsAddress` already use it).
 - `connectWallet(options)` accepts `walletList`, `description`, and `preSelectedWalletId`. Use `walletList: ['metamask']` to skip the selector entirely.
