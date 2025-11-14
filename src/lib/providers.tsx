@@ -1,10 +1,10 @@
 'use client'
 
-import { PrivyProvider } from '@/lib/privy'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { WagmiProvider } from 'wagmi'
 
+import { PrivyProvider } from '@/lib/privy'
 import { wagmiConfig } from '@/lib/web3'
 
 const queryClient = new QueryClient()
@@ -19,10 +19,9 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
       config={{
         appearance: {
           theme: 'dark',
+          walletList: ['metamask']
         },
-        embeddedWallets: {
-          createOnLogin: 'users-without-wallets',
-        },
+        loginMethods: ['wallet'],
       }}
     >
       <WagmiProvider config={wagmiConfig}>
