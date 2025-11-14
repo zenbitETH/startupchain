@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
+import { mainnet, sepolia } from 'viem/chains'
 import { WagmiProvider } from 'wagmi'
 
 import { PrivyProvider } from '@/lib/privy'
@@ -19,9 +20,12 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
       config={{
         appearance: {
           theme: 'dark',
-          walletList: ['metamask']
+          walletList: ['metamask'],
+          walletChainType: 'ethereum-only',
         },
         loginMethods: ['wallet'],
+        defaultChain: mainnet,
+        supportedChains: [mainnet, sepolia],
       }}
     >
       <WagmiProvider config={wagmiConfig}>
