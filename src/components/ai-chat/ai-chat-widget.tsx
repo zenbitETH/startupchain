@@ -61,10 +61,10 @@ export function AIChatWidget({
   return (
     <div
       className={cn(
-        'fixed right-4 bottom-20 w-full max-w-xs sm:max-w-sm lg:right-8 lg:bottom-10 transition-all duration-300 ease-out',
+        'fixed right-4 bottom-20 w-full max-w-xs transition-all duration-300 ease-out sm:max-w-sm lg:right-8 lg:bottom-10',
         isOpen
-          ? 'z-50 pointer-events-auto translate-y-0 opacity-100'
-          : 'z-0 pointer-events-none translate-y-4 opacity-0'
+          ? 'pointer-events-auto z-50 translate-y-0 opacity-100'
+          : 'pointer-events-none -z-10 translate-y-4 opacity-0'
       )}
       aria-hidden={!isOpen}
     >
