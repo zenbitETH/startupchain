@@ -1,4 +1,4 @@
-# Dashboard, Auth, and ENS Re-plan
+# Dashboard,\*\*\*\* Auth, and ENS Re-plan
 
 system prompt: Work inside this doc: reply inline under comments (using `>`), name yourself **AI**, and mark open threads with `--> gertsio`. Ask before adding new sections, keep diffs small, and remind gertsio about unanswered blockers. Treat this file as the living roadmap + comms + discussion space for the project; only create GitHub issues when explicitly requested. Be proactive and there should not be threads where user's question / suggestion isn't answered
 
@@ -6,9 +6,9 @@ _Last updated: 2025-11-10_
 
 This document replaces the Neon/Postgres-heavy plan in `docs/ens-flow-plan.md` for the dashboard + ENS wizard work. The new direction leans entirely on the `StartupChain` contract set in `src/contracts/src/StartupChain.sol` plus the viem client in `src/lib/blockchain/startupchain-client.ts`.
 
-> **gertsio** *(11/11/25 11:01pm)* — Use it as the guide and tie it to GitHub Issues/Projects instead of Linear for simplicity, or do you think Linear is still better for a small team?
+> **gertsio** _(11/11/25 11:01pm)_ — Use it as the guide and tie it to GitHub Issues/Projects instead of Linear for simplicity, or do you think Linear is still better for a small team?
 >
-> **AI** *(11/11/25 11:01pm)* — GitHub Projects + Issues is lighter for us now—I'll keep everything GitHub-native and only mention Linear if we ever need personal tracking.
+> **AI** _(11/11/25 11:01pm)_ — GitHub Projects + Issues is lighter for us now—I'll keep everything GitHub-native and only mention Linear if we ever need personal tracking.
 
 ---
 
@@ -16,21 +16,21 @@ This document replaces the Neon/Postgres-heavy plan in `docs/ens-flow-plan.md` f
 
 - New Foundry artifacts (`script/StartupChain.s.sol`, viem client, `/api/ens/register`) give us end-to-end contract writes without relying on Postgres mirrors.
 
-> **gertsio** *(11/11/25 11:01pm)* — Why do I need Viem, how is it different from Wagmi, and what should I know about them?
+> **gertsio** _(11/11/25 11:01pm)_ — Why do I need Viem, how is it different from Wagmi, and what should I know about them?
 >
-> **AI** *(11/11/25 11:01pm)* — Viem is the lower-level RPC toolkit (server-safe clients, typed ABI helpers) and Wagmi wraps it for React hooks. We need Viem in server actions/routes, Wagmi only in client components, so we can reuse ABI/contract configs everywhere.
+> **AI** _(11/11/25 11:01pm)_ — Viem is the lower-level RPC toolkit (server-safe clients, typed ABI helpers) and Wagmi wraps it for React hooks. We need Viem in server actions/routes, Wagmi only in client components, so we can reuse ABI/contract configs everywhere.
 
 - Auth has drifted: Privy should be the single session authority again, RainbowKit/RPC is additive.
 
-> **gertsio** *(11/11/25 11:01pm)* — Only Privy with hooks to use it in our own UI. No Privy templates and UI control stays with us.
+> **gertsio** _(11/11/25 11:01pm)_ — Only Privy with hooks to use it in our own UI. No Privy templates and UI control stays with us.
 >
-> **AI** *(11/11/25 11:01pm)* — Noted—we'll stick to Privy hooks plus custom shadCN UI, removing any prefab Privy components.
+> **AI** _(11/11/25 11:01pm)_ — Noted—we'll stick to Privy hooks plus custom shadCN UI, removing any prefab Privy components.
 
 - The dashboard must surface on-chain company data immediately after registration. We can read directly from the contract and skip DB reads unless we later need analytics or complex filters.
 
-> **gertsio** *(11/11/25 11:01pm)* — Correct. We should nuke DBs to keep the bundle small and add a backlog item to clean up unused/weird architecture pieces.
+> **gertsio** _(11/11/25 11:01pm)_ — Correct. We should nuke DBs to keep the bundle small and add a backlog item to clean up unused/weird architecture pieces.
 >
-> **AI** *(11/11/25 11:01pm)* — I'll note a housekeeping backlog item to audit/remove unused code and DB remnants; staying contract-first keeps the bundle lean.
+> **AI** _(11/11/25 11:01pm)_ — I'll note a housekeeping backlog item to audit/remove unused code and DB remnants; staying contract-first keeps the bundle lean.
 
 ---
 
@@ -38,57 +38,58 @@ This document replaces the Neon/Postgres-heavy plan in `docs/ens-flow-plan.md` f
 
 1. **Privy-first auth** — No mixed providers until Privy session + embedded wallet flow is stable. RainbowKit can still connect wallets, but Privy drives authorization and server actions.
 
-> **gertsio** *(11/11/25 11:01pm)* — Only Privy with wallet connection right now. Other sign-up methods come later because they change the flow (wallet registration, top-ups, etc.).
+> **gertsio** _(11/11/25 11:01pm)_ — Only Privy with wallet connection right now. Other sign-up methods come later because they change the flow (wallet registration, top-ups, etc.).
 >
-> **AI** *(11/11/25 11:01pm)* — Got it—we’ll scope Epic A strictly around wallet-based Privy auth and leave non-wallet login as a future epic once we solve top-ups/funding.
+> **AI** _(11/11/25 11:01pm)_ — Got it—we’ll scope Epic A strictly around wallet-based Privy auth and leave non-wallet login as a future epic once we solve top-ups/funding.
 
 2. **Server-driven data** — ENS/company data comes from `StartupChain` reads via server components/actions. No client-side `fetch`.
 
-> **gertsio** *(11/11/25 11:01pm)* — Why do we need server actions? Should the dashboard be client-side or server-side? Let’s discuss.
+> **gertsio** _(11/11/25 11:01pm)_ — Why do we need server actions? Should the dashboard be client-side or server-side? Let’s discuss.
 >
-> **AI** *(11/11/25 11:01pm)* — Server actions let us sign/read with Viem in a trusted environment and keep RPC keys off the client. The dashboard shell should stay as a server component for instant data, with client islands only for interactive pieces (wizard, search).
+> **AI** _(11/11/25 11:01pm)_ — Server actions let us sign/read with Viem in a trusted environment and keep RPC keys off the client. The dashboard shell should stay as a server component for instant data, with client islands only for interactive pieces (wizard, search).
 >
-> **gertsio** *(11/12/25 12:20am)* — Agree. Let’s explore using Privy on the server; here’s the doc: https://docs.privy.io/llms-full.txt
+> **gertsio** _(11/12/25 12:20am)_ — Agree. Let’s explore using Privy on the server; here’s the doc: https://docs.privy.io/llms-full.txt
 >
-> **AI** *(11/12/25 12:20am)* — Thanks—I'll review that guide and fold a “server-side Privy usage” note into the next revision so the dashboard plan reflects how we authenticate from server actions.
+> **AI** _(11/12/25 12:20am)_ — Thanks—I'll review that guide and fold a “server-side Privy usage” note into the next revision so the dashboard plan reflects how we authenticate from server actions.
 >
-> **gertsio** *(11/12/25 12:55am)* — Yeah we should do it. Next step is to move to section 3 and build the plan step by step.
+> **gertsio** _(11/12/25 12:55am)_ — Yeah we should do it. Next step is to move to section 3 and build the plan step by step.
 >
-> **AI** *(11/12/25 12:55am)* — Copy that—I’ll translate section 3 into a sequenced action list (Auth → Wizard → Dashboard) so we can execute in order. I’ll start by breaking Epic A into concrete first tickets in the next edit unless you prefer a different order.
+> **AI** _(11/12/25 12:55am)_ — Copy that—I’ll translate section 3 into a sequenced action list (Auth → Wizard → Dashboard) so we can execute in order. I’ll start by breaking Epic A into concrete first tickets in the next edit unless you prefer a different order.
 >
 > gertsio - got it, do
 
 3. **Component reuse** — The ENS search input that lives on the homepage becomes a reusable component mounted in the dashboard empty state.
 
-> **gertsio** *(11/11/25 11:01pm)* — Yep!
+> **gertsio** _(11/11/25 11:01pm)_ — Yep!
 >
-> **AI** *(11/11/25 11:01pm)* — Copy that—I'll keep ENS search as a shared component in the backlog.
+> **AI** _(11/11/25 11:01pm)_ — Copy that—I'll keep ENS search as a shared component in the backlog.
 
 4. **On-chain as source of truth** — No database writes in the wizard for now. We only persist via contracts, then derive state from chain reads plus cached request data in React state/session storage if needed.
 
-> **gertsio** *(11/11/25 11:01pm)* — Yep! Also, what tool do we use for data fetching from the contract? Is it like React Query or GraphQL? Need a guide.
+> **gertsio** _(11/11/25 11:01pm)_ — Yep! Also, what tool do we use for data fetching from the contract? Is it like React Query or GraphQL? Need a guide.
 >
-> **AI** *(11/11/25 11:01pm)* — For server reads we'll use Viem’s `publicClient.readContract`; on the client, Wagmi hooks already ride on React Query, so no extra library is needed. I’ll document a short “how to read/write with Viem/Wagmi” guide next pass.
+> **AI** _(11/11/25 11:01pm)_ — For server reads we'll use Viem’s `publicClient.readContract`; on the client, Wagmi hooks already ride on React Query, so no extra library is needed. I’ll document a short “how to read/write with Viem/Wagmi” guide next pass.
 >
-> **gertsio** *(11/12/25 12:20am)* — Good. Create a new `use-guid-viem-vagmi.md` doc with examples showing where to use Wagmi hooks vs Viem, and how they fit the flow.
+> **gertsio** _(11/12/25 12:20am)_ — Good. Create a new `use-guid-viem-vagmi.md` doc with examples showing where to use Wagmi hooks vs Viem, and how they fit the flow.
 >
-> **AI** *(11/12/25 12:20am)* — On it—I’ll add the guide under `docs/general/` with practical read/write examples tied to the wizard and dashboard paths.
+> **AI** _(11/12/25 12:20am)_ — On it—I’ll add the guide under `docs/general/` with practical read/write examples tied to the wizard and dashboard paths.
 >
-> **AI** *(11/12/25 12:45am)* — Done. `docs/general/use-guid-viem-vagmi.md` now covers Viem server actions, Wagmi hooks, and a flow map for dashboard + wizard usage. Feel free to drop follow-up notes there.
+> **AI** _(11/12/25 12:45am)_ — Done. `docs/general/use-guid-viem-vagmi.md` now covers Viem server actions, Wagmi hooks, and a flow map for dashboard + wizard usage. Feel free to drop follow-up notes there.
 >
 > gertsio - ok
 
 5. **Small diffs** — Ship each subsection below as its own PR/Linear ticket. Keep styling in `src/style.css`, rely on shadCN primitives.
 
-> **gertsio** *(11/11/25 11:01pm)* — yep!
+> **gertsio** _(11/11/25 11:01pm)_ — yep!
 >
-> **AI** *(11/11/25 11:01pm)* — Noted—small diffs and centralized styling only.
+> **AI** _(11/11/25 11:01pm)_ — Noted—small diffs and centralized styling only.
 
 ---
 
 ## 3. Linear-style Backlog
 
 ### Step-by-step rollout
+
 1. **Step 1 – Privy auth foundation**: Deliver Epic A so server actions + dashboard shell can trust Privy sessions (includes server-side Privy integration from section 2).
 2. **Step 2 – ENS wizard contract writes**: Tackle Epic B once Step 1 is green; wizard depends on the authenticated server actions.
 3. **Step 3 – Dashboard UX + ENS embed**: Ship Epic C immediately after wizard work so new registrations surface in-app.
@@ -97,17 +98,17 @@ This document replaces the Neon/Postgres-heavy plan in `docs/ens-flow-plan.md` f
 
 Use the epics below as the task bank for each step; we can check them off sequentially instead of juggling everything at once.
 
-> **gertsio** *(11/11/25 11:01pm)* — Part 3 after sections 1 and 2 are complete.
+> **gertsio** _(11/11/25 11:01pm)_ — Part 3 after sections 1 and 2 are complete.
 >
-> **AI** *(11/11/25 11:01pm)* — Sounds good—once guardrails/assumptions are appr„oved I'll rephrase this backlog into numbered GitHub Issues and reference them here so we keep everything in sync.
+> **AI** _(11/11/25 11:01pm)_ — Sounds good—once guardrails/assumptions are appr„oved I'll rephrase this backlog into numbered GitHub Issues and reference them here so we keep everything in sync.
 >
-> ** gertsio** *(11/12/25 12:32am)* — Ok, and we can probably automate it; there should be MCP and/or API/CLI hooks.
+> ** gertsio** _(11/12/25 12:32am)_ — Ok, and we can probably automate it; there should be MCP and/or API/CLI hooks.
 >
-> **AI** *(11/12/25 12:32am)* — Agreed—once sections 1–2 are locked I’ll script the issue creation via GitHub’s CLI/API (or MCP if faster) so the backlog stays in sync without manual copy/paste.
+> **AI** _(11/12/25 12:32am)_ — Agreed—once sections 1–2 are locked I’ll script the issue creation via GitHub’s CLI/API (or MCP if faster) so the backlog stays in sync without manual copy/paste.
 >
-> ** gertsio** *(11/12/25 12:40am)* — Hmm, maybe GH Issues isn’t even the best way; this doc + AI feels more efficient.
+> ** gertsio** _(11/12/25 12:40am)_ — Hmm, maybe GH Issues isn’t even the best way; this doc + AI feels more efficient.
 >
-> **AI** *(11/12/25 12:40am)* — Fair point—let’s keep iterating in this doc and only spin up GitHub issues when we specifically need async tracking or outside collaborators. I’ll keep expanding the plan + linked guides here by default.
+> **AI** _(11/12/25 12:40am)_ — Fair point—let’s keep iterating in this doc and only spin up GitHub issues when we specifically need async tracking or outside collaborators. I’ll keep expanding the plan + linked guides here by default.
 >
 > gertsio - ok it's time to move forward i guess
 
@@ -117,6 +118,24 @@ Use the epics below as the task bank for each step; we can check them off sequen
 - **A2**: Add server action/session helper that verifies Privy tokens before allowing ENS register/dashboard reads. Remove any fallback mocks.
 - **A3**: Gate the dashboard layout route segment: unauthenticated → redirect to `(public)/login`, authenticated → load user context for downstream server components.
 - **A4**: Align RainbowKit usage with Privy identity (if we expose it) by mapping connected EOA → Privy user in context. Disable actions if mismatch.
+
+> **AI** _(2025-01-27)_ — **Recommended starting point: A2 first, then A3, then A1 if needed.**
+>
+> **Rationale**: A2 (server session helper) is the foundation—we need Privy token verification before we can gate routes (A3) or refactor providers (A1). Current state: middleware checks cookies but doesn't verify tokens; dashboard is client-only with no server guard.
+>
+> **Execution order**:
+>
+> 1. Review Privy server-side docs (https://docs.privy.io/llms-full.txt) to understand token verification APIs
+> 2. Create `src/lib/auth/server-session.ts` helper that verifies Privy access tokens from cookies/headers
+> 3. Use helper in middleware for A3 (route guard)
+> 4. Use helper in server actions for contract reads/writes
+> 5. A1 (provider refactor) may not be needed if current setup already supports SSR boundaries correctly
+>
+> **Blockers**: Need to understand Privy server SDK APIs for token verification. Once A2 is done, A3 becomes straightforward.
+>
+> --> gertsio
+
+> **AI** _(2025-11-15)_ — Read and aligned. I’ll start with A2: add `src/lib/auth/server-session.ts` to verify Privy access tokens (per server doc), then wire middleware + server actions to it so A3 is unblocked. If you prefer a different order or want a checkpoint before wiring middleware, flag it. --> gertsio
 
 ### Epic B — ENS Wizard & Contract Writes
 
