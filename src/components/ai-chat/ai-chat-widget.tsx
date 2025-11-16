@@ -1,16 +1,17 @@
 'use client'
 
+import { UIMessage } from '@ai-sdk/react'
 import type { ChatStatus } from 'ai'
 import { Send, X } from 'lucide-react'
 import type { Dispatch, SetStateAction } from 'react'
 import { useEffect, useMemo, useRef } from 'react'
+
 import { cn } from '@/lib/utils'
-import { UIMessage } from '@ai-sdk/react'
 
 interface AIChatWidgetProps {
   isOpen: boolean
   onClose: () => void
-  messages: UIMessage
+  messages: UIMessage[]
   inputValue: string
   onInputChange: Dispatch<SetStateAction<string>>
   onSend: () => void
@@ -18,7 +19,6 @@ interface AIChatWidgetProps {
   stop: () => Promise<void>
   error?: Error
 }
-
 
 export function AIChatWidget({
   isOpen,
@@ -45,6 +45,20 @@ export function AIChatWidget({
     if (!isOpen) return
     containerRef.current?.focus({ preventScroll: true })
   }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
 
   const placeholder = useMemo(() => {
     if (isBusy) return 'StartupChain Assistant is responding...'
@@ -83,7 +97,7 @@ export function AIChatWidget({
         </header>
 
         <div className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-br from-slate-950/40 via-slate-950/10 to-slate-900/60 p-5 text-sm text-slate-300 backdrop-blur-2xl">
-          {messages.parts.length === 0 && (
+          {messages.length === 0 && (
             <div className="rounded-2xl border border-white/5 bg-white/5 p-4 text-xs leading-relaxed text-slate-200 shadow-[0_12px_30px_-20px_rgba(150,180,255,0.6)]">
               <p className="font-medium text-white">Welcome to StartupChain!</p>
               <p>
@@ -93,8 +107,13 @@ export function AIChatWidget({
             </div>
           )}
 
-          {messages.parts.map((part) => {
-            const text = part.type === 'text' ? return part.text
+          {messages.map((message) => {
+            const text = message.parts
+              .map((part) => (part.type === 'text' ? part.text : ''))
+              .join('')
+              .trim()
+            if (!text) return null
+
             const isUser = message.role === 'user'
             if (!text) return null
 
