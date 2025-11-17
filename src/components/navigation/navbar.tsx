@@ -10,7 +10,7 @@ import { ChainLogo } from '../ui/chain-logo'
 import { LoadingSpinner } from '../ui/loading-spinner'
 
 export function Navbar() {
-  const providersReady = useProvidersReady()
+  const { ready: providersReady } = useProvidersReady()
 
   return (
     <nav className="sticky top-0 z-50 h-16 w-full py-4 backdrop-blur-sm">
