@@ -4,13 +4,37 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
 import { ClientProviders } from '@/lib/providers'
 
-const ProvidersReadyContext = createContext(false)
+type InitialSession = {
+  userId: string
+  walletAddress?: string
+  expiresAt: Date
+}
 
-export function ProvidersShell({ children }: { children: React.ReactNode }) {
-  const [activate, setActivate] = useState(false)
+type ProvidersContextValue = {
+  ready: boolean
+  initialSession?: InitialSession
+}
+
+const ProvidersReadyContext = createContext<ProvidersContextValue>({
+  ready: false,
+})
+
+type ProvidersShellProps = {
+  children: React.ReactNode
+  initialSession?: InitialSession
+  mountImmediately?: boolean
+}
+
+export function ProvidersShell({
+  children,
+  initialSession,
+  mountImmediately = false,
+}: ProvidersShellProps) {
+  const shouldActivate = mountImmediately || Boolean(initialSession)
+  const [activate, setActivate] = useState(shouldActivate)
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (activate || typeof window === 'undefined') return
 
     const id =
       'requestIdleCallback' in window
@@ -24,21 +48,20 @@ export function ProvidersShell({ children }: { children: React.ReactNode }) {
         clearTimeout(id as ReturnType<typeof setTimeout>)
       }
     }
-  }, [])
+  }, [activate])
 
-  const contextValue = useMemo(() => activate, [activate])
+  const contextValue = useMemo(
+    () => ({ ready: activate, initialSession }),
+    [activate, initialSession]
+  )
 
-  if (!activate) {
-    return (
-      <ProvidersReadyContext.Provider value={contextValue}>
-        {children}
-      </ProvidersReadyContext.Provider>
-    )
-  }
-
-  return (
+  return activate ? (
     <ProvidersReadyContext.Provider value={contextValue}>
       <ClientProviders>{children}</ClientProviders>
+    </ProvidersReadyContext.Provider>
+  ) : (
+    <ProvidersReadyContext.Provider value={contextValue}>
+      {children}
     </ProvidersReadyContext.Provider>
   )
 }
