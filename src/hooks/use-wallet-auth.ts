@@ -16,7 +16,16 @@ const fallbackAuth = {
 } as const
 
 export function useWalletAuth() {
-  const providersReady = useProvidersReady()
+  const { ready: providersReady, initialSession } = useProvidersReady()
+
+  // Avoid calling Privy hooks until the provider is mounted; use initialSession as a hint.
+  if (!providersReady) {
+    return {
+      ...fallbackAuth,
+      authenticated: Boolean(initialSession),
+      primaryAddress: initialSession?.walletAddress ?? undefined,
+    }
+  }
 
   let privyResult: ReturnType<typeof usePrivy> | null = null
   let privyError: unknown = null
@@ -33,7 +42,7 @@ export function useWalletAuth() {
     // ignore, will fall back below
   }
 
-  if (!providersReady || privyError || !privyResult) {
+  if (privyError || !privyResult) {
     return fallbackAuth
   }
 
