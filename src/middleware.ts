@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/auth/server-session'
 
 export async function middleware(request: NextRequest) {
-  console.log('somethin')
   if (!request.nextUrl.pathname.startsWith('/dashboard')) {
     return NextResponse.next()
   }
