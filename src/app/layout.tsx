@@ -1,8 +1,10 @@
 import { Metadata } from 'next'
 import { Fredoka } from 'next/font/google'
+import { cookies, headers } from 'next/headers'
 
 import { AIChatTrigger } from '@/components/ai-chat/ai-chat-trigger'
 import { ProvidersShell } from '@/components/providers/providers-shell'
+import { getServerSession } from '@/lib/auth/server-session'
 import '@/style.css'
 
 export const viewport = {
@@ -48,17 +50,22 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const session = await getServerSession({
+    headers: headers(),
+    cookies: cookies(),
+  })
+
   return (
     <html lang="en" className={`${fredoka.variable} dark`}>
       <head />
       <body className="antialiased">
         <>
-          <ProvidersShell>
+          <ProvidersShell initialSession={session || undefined}>
             {children}
             <AIChatTrigger />
           </ProvidersShell>
