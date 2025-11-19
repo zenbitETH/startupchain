@@ -25,6 +25,13 @@ type ProvidersShellProps = {
   mountImmediately?: boolean
 }
 
+
+// Strategy:
+// 1. Initially render children directly to allow immediate painting of SSG content.
+// 2. Wait for idle callback (client-side).
+// 3. Wrap children in ClientProviders to hydrate interactive features (Auth, Web3).
+// This prevents the heavy providers from blocking the First Contentful Paint (FCP).
+
 export function ProvidersShell({
   children,
   initialSession,
