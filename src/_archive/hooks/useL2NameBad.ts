@@ -1,3 +1,4 @@
+// ! Archived 2025-11-20
 // This hook fakes L2 Primary Name resolution, allowing use on mainnet even though ENS DAO hasn't approved it yet.
 //
 // This is not advisable, and should only be used for testing purposes.

@@ -1,3 +1,4 @@
+// ! Archived 2025-11-20
 import { Button, Profile, mq } from '@ensdomains/thorin'
 import { usePrivy } from '@/lib/privy'
 import styled, { css } from 'styled-components'

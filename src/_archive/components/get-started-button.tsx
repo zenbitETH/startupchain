@@ -1,3 +1,4 @@
+// ! Archived 2025-11-20
 'use client'
 
 import { LoginButton } from './login-button'

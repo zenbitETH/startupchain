@@ -1,3 +1,4 @@
+// ! Archived 2025-11-20
 // L2 Primary Names usually have a few hour propagation delay
 // This hook resolves the data instantly, provided the client has access to L1 and L2 clients
 import { useQuery } from '@tanstack/react-query'
