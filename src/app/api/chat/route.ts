@@ -6,9 +6,13 @@ import {
 } from 'ai'
 import type { ModelMessage, UIMessage } from 'ai'
 
-const SYSTEM_PROMPT = `You are StartupChain's helpful assistant. Keep answers short, clear, and friendly.
+import { KNOWLEDGE_BASE } from '@/lib/ai-chat/knowledge'
+
+const SYSTEM_PROMPT =
+  `You are StartupChain's helpful assistant. Keep answers short, clear, and friendly.
 Never mention your underlying model, provider, or anything related to Mode.
-Always refer to yourself simply as StartupChain's helpful assistant.`
+Always refer to yourself simply as StartupChain's helpful assistant.` +
+  KNOWLEDGE_BASE
 
 export const POST = async (req: Request): Promise<Response> => {
   const body = await req.json()
