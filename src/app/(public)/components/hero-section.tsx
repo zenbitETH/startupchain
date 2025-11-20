@@ -1,4 +1,4 @@
-import { EnsNameChecker } from '../ens-name-checker'
+import { EnsNameChecker } from '../../../components/ens-name-checker'
 
 export function HeroSection() {
   return (

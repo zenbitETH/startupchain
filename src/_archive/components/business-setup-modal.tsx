@@ -6,9 +6,9 @@ import React, { useEffect, useState } from 'react'
 
 import { useSmartWallet } from '@/hooks/use-smart-wallet'
 
-import { CongratulationsModal } from './congratulations-modal'
-import { ENSCostEstimate } from '../ens/ens-cost-estimate'
-import { CountdownModal } from './countdown-modal'
+import { CongratulationsModal } from '../../components/modals/congratulations-modal'
+import { ENSCostEstimate } from '../../components/ens/ens-cost-estimate'
+import { CountdownModal } from '../../components/modals/countdown-modal'
 
 interface Founder {
   id: string

@@ -1,7 +1,8 @@
-import AnimatedRocket from '@/components/home/AnimatedRocket/AnimatedRocket'
-import { FeaturesSection } from '@/components/home/features-section'
-import { Footer } from '@/components/home/footer'
-import { HeroSection } from '../../components/home/hero-section'
+import AnimatedRocket from '@/app/(public)/components/AnimatedRocket/AnimatedRocket'
+import { FeaturesSection } from '@/app/(public)/components/features-section'
+import { Footer } from '@/app/(public)/components/footer'
+
+import { HeroSection } from './components/hero-section'
 
 export default function Home() {
   return (

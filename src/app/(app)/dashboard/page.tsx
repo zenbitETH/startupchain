@@ -65,12 +65,6 @@ export default function Dashboard() {
     }
   }, [searchParams])
 
-  // Redirect if not authenticated (wait for Privy to be ready)
-  useEffect(() => {
-    if (ready && !authenticated) {
-      router.push('/')
-    }
-  }, [authenticated, ready, router])
 
   const handleLogout = async () => {
     await logout()
