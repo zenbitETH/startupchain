@@ -1,9 +1,12 @@
 'use client'
 
-import { usePrivy } from '@privy-io/react-auth'
-import { ArrowRight, Loader2 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+
+import { Button } from '@/components/ui/button'
+import { useWalletAuth } from '@/hooks/use-wallet-auth'
+import { cn } from '@/lib/utils'
 
 interface LoginButtonProps {
   children: React.ReactNode
@@ -11,8 +14,12 @@ interface LoginButtonProps {
   className?: string
 }
 
-export function LoginButton({ children, redirectTo = '/dashboard', className }: LoginButtonProps) {
-  const { login, authenticated, ready } = usePrivy()
+export function LoginButton({
+  children,
+  redirectTo = '/dashboard',
+  className,
+}: LoginButtonProps) {
+  const { connect, authenticated, ready } = useWalletAuth()
   const router = useRouter()
   const [isAuthenticating, setIsAuthenticating] = useState(false)
 
@@ -25,37 +32,42 @@ export function LoginButton({ children, redirectTo = '/dashboard', className }: 
   }, [authenticated, isAuthenticating, router, redirectTo])
 
   const handleClick = () => {
+    if (isAuthenticating || !ready) return
+
     if (!authenticated) {
       setIsAuthenticating(true)
-      login()
-    } else {
-      router.push(redirectTo)
+      connect().catch(() => setIsAuthenticating(false))
+      return
     }
+
+    router.push(redirectTo)
   }
 
-  if (!ready) {
-    return (
-      <button disabled className={className}>
-        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-        Loading...
-      </button>
-    )
-  }
+  const content = isAuthenticating ? (
+    <>
+      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      Authenticating...
+    </>
+  ) : (
+    children
+  )
 
   return (
-    <button
+    <Button
+      type="button"
+      size="lg"
       onClick={handleClick}
-      disabled={isAuthenticating}
-      className={className}
+      disabled={isAuthenticating || !ready}
+      className={cn('min-w-[160px]', className)}
     >
-      {isAuthenticating ? (
+      {!ready ? (
         <>
-          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          Authenticating...
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Loading…
         </>
       ) : (
-        children
+        content
       )}
-    </button>
+    </Button>
   )
 }

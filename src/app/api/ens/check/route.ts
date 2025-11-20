@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPublicClient, http } from 'viem'
-import { mainnet, sepolia } from 'viem/chains'
+import { sepolia } from 'viem/chains'
 import { normalize } from 'viem/ens'
+
+const alchemyKey = process.env.ALCHEMY_API_KEY?.trim()
+const rpcUrl = alchemyKey
+  ? alchemyKey.startsWith('http')
+    ? alchemyKey
+    : `https://eth-sepolia.g.alchemy.com/v2/${alchemyKey}`
+  : sepolia.rpcUrls.default.http[0]
 
 const client = createPublicClient({
   chain: sepolia,
-  transport: http(process.env.ALCHEMY_API_KEY || ''),
+  transport: http(rpcUrl),
 })
 
 export async function GET(request: NextRequest) {

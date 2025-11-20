@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react'
-import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { Address, formatEther, createWalletClient, custom } from 'viem'
 import { useConfig } from 'wagmi'
 import { isValidEnsName } from '@/lib/ens'
 import { sepoliaWithEns, mainnetWithEns } from '@/lib/web3'
+import { usePrivy, useWallets } from '@/lib/privy'
 
 // ENS.js imports - same as ens-register-test
 import { getPrice, getOwner, getResolver } from '@ensdomains/ensjs/public'

@@ -1,15 +1,15 @@
 'use client'
 
-import { PrivyProvider, usePrivy } from '@privy-io/react-auth'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+
+import { useProvidersReady } from '@/components/providers/providers-shell'
+import { usePrivy } from '@/lib/privy'
 
 import { useDebounce } from '../../hooks/use-debounce'
 import { EnsInput } from './EnsInput'
 import { EnsStatus } from './EnsStatus'
 import { useEnsCheck } from './useEnsCheck'
-
-const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID
 
 interface CheckerViewProps {
   ensName: string
@@ -57,6 +57,9 @@ function EnsCheckerView({
 }
 
 function EnsNameCheckerWithPrivy() {
+  const providersReady = useProvidersReady()
+  // TODO(auth-ens): render a shell-only view when providers aren't ready so we avoid touching Privy hooks until the global provider hydrates. Privy mock crashes due to this bug.
+
   const [ensName, setEnsName] = useState('')
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [pendingName, setPendingName] = useState<string | null>(null)
@@ -117,21 +120,5 @@ function EnsNameCheckerWithPrivy() {
 }
 
 export function EnsNameChecker() {
-  if (!privyAppId) {
-    throw new Error(
-      'NEXT_PUBLIC_PRIVY_APP_ID must be set to render EnsNameChecker'
-    )
-  }
-
-  return (
-    <PrivyProvider
-      appId={privyAppId}
-      config={{
-        appearance: { theme: 'dark' },
-        embeddedWallets: { createOnLogin: 'users-without-wallets' },
-      }}
-    >
-      <EnsNameCheckerWithPrivy />
-    </PrivyProvider>
-  )
+  return <EnsNameCheckerWithPrivy />
 }

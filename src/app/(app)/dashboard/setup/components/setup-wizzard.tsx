@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { usePrivy } from '@privy-io/react-auth'
+import { usePrivy } from '@/lib/privy'
 import { Plus, Trash2 } from 'lucide-react'
 
 import { ENSCostEstimate } from '@/components/ens/ens-cost-estimate'

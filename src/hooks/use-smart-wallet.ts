@@ -1,8 +1,8 @@
-import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useState, useCallback, useEffect } from 'react'
 import { Address, parseEther, formatEther } from 'viem'
 import { baseSepolia, sepolia, mainnet } from 'viem/chains'
 import { useEnsRegistration } from './use-ens-registration'
+import { usePrivy, useWallets } from '@/lib/privy'
 
 // Get current environment
 const isDevelopment = process.env.NODE_ENV === 'development'

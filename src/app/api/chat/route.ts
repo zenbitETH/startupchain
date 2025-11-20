@@ -1,0 +1,29 @@
+import { google } from '@ai-sdk/google'
+import {
+  convertToModelMessages,
+  createUIMessageStreamResponse,
+  streamText,
+} from 'ai'
+import type { ModelMessage, UIMessage } from 'ai'
+
+const SYSTEM_PROMPT = `You are StartupChain's helpful assistant. Keep answers short, clear, and friendly.
+Never mention your underlying model, provider, or anything related to Mode.
+Always refer to yourself simply as StartupChain's helpful assistant.`
+
+export const POST = async (req: Request): Promise<Response> => {
+  const body = await req.json()
+
+  const messages: UIMessage[] = body.messages
+
+  const modelMessages: ModelMessage[] = convertToModelMessages(messages)
+
+  const streamTextResult = streamText({
+    model: google('gemini-2.0-flash-lite'),
+    messages: modelMessages,
+    system: SYSTEM_PROMPT,
+  })
+
+  const stream = streamTextResult.toUIMessageStream()
+
+  return createUIMessageStreamResponse({ stream })
+}

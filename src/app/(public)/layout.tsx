@@ -1,6 +1,6 @@
 import { Navbar } from '@/components/navigation/navbar'
 
-export default function AuthenticatedLayout({
+export default function PublicLayout({
   children,
 }: {
   children: React.ReactNode

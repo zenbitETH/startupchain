@@ -1,30 +1,23 @@
 'use client'
 
+import { UIMessage } from '@ai-sdk/react'
 import type { ChatStatus } from 'ai'
 import { Send, X } from 'lucide-react'
 import type { Dispatch, SetStateAction } from 'react'
 import { useEffect, useMemo, useRef } from 'react'
 
-import type { Message } from '@/components/ai-chat/ai-chat-trigger'
 import { cn } from '@/lib/utils'
 
 interface AIChatWidgetProps {
   isOpen: boolean
   onClose: () => void
-  messages: Message[]
+  messages: UIMessage[]
   inputValue: string
   onInputChange: Dispatch<SetStateAction<string>>
   onSend: () => void
   status: ChatStatus
   stop: () => Promise<void>
   error?: Error
-}
-
-function getMessageText(message: Message): string {
-  return message.parts
-    .filter((part) => part.type === 'text')
-    .map((part) => part.text)
-    .join('\n')
 }
 
 export function AIChatWidget({
@@ -53,6 +46,20 @@ export function AIChatWidget({
     containerRef.current?.focus({ preventScroll: true })
   }, [isOpen])
 
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   const placeholder = useMemo(() => {
     if (isBusy) return 'StartupChain Assistant is responding...'
     return 'Ask StartupChain anything about ENS, revenue splits, or onboarding.'
@@ -61,10 +68,10 @@ export function AIChatWidget({
   return (
     <div
       className={cn(
-        'fixed right-4 bottom-20 w-full max-w-xs sm:max-w-sm lg:right-8 lg:bottom-10 transition-all duration-300 ease-out',
+        'fixed right-4 bottom-20 w-full max-w-xs transition-all duration-300 ease-out sm:max-w-sm lg:right-8 lg:bottom-10',
         isOpen
-          ? 'z-50 pointer-events-auto translate-y-0 opacity-100'
-          : 'z-0 pointer-events-none translate-y-4 opacity-0'
+          ? 'pointer-events-auto z-50 translate-y-0 opacity-100'
+          : 'pointer-events-none -z-10 translate-y-4 opacity-0'
       )}
       aria-hidden={!isOpen}
     >
@@ -101,7 +108,12 @@ export function AIChatWidget({
           )}
 
           {messages.map((message) => {
-            const text = getMessageText(message)
+            const text = message.parts
+              .map((part) => (part.type === 'text' ? part.text : ''))
+              .join('')
+              .trim()
+            if (!text) return null
+
             const isUser = message.role === 'user'
             if (!text) return null
 
