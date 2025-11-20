@@ -61,11 +61,20 @@ export async function getServerSession(
       appSecret: process.env.PRIVY_APP_SECRET,
     })
 
-    let walletAddress: string | number | undefined
+    let walletAddress: string | undefined
 
     try {
-      const user = await client.users().get({ id_token: verified.user_id })
-      walletAddress = user.linked_accounts
+      const user = await client.users()._get(verified.user_id)
+      const account =
+        user.linked_accounts.find(
+          (a) => a.type === 'wallet' && a.connector_type !== 'embedded'
+        ) ||
+        user.linked_accounts.find((a) => a.type === 'wallet') ||
+        user.linked_accounts.find((a) => a.type === 'smart_wallet')
+
+      if (account && 'address' in account) {
+        walletAddress = account.address
+      }
     } catch (err) {
       console.error('Error fetching Privy user profile', err)
     }
