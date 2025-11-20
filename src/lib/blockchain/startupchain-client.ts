@@ -1,6 +1,6 @@
 'use server'
 
-import { http } from 'viem'
+import { createPublicClient, http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { mainnet, sepolia } from 'viem/chains'
 
@@ -30,6 +30,11 @@ const chainId = (process.env.NEXT_PUBLIC_CHAIN_ID ??
   '11155111') as keyof typeof CHAINS
 const target = CHAINS[chainId]
 if (!target) throw new Error(`Unsupported chain id: ${chainId}`)
+
+export const publicClient = createPublicClient({
+  chain: target.chain,
+  transport: http(target.rpcUrl),
+})
 
 export const startupChainClient = async () => ({
   chain: target.chain,
