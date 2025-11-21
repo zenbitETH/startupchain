@@ -23,16 +23,10 @@ export function PrivyProvider(props: RealPrivyProviderProps) {
   return <RealPrivyProvider {...props} />
 }
 
-export function usePrivy(): UsePrivyReturn {
-  const mock = useMockPrivy()
-  const real = usePrivyReal()
+export const usePrivy: () => UsePrivyReturn = isMockPrivy
+  ? useMockPrivy
+  : usePrivyReal
 
-  return isMockPrivy ? mock : real
-}
-
-export function useWallets(): UseWalletsReturn {
-  const mock = useMockWallets()
-  const real = useWalletsReal()
-
-  return isMockPrivy ? mock : real
-}
+export const useWallets: () => UseWalletsReturn = isMockPrivy
+  ? useMockWallets
+  : useWalletsReal
