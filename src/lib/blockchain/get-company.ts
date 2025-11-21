@@ -33,7 +33,7 @@ export async function getCompanyByAddress(address: string) {
 
     // Format the result into a nice object
     // The return type of readContract with this ABI will be an array/tuple
-    const [id, companyAddress, ensName, creationDate, founders] = data as any
+    const [id, companyAddress, ensName, creationDate, founders] = data
 
     return {
       id: id.toString(),
@@ -42,7 +42,7 @@ export async function getCompanyByAddress(address: string) {
       creationDate: new Date(Number(creationDate) * 1000),
       founders,
     }
-  } catch (error) {
+  } catch {
     // If the contract reverts (e.g., "No company found"), we return null
     return null
   }
