@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect } from 'react'
-import { usePrivy } from '@/lib/privy'
 import { Plus, Trash2 } from 'lucide-react'
 
 import { ENSCostEstimate } from '@/components/ens/ens-cost-estimate'
 import { CountdownModal } from '@/components/modals/countdown-modal'
 import { CongratulationsModal } from '@/components/modals/congratulations-modal'
 import { useSmartWallet } from '@/hooks/use-smart-wallet'
+import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import {
   useDraftStore,
   type Shareholder,
@@ -18,7 +18,7 @@ interface SetupWizardProps {
 }
 
 export function SetupWizard({ initialEnsName }: SetupWizardProps) {
-  const { login, authenticated, user } = usePrivy()
+  const { connect, authenticated, user } = useWalletAuth()
   const {
     createBusinessAccount,
     isCreating,
@@ -97,7 +97,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
 
   const handleCreateBusiness = async () => {
     if (!authenticated) {
-      await login()
+      await connect()
       return
     }
 
