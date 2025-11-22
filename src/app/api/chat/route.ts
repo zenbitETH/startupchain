@@ -14,8 +14,6 @@ Never mention your underlying model, provider, or anything related to Mode.
 Always refer to yourself simply as StartupChain's helpful assistant.
 Knowledge base: ${JSON.stringify(KNOWLEDGE_BASE, null)}`
 
-console.log(SYSTEM_PROMPT)
-
 export const POST = async (req: Request): Promise<Response> => {
   const body = await req.json()
 
