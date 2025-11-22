@@ -1,5 +1,4 @@
 import React, { Suspense } from 'react'
-import dynamic from 'next/dynamic'
 
 import {
   ANIMATION_CONFIG,
@@ -18,7 +17,7 @@ type RocketProps = {
 } & React.SVGProps<SVGSVGElement>
 
 export default function AnimatedRocket({
-  animated = false,
+  animated: _animated = false,
   speedLines = false,
   scrollEffect = false,
   className,
