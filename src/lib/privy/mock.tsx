@@ -9,7 +9,7 @@ import {
 } from 'react'
 import type { Address } from 'viem'
 
-import { UsePrivyReturn, UseWalletsReturn } from '@/lib/privy'
+import type { UsePrivyReturn, UseWalletsReturn } from './types'
 
 type MockSmartWalletAccount = {
   type: 'smart_wallet'
