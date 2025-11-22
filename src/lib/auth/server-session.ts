@@ -49,7 +49,6 @@ export async function getServerSession(
       app_id: process.env.NEXT_PUBLIC_PRIVY_APP_ID,
       verification_key: process.env.PRIVY_VERIFICATION_KEY,
     })
-    console.log(verified)
 
     if (!process.env.PRIVY_APP_SECRET) {
       console.log('no app secret')
@@ -78,8 +77,6 @@ export async function getServerSession(
     } catch (err) {
       console.error('Error fetching Privy user profile', err)
     }
-
-    console.log('walletAddress:', walletAddress)
 
     return {
       userId: verified.user_id,
