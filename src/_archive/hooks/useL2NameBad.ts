@@ -1,3 +1,4 @@
+// ! Archived 2025-11-20
 // This hook fakes L2 Primary Name resolution, allowing use on mainnet even though ENS DAO hasn't approved it yet.
 //
 // This is not advisable, and should only be used for testing purposes.
@@ -68,17 +69,22 @@ const evmChainIdToCoinType = (chainId: number) => {
 
 export function useL2NameBad({ address, l1ChainId, l2ChainId }: Props) {
   const connectedChainId = useChainId() as WagmiConfigChainId
-  const chainId = l2ChainId ?? connectedChainId
+  const chainId = (l2ChainId ?? connectedChainId) as WagmiConfigChainId
+  const resolvedL1ChainId = l1ChainId ?? mainnet.id
 
-  if (!wagmiConfigChainIds.includes(chainId as any)) {
+  if (!l2ChainIds.includes(chainId as L2ChainId)) {
+    throw new Error('`l2ChainId` must be one of the supported L2 networks')
+  }
+
+  if (!wagmiConfigChainIds.includes(chainId)) {
     throw new Error('`l2ChainId` is not in the wagmi config')
   }
 
-  if (l1ChainIds.includes(l2ChainId as any)) {
+  if (l1ChainIds.includes(chainId as L1ChainId)) {
     throw new Error("Use wagmi's native `useEnsName` hook for L1")
   }
 
-  if (!wagmiConfigChainIds.includes(l1ChainId as any)) {
+  if (!wagmiConfigChainIds.includes(resolvedL1ChainId as WagmiConfigChainId)) {
     throw new Error(
       '`l1ChainId` is not in the wagmi config. Must have `mainnet`, `sepolia` or `holesky`'
     )
@@ -91,7 +97,7 @@ export function useL2NameBad({ address, l1ChainId, l2ChainId }: Props) {
 
   const l1Client = usePublicClient({
     config: wagmiConfig,
-    chainId: (l1ChainId ?? 1) as WagmiConfigChainId,
+    chainId: resolvedL1ChainId as WagmiConfigChainId,
   })
 
   return useQuery({

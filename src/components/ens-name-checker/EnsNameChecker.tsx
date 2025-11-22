@@ -4,68 +4,19 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
 import { useProvidersReady } from '@/components/providers/providers-shell'
-import { usePrivy } from '@/lib/privy'
+import { useWalletAuth } from '@/hooks/use-wallet-auth'
 
 import { useDebounce } from '../../hooks/use-debounce'
 import { EnsInput } from './EnsInput'
 import { EnsStatus } from './EnsStatus'
 import { useEnsCheck } from './useEnsCheck'
 
-interface CheckerViewProps {
-  ensName: string
-  setEnsName: (value: string) => void
-  normalizedName: string
-  isLoading: boolean
-  error: any
-  isTaken: boolean
-  isAvailable: boolean
-  resolvedAddress: string | null
-  onProceed: () => void
-  isAuthenticating: boolean
-}
-
-function EnsCheckerView({
-  ensName,
-  setEnsName,
-  normalizedName,
-  isLoading,
-  error,
-  isTaken,
-  isAvailable,
-  resolvedAddress,
-  onProceed,
-  isAuthenticating,
-}: CheckerViewProps) {
-  return (
-    <div className="mx-auto mb-13 max-w-2xl md:mb-15 lg:mx-0">
-      <div className="bg-card border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
-        <EnsInput ensName={ensName} setEnsName={setEnsName} />
-        <EnsStatus
-          ensName={ensName}
-          normalizedName={normalizedName}
-          isLoading={isLoading}
-          error={error}
-          isTaken={isTaken}
-          isAvailable={isAvailable}
-          resolvedAddress={resolvedAddress}
-          onProceed={onProceed}
-          isAuthenticating={isAuthenticating}
-        />
-      </div>
-    </div>
-  )
-}
-
-function EnsNameCheckerWithPrivy() {
-  const providersReady = useProvidersReady()
-  // TODO(auth-ens): render a shell-only view when providers aren't ready so we avoid touching Privy hooks until the global provider hydrates. Privy mock crashes due to this bug.
-
-  const [ensName, setEnsName] = useState('')
+function EnsLogic({ ensName }: { ensName: string }) {
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [pendingName, setPendingName] = useState<string | null>(null)
   const debouncedEnsName = useDebounce(ensName, 500)
   const router = useRouter()
-  const { authenticated, login } = usePrivy()
+  const { authenticated, connect } = useWalletAuth()
 
   const {
     normalizedName,
@@ -91,7 +42,7 @@ function EnsNameCheckerWithPrivy() {
       try {
         setPendingName(normalizedName)
         setIsAuthenticating(true)
-        await login()
+        await connect()
       } catch (privyError) {
         console.error('Privy login failed', privyError)
         setIsAuthenticating(false)
@@ -101,12 +52,11 @@ function EnsNameCheckerWithPrivy() {
     }
 
     router.push(`/dashboard/setup?ensName=${normalizedName}`)
-  }, [authenticated, login, normalizedName, router])
+  }, [authenticated, connect, normalizedName, router])
 
   return (
-    <EnsCheckerView
+    <EnsStatus
       ensName={ensName}
-      setEnsName={setEnsName}
       normalizedName={normalizedName}
       isLoading={isLoading}
       error={error}
@@ -120,5 +70,29 @@ function EnsNameCheckerWithPrivy() {
 }
 
 export function EnsNameChecker() {
-  return <EnsNameCheckerWithPrivy />
+  const { ready } = useProvidersReady()
+  const [ensName, setEnsName] = useState('')
+
+  return (
+    <div className="mx-auto mb-13 max-w-2xl md:mb-15 lg:mx-0">
+      <div className="bg-card border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
+        <EnsInput ensName={ensName} setEnsName={setEnsName} />
+        {ready ? (
+          <EnsLogic ensName={ensName} />
+        ) : (
+          <EnsStatus
+            ensName={ensName}
+            normalizedName=""
+            isLoading={false}
+            error={null}
+            isTaken={false}
+            isAvailable={false}
+            resolvedAddress={null}
+            onProceed={() => {}}
+            isAuthenticating={false}
+          />
+        )}
+      </div>
+    </div>
+  )
 }

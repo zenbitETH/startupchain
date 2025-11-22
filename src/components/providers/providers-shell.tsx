@@ -25,7 +25,6 @@ type ProvidersShellProps = {
   mountImmediately?: boolean
 }
 
-
 // Strategy:
 // 1. Initially render children directly to allow immediate painting of SSG content.
 // 2. Wait for idle callback (client-side).

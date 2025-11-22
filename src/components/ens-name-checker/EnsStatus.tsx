@@ -6,7 +6,7 @@ interface EnsStatusProps {
   ensName: string
   normalizedName: string
   isLoading: boolean
-  error: any
+  error: unknown
   isTaken: boolean
   isAvailable: boolean
   resolvedAddress: string | null

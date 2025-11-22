@@ -51,7 +51,10 @@ export function CongratulationsModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-md"
+        onClick={onClose}
+      />
 
       {/* Modal */}
       <div className="relative mx-4 w-full max-w-lg max-h-[90vh] overflow-y-auto">

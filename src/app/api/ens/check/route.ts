@@ -3,6 +3,8 @@ import { createPublicClient, http } from 'viem'
 import { sepolia } from 'viem/chains'
 import { normalize } from 'viem/ens'
 
+export const dynamic = 'force-dynamic'
+
 const alchemyKey = process.env.ALCHEMY_API_KEY?.trim()
 const rpcUrl = alchemyKey
   ? alchemyKey.startsWith('http')

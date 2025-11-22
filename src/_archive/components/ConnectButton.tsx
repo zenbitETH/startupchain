@@ -1,5 +1,6 @@
+// ! Archived 2025-11-20
 import { Button, Profile, mq } from '@ensdomains/thorin'
-import { usePrivy } from '@/lib/privy'
+import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import styled, { css } from 'styled-components'
 import { useAccount, useChainId, useSwitchChain } from 'wagmi'
 import { mainnet } from 'wagmi/chains'
@@ -15,7 +16,7 @@ const StyledButton = styled(Button)`
 `
 
 export function ConnectButton() {
-  const { ready, authenticated, user, login, logout } = usePrivy()
+  const { ready, authenticated, user, connect, disconnect } = useWalletAuth()
   const { address } = useAccount()
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
@@ -37,7 +38,7 @@ export function ConnectButton() {
 
   if (!authenticated) {
     return (
-      <StyledButton shape="rounded" onClick={login}>
+      <StyledButton shape="rounded" onClick={connect}>
         Connect
       </StyledButton>
     )
@@ -77,7 +78,7 @@ export function ConnectButton() {
         {
           label: 'Disconnect',
           color: 'red',
-          onClick: logout,
+          onClick: disconnect,
         },
       ]}
     />

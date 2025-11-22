@@ -1,3 +1,4 @@
+// ! Archived 2025-11-20
 // This is the correct way to implement ENS Primary Name resolution with L2 support.
 // Caveats: propogation is slow, which can lead to a confusing UX and suboptimal DX during hackathons.
 // See the other files in this directory for alternative approaches.

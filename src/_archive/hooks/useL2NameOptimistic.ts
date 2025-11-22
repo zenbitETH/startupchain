@@ -1,3 +1,4 @@
+// ! Archived 2025-11-20
 // L2 Primary Names usually have a few hour propagation delay
 // This hook resolves the data instantly, provided the client has access to L1 and L2 clients
 import { useQuery } from '@tanstack/react-query'
@@ -7,7 +8,8 @@ import { holesky, mainnet, sepolia } from 'wagmi/chains'
 
 import { wagmiConfig } from '@/lib/web3'
 
-const l1ChainIds = [mainnet.id, sepolia.id, holesky.id]
+const l1ChainIds = [mainnet.id, sepolia.id, holesky.id] as const
+type L1ChainId = (typeof l1ChainIds)[number]
 const wagmiConfigChainIds = wagmiConfig.chains.map((chain) => chain.id)
 type WagmiConfigChainId = (typeof wagmiConfigChainIds)[number]
 
@@ -23,17 +25,18 @@ export function useL2NameOptimistic({
   l2ChainId,
 }: Props) {
   const connectedChainId = useChainId() as WagmiConfigChainId
-  const chainId = l2ChainId ?? connectedChainId
+  const chainId = (l2ChainId ?? connectedChainId) as WagmiConfigChainId
+  const resolvedL1ChainId = l1ChainId ?? mainnet.id
 
-  if (!wagmiConfigChainIds.includes(chainId as any)) {
+  if (!wagmiConfigChainIds.includes(chainId)) {
     throw new Error('`l2ChainId` is not in the wagmi config')
   }
 
-  if (l1ChainIds.includes(l2ChainId as any)) {
+  if (l1ChainIds.includes(chainId as L1ChainId)) {
     throw new Error("Use wagmi's native `useEnsName` hook for L1")
   }
 
-  if (!wagmiConfigChainIds.includes(l1ChainId as any)) {
+  if (!wagmiConfigChainIds.includes(resolvedL1ChainId as WagmiConfigChainId)) {
     throw new Error(
       '`l1ChainId` is not in the wagmi config. Must have `mainnet`, `sepolia` or `holesky`'
     )
@@ -46,7 +49,7 @@ export function useL2NameOptimistic({
 
   const l1Client = usePublicClient({
     config: wagmiConfig,
-    chainId: l1ChainId as WagmiConfigChainId,
+    chainId: resolvedL1ChainId as WagmiConfigChainId,
   })
 
   return useQuery({

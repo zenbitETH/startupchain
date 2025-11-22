@@ -1,7 +1,6 @@
-import useSWR from 'swr'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
 import { isValidEnsName } from '../../lib/ens'
-import { fetcher } from '../../lib/swr/fetcher'
 
 interface EnsCheckResult {
   name: string
@@ -16,17 +15,32 @@ export function useEnsCheck(ensName: string) {
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '')
 
-  const { data, error, isLoading } = useSWR<EnsCheckResult>(
-    isValidEnsName(ensName) && normalizedName.length >= 3
-      ? `/api/ens/check?name=${encodeURIComponent(normalizedName)}`
-      : null,
-    fetcher,
-    {
-      dedupingInterval: 30_000,
-      revalidateOnFocus: false,
-      keepPreviousData: true,
-    }
-  )
+  const shouldCheck = isValidEnsName(ensName) && normalizedName.length >= 3
+
+  const { data, error, isLoading } = useQuery<EnsCheckResult>({
+    queryKey: ['ens-check', normalizedName],
+    queryFn: async ({ signal }) => {
+      const response = await fetch(
+        `/api/ens/check?name=${encodeURIComponent(normalizedName)}`,
+        { signal }
+      )
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as {
+          error?: string
+          details?: string
+        } | null
+        const message =
+          body?.error || body?.details || 'Failed to check ENS availability'
+        throw new Error(message)
+      }
+
+      return (await response.json()) as EnsCheckResult
+    },
+    enabled: shouldCheck,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
+  })
 
   const isAvailable = data?.available ?? false
   const isTaken = !isAvailable && data?.checked === true

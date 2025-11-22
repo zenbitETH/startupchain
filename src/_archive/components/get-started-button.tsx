@@ -1,6 +1,7 @@
+// ! Archived 2025-11-20
 'use client'
 
-import { LoginButton } from '../ui/login-button'
+import { LoginButton } from './login-button'
 
 export function GetStartedButton() {
   return (

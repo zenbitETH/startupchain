@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { mainnet, sepolia } from 'viem/chains'
 import { WagmiProvider } from 'wagmi'
 
+import { WalletAuthProvider } from '@/components/providers/wallet-auth-provider'
 import { PrivyProvider } from '@/lib/privy'
 import { wagmiConfig } from '@/lib/web3'
 
@@ -26,7 +27,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
     >
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
-          {children}
+          <WalletAuthProvider>{children}</WalletAuthProvider>
         </QueryClientProvider>
       </WagmiProvider>
     </PrivyProvider>

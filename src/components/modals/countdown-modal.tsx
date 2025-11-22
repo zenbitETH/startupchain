@@ -25,7 +25,6 @@ export function CountdownModal({
 
   const minutes = Math.floor(displayCountdown / 60)
   const seconds = displayCountdown % 60
-  const progress = ((61 - displayCountdown) / 61) * 100
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">

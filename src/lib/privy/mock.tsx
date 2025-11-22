@@ -1,7 +1,15 @@
 'use client'
 
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from 'react'
 import type { Address } from 'viem'
+
+import type { UsePrivyReturn, UseWalletsReturn } from './types'
 
 type MockSmartWalletAccount = {
   type: 'smart_wallet'
@@ -150,7 +158,11 @@ export function PrivyProviderMock({ children }: PrivyProviderProps) {
   }, [])
 
   const provider = useMemo(
-    () => createMockProvider(() => user.wallet.address, () => chainId),
+    () =>
+      createMockProvider(
+        () => user.wallet.address,
+        () => chainId
+      ),
     [user.wallet.address, chainId]
   )
 
@@ -196,18 +208,18 @@ export function PrivyProviderMock({ children }: PrivyProviderProps) {
   )
 }
 
-export function useMockPrivy() {
+export function useMockPrivy(): UsePrivyReturn {
   const context = useContext(MockPrivyContext)
   if (!context) {
     throw new Error('usePrivy must be used within PrivyProviderMock')
   }
-  return context
+  return context as unknown as UsePrivyReturn
 }
 
-export function useMockWallets() {
+export function useMockWallets(): UseWalletsReturn {
   const context = useContext(MockWalletContext)
   if (!context) {
     throw new Error('useWallets must be used within PrivyProviderMock')
   }
-  return context
+  return context as unknown as UseWalletsReturn
 }

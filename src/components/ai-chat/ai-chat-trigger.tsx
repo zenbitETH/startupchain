@@ -1,8 +1,8 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
-import { MessageCircle, X } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { MessageCircle } from 'lucide-react'
+import { useCallback, useState } from 'react'
 
 import { AIChatWidget } from '@/components/ai-chat/ai-chat-widget'
 

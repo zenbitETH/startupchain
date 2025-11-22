@@ -1,14 +1,15 @@
+// ! Archived 2025-11-20
 'use client'
 
-import { usePrivy } from '@/lib/privy'
+import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { Plus, Trash2, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 
 import { useSmartWallet } from '@/hooks/use-smart-wallet'
 
-import { CongratulationsModal } from './congratulations-modal'
-import { ENSCostEstimate } from '../ens/ens-cost-estimate'
-import { CountdownModal } from './countdown-modal'
+import { CongratulationsModal } from '../../components/modals/congratulations-modal'
+import { ENSCostEstimate } from '../../components/ens/ens-cost-estimate'
+import { CountdownModal } from '../../components/modals/countdown-modal'
 
 interface Founder {
   id: string
@@ -27,7 +28,7 @@ export function BusinessSetupModal({
   onClose,
   ensName,
 }: BusinessSetupModalProps) {
-  const { login, authenticated, user } = usePrivy()
+  const { connect, authenticated, user } = useWalletAuth()
   const {
     createBusinessAccount,
     isCreating,
@@ -135,7 +136,7 @@ export function BusinessSetupModal({
     // Check if user is authenticated
     if (!authenticated) {
       // Trigger Privy login flow
-      await login()
+      await connect()
       return
     }
 
