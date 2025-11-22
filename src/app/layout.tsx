@@ -55,21 +55,22 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const [headerList, cookieStore] = await Promise.all([headers(), cookies()])
   const session = await getServerSession({
-    headers: headers(),
-    cookies: cookies(),
+    headers: headerList,
+    cookies: cookieStore,
   })
 
   return (
     <html lang="en" className={`${fredoka.variable} dark`}>
       <head />
       <body className="antialiased">
-        <>
-          <ProvidersShell initialSession={session || undefined}>
+        <ProvidersShell initialSession={session || undefined}>
+          <main>
             {children}
             <AIChatTrigger />
-          </ProvidersShell>
-        </>
+          </main>
+        </ProvidersShell>
       </body>
     </html>
   )
