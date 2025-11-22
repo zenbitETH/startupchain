@@ -1,7 +1,7 @@
 // ! Archived 2025-11-20
 'use client'
 
-import { usePrivy } from '@/lib/privy'
+import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { Plus, Trash2, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 
@@ -28,7 +28,7 @@ export function BusinessSetupModal({
   onClose,
   ensName,
 }: BusinessSetupModalProps) {
-  const { login, authenticated, user } = usePrivy()
+  const { connect, authenticated, user } = useWalletAuth()
   const {
     createBusinessAccount,
     isCreating,
@@ -136,7 +136,7 @@ export function BusinessSetupModal({
     // Check if user is authenticated
     if (!authenticated) {
       // Trigger Privy login flow
-      await login()
+      await connect()
       return
     }
 
