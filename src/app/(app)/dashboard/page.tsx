@@ -1,6 +1,5 @@
 'use client'
 
-import { usePrivy, useWallets } from '@/lib/privy'
 import {
   AlertCircle,
   ArrowRight,
@@ -12,7 +11,6 @@ import {
   Mail,
   Search,
   Settings,
-  Sparkles,
   User,
   Wallet,
 } from 'lucide-react'
@@ -22,22 +20,20 @@ import { formatEther } from 'viem'
 import { normalize } from 'viem/ens'
 import { useBalance, useEnsAddress } from 'wagmi'
 
+import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { isValidEnsName } from '@/lib/ens'
 
 export default function Dashboard() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { authenticated, user, logout } = usePrivy()
-  const { wallets, ready } = useWallets()
+  const { authenticated, user, disconnect, ready, primaryAddress } =
+    useWalletAuth()
   const [ethPrice, setEthPrice] = useState<number>(0)
   const [ensName, setEnsName] = useState('')
 
-  // Get the user's primary wallet
-  const primaryWallet = wallets[0]
-
   // Get wallet balance
   const { data: balance } = useBalance({
-    address: primaryWallet?.address as `0x${string}`,
+    address: primaryAddress as `0x${string}`,
   })
 
   // Fetch ETH price for USD conversion
@@ -65,15 +61,14 @@ export default function Dashboard() {
     }
   }, [searchParams])
 
-
   const handleLogout = async () => {
-    await logout()
+    await disconnect()
     router.push('/')
   }
 
   const copyAddress = () => {
-    if (primaryWallet?.address) {
-      navigator.clipboard.writeText(primaryWallet.address)
+    if (primaryAddress) {
+      navigator.clipboard.writeText(primaryAddress)
     }
   }
 
@@ -88,9 +83,16 @@ export default function Dashboard() {
   const getEmailVerificationStatus = () => {
     if (!user?.linkedAccounts) return null
 
-    const emailAccount = user.linkedAccounts.find(
-      (account: any) => account.type === 'email'
-    )
+    const isEmailAccount = (
+      account: (typeof user.linkedAccounts)[number]
+    ): account is (typeof user.linkedAccounts)[number] & {
+      type: 'email'
+      firstVerifiedAt: string | null
+    } => {
+      return account.type === 'email' && 'firstVerifiedAt' in account
+    }
+
+    const emailAccount = user.linkedAccounts.find(isEmailAccount)
 
     if (!emailAccount) return null
 
@@ -315,18 +317,16 @@ export default function Dashboard() {
                 )}
 
                 {/* Wallet */}
-                {primaryWallet && (
+                {primaryAddress && (
                   <div className="bg-background flex items-center justify-between rounded-2xl p-4">
                     <div className="flex items-center gap-3">
                       <Wallet className="text-muted-foreground h-5 w-5" />
                       <div>
                         <p className="text-foreground font-medium">
-                          {primaryWallet.walletClientType === 'privy'
-                            ? 'Embedded Wallet'
-                            : 'Connected Wallet'}
+                          Connected Wallet
                         </p>
                         <p className="text-muted-foreground font-mono text-sm">
-                          {formatAddress(primaryWallet.address)}
+                          {formatAddress(primaryAddress)}
                         </p>
                       </div>
                     </div>
@@ -338,7 +338,7 @@ export default function Dashboard() {
                         <Copy className="h-4 w-4" />
                       </button>
                       <a
-                        href={`https://etherscan.io/address/${primaryWallet.address}`}
+                        href={`https://etherscan.io/address/${primaryAddress}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-muted-foreground hover:text-foreground transition-colors"
