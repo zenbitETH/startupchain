@@ -20,9 +20,9 @@ export type { UsePrivyReturn, UseWalletsReturn }
 
 export function PrivyProvider(props: RealPrivyProviderProps) {
   if (isMockPrivy) {
-    return <PrivyProviderMock {...props} />
+    return <PrivyProviderMock key="privy-provider-mock" {...props} />
   }
-  return <RealPrivyProvider {...props} />
+  return <RealPrivyProvider key="privy-provider" {...props} />
 }
 
 export const usePrivy: () => UsePrivyReturn = isMockPrivy

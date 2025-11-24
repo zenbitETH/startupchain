@@ -1,7 +1,7 @@
 # StartupChain
 
 StartupChain is an OSS dApp for Onchain Company Services, built so founders can launch and run their company identity from one place. [startupchain.io](https://startupchain.io).
-`Status: early production*.`
+`Status: early production.`
 
 ## What’s inside
 
