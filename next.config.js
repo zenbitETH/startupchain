@@ -4,9 +4,6 @@ const nextConfig = {
   serverExternalPackages: ['thread-stream'],
   turbopack: {
     resolveExtensions: ['.mdx', '.tsx', '.ts', '.jsx', '.js', '.mjs', '.json'],
-    rules: {
-      'node_modules/thread-stream/**': ['builtin:empty'],
-    },
   },
 }
 
