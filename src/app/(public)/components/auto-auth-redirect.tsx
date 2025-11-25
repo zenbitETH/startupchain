@@ -16,22 +16,21 @@ export function AutoAuthRedirect() {
   const isValidReturnUrl =
     returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')
 
-  // 1. Handle Redirect
   useEffect(() => {
-    if (ready && authenticated && isValidReturnUrl) {
-      router.replace(returnUrl)
-    }
-  }, [ready, authenticated, isValidReturnUrl, returnUrl, router])
+    if (!ready) return
 
-  // 2. Handle Connect Trigger
-  useEffect(() => {
-    if (!ready || authenticated || !isValidReturnUrl || attempted.current) {
+    // 1. Handle Redirect
+    if (authenticated && isValidReturnUrl) {
+      router.replace(returnUrl)
       return
     }
 
-    attempted.current = true
-    void connect()
-  }, [ready, authenticated, isValidReturnUrl, connect])
+    // 2. Handle Connect Trigger
+    if (!authenticated && isValidReturnUrl && !attempted.current) {
+      attempted.current = true
+      void connect()
+    }
+  }, [ready, authenticated, isValidReturnUrl, returnUrl, router, connect])
 
   return null
 }
