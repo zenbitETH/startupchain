@@ -48,7 +48,7 @@ export function WalletBalance() {
           )}
         </div>
 
-        {balance && balance.value === BigInt(0) && (
+        {balanceInEth === 0 && (
           <div className="bg-accent/10 border-accent/20 rounded-2xl border p-4 text-center">
             <p className="text-accent font-medium">Get started!</p>
             <p className="text-muted-foreground mt-1 text-sm">
