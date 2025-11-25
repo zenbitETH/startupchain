@@ -10,8 +10,13 @@ export function QuickActions() {
   const { disconnect } = useWalletAuth()
 
   const handleLogout = async () => {
-    await disconnect()
-    router.push('/')
+    try {
+      await disconnect()
+      router.push('/')
+    } catch (error) {
+      console.error('Failed to disconnect:', error)
+      // Optionally: show toast notification to user
+    }
   }
 
   return (
