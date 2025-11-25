@@ -1,3 +1,4 @@
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Metadata } from 'next'
 import { Fredoka } from 'next/font/google'
 import { cookies, headers } from 'next/headers'
@@ -71,6 +72,7 @@ export default async function RootLayout({
             <AIChatTrigger />
           </main>
         </ProvidersShell>
+        <SpeedInsights />
       </body>
     </html>
   )
