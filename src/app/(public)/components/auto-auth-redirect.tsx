@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useRef } from 'react'
 
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 
@@ -10,30 +10,28 @@ export function AutoAuthRedirect() {
   const { authenticated, ready, connect } = useWalletAuth()
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [attempted, setAttempted] = useState(false)
+  const attempted = useRef(false)
 
-  const returnUrl = useMemo(() => {
-    const urlParam = searchParams.get('returnUrl')
-    if (!urlParam) return null
-    return urlParam.startsWith('/') ? urlParam : null
-  }, [searchParams])
+  const returnUrl = searchParams.get('returnUrl')
+  const isValidReturnUrl =
+    returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')
 
+  // 1. Handle Redirect
   useEffect(() => {
-    if (!returnUrl || !ready) return
-
-    if (authenticated) {
+    if (ready && authenticated && isValidReturnUrl) {
       router.replace(returnUrl)
+    }
+  }, [ready, authenticated, isValidReturnUrl, returnUrl, router])
+
+  // 2. Handle Connect Trigger
+  useEffect(() => {
+    if (!ready || authenticated || !isValidReturnUrl || attempted.current) {
       return
     }
 
-    if (attempted) return
-
-    setAttempted(true)
-    void connect().catch(() => {
-      // Swallow errors so the landing page still works if login is canceled.
-      setAttempted(false)
-    })
-  }, [authenticated, attempted, connect, ready, returnUrl, router])
+    attempted.current = true
+    void connect()
+  }, [ready, authenticated, isValidReturnUrl, connect])
 
   return null
 }
