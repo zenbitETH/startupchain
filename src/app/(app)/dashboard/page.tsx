@@ -20,6 +20,7 @@ import { formatEther } from 'viem'
 import { normalize } from 'viem/ens'
 import { useBalance, useEnsAddress } from 'wagmi'
 
+import { useEthPrice } from '@/hooks/use-eth-price'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { isValidEnsName } from '@/lib/ens'
 
@@ -28,30 +29,13 @@ export default function Dashboard() {
   const searchParams = useSearchParams()
   const { authenticated, user, disconnect, ready, primaryAddress } =
     useWalletAuth()
-  const [ethPrice, setEthPrice] = useState<number>(0)
+  const { data: ethPrice = 0 } = useEthPrice()
   const [ensName, setEnsName] = useState('')
 
   // Get wallet balance
   const { data: balance } = useBalance({
     address: primaryAddress as `0x${string}`,
   })
-
-  // Fetch ETH price for USD conversion
-  useEffect(() => {
-    const fetchEthPrice = async () => {
-      try {
-        const response = await fetch(
-          'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'
-        )
-        const data = await response.json()
-        setEthPrice(data.ethereum.usd)
-      } catch (error) {
-        console.error('Failed to fetch ETH price:', error)
-      }
-    }
-
-    fetchEthPrice()
-  }, [])
 
   // Handle ENS name from URL params
   useEffect(() => {
