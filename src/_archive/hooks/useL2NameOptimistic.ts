@@ -99,6 +99,5 @@ export function useL2NameOptimistic({
   })
 }
 
-const evmChainIdToCoinType = (chainId: number) => {
-  return (0x80000000 | chainId) >>> 0
-}
+const evmChainIdToCoinType = (chainId: number): bigint =>
+  BigInt((0x80000000 | chainId) >>> 0)
