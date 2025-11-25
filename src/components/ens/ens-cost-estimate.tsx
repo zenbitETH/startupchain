@@ -1,7 +1,6 @@
 import { AlertTriangle, Clock, DollarSign, ExternalLink } from 'lucide-react'
-import { useEffect, useState } from 'react'
 
-import { useEnsRegistration } from '@/hooks/use-ens-registration'
+import { useEnsCost } from '@/hooks/use-ens-cost'
 
 interface ENSCostEstimateProps {
   ensName: string
@@ -16,43 +15,8 @@ export function ENSCostEstimate({
   onCancel,
   isOpen,
 }: ENSCostEstimateProps) {
-  const { getRegistrationCost, checkWalletBalance } = useEnsRegistration()
-  const [costs, setCosts] = useState<{
-    costEth: string
-    costWei: bigint
-  } | null>(null)
-  const [balance, setBalance] = useState<{
-    balance: string
-    hasEnough: boolean
-  } | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!isOpen || !ensName) return
-
-    const fetchCosts = async () => {
-      setLoading(true)
-      setError(null)
-
-      try {
-        // Get registration cost
-        const costData = await getRegistrationCost(ensName, 1) // 1 year
-        setCosts(costData)
-
-        // Get wallet balance
-        const balanceData = await checkWalletBalance()
-        setBalance(balanceData)
-      } catch (err) {
-        console.error('Failed to fetch costs:', err)
-        setError(err instanceof Error ? err.message : 'Failed to fetch costs')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchCosts()
-  }, [isOpen, ensName, getRegistrationCost, checkWalletBalance])
+  const { data, isLoading, error } = useEnsCost(ensName, isOpen)
+  const { costs, balance } = data || {}
 
   if (!isOpen) return null
 
@@ -80,7 +44,7 @@ export function ENSCostEstimate({
 
           {/* Content */}
           <div className="p-6">
-            {loading ? (
+            {isLoading ? (
               <div className="py-8 text-center">
                 <div className="border-primary mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
                 <p className="text-muted-foreground">Calculating costs...</p>
@@ -88,7 +52,11 @@ export function ENSCostEstimate({
             ) : error ? (
               <div className="py-8 text-center">
                 <AlertTriangle className="text-destructive mx-auto mb-4 h-12 w-12" />
-                <p className="text-destructive text-sm">{error}</p>
+                <p className="text-destructive text-sm">
+                  {error instanceof Error
+                    ? error.message
+                    : 'Failed to fetch costs'}
+                </p>
                 <button
                   onClick={onCancel}
                   className="bg-muted hover:bg-muted/80 mt-4 rounded-2xl px-4 py-2 text-sm transition-colors"
