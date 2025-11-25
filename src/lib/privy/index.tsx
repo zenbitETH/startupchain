@@ -37,7 +37,7 @@ export function PrivyProvider({
   }
   return (
     <RealPrivyProvider appId={appId} config={config}>
-      <>{children}</>
+      {children}
     </RealPrivyProvider>
   )
 }

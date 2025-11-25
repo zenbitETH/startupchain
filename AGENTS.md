@@ -40,11 +40,11 @@ Allowed without prompt:
 - tsc single file, prettier, eslint,
 - vitest single test
 
-Aks first:
+Ask first:
 - package installs,
 - git push
 - deleting files, chmod
-- running full build or end to end suits
+- running full build or end to end suites
 
 ### Project structure
 - `/src/app/` - Next.js app router with (app)/ protected routes, (public)/ public routes, api/ endpoints
