@@ -5,7 +5,7 @@ import { Copy, ExternalLink, Mail, Settings, User, Wallet } from 'lucide-react'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 
 export function AccountInfo() {
-  const { user, primaryAddress } = useWalletAuth()
+  const { user, primaryAddress, chainId } = useWalletAuth()
 
   const copyAddress = () => {
     if (primaryAddress) {
@@ -23,6 +23,20 @@ export function AccountInfo() {
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`
+  }
+
+  const getExplorerUrl = (address: string, walletChainId?: number) => {
+    const explorerDomains: Record<number, string> = {
+      1: 'etherscan.io',
+      10: 'optimistic.etherscan.io',
+      8453: 'basescan.org',
+      11155111: 'sepolia.etherscan.io',
+      11155420: 'sepolia-optimism.etherscan.io',
+      84532: 'sepolia.basescan.org',
+    }
+
+    const domain = explorerDomains[walletChainId ?? 1] || 'etherscan.io'
+    return `https://${domain}/address/${address}`
   }
 
   // Get email verification status from linkedAccounts
@@ -113,7 +127,7 @@ export function AccountInfo() {
                 <Copy className="h-4 w-4" />
               </button>
               <a
-                href={`https://etherscan.io/address/${primaryAddress}`}
+                href={getExplorerUrl(primaryAddress, chainId)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground transition-colors"
