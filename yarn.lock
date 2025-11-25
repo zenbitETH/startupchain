@@ -337,7 +337,7 @@
     dns-packet "^5.6.1"
     typescript-logging "^1.0.1"
 
-"@ensdomains/ensjs@^4.0.3-alpha.12":
+"@ensdomains/ensjs@^4.2.0":
   version "4.2.0"
   resolved "https://registry.yarnpkg.com/@ensdomains/ensjs/-/ensjs-4.2.0.tgz#8f3b72418d38f3c5870e5f404fffc9175d02987e"
   integrity sha512-6E8LnKCJ45HySx8PSlepL8VfHJg0PgQRmP1xM8Snu9IcOkSpwI1LEiGOUYfEHX/I7yEglGSYMyGgeiqk0LeCcw==
@@ -8373,7 +8373,7 @@ viem@2.36.0:
     ox "0.9.1"
     ws "8.18.3"
 
-viem@2.x, viem@>=2.29.0, viem@>=2.37.9, viem@^2.1.1, viem@^2.21.26, viem@^2.27.2, viem@^2.31.7, viem@^2.38.6:
+viem@>=2.29.0, viem@>=2.37.9, viem@^2.1.1, viem@^2.21.26, viem@^2.27.2, viem@^2.31.7, viem@^2.38.6, viem@^2.40.2:
   version "2.40.2"
   resolved "https://registry.yarnpkg.com/viem/-/viem-2.40.2.tgz#d9b38c5f8e85a413b604f7652cd1f39dba6f691d"
   integrity sha512-iZXVl5Uip1BUQv0PI9yOq+vHGRTnJ0a8azC5IAAJMSrvdkGrvghIwGskp3+g243fpzFlO/iqAFrWIG15SDoiTQ==

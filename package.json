@@ -20,7 +20,7 @@
   "dependencies": {
     "@ai-sdk/google": "^2.0.32",
     "@ai-sdk/react": "^2.0.45",
-    "@ensdomains/ensjs": "^4.0.3-alpha.12",
+    "@ensdomains/ensjs": "^4.2.0",
     "@ensdomains/thorin": "^0.6.50",
     "@privy-io/node": "^0.5.0",
     "@privy-io/react-auth": "^3.8.0",
@@ -40,7 +40,7 @@
     "styled-components": "^6.1.19",
     "tailwind-merge": "^3.3.1",
     "usehooks-ts": "^3.1.1",
-    "viem": "2.x",
+    "viem": "^2.40.2",
     "wagmi": "^3.0.1",
     "zod": "^4.1.9"
   },
