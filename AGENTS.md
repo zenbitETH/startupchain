@@ -1,6 +1,7 @@
 # AGENTS.md
 
 ### Do
+- **READ THIS FIRST**: Refer to `docs/general/modern-react-nextjs-guide.md` for the latest React 19 & Next.js 16 patterns (Async APIs, Server Actions, `use` hook).
 - look in `docs/general/` for the active plan/context before making changes
 - skim `README.md` for product framing when kicking off new work
 - StartupChain = onchain company OS (ENS identity, Safe treasury, EAS attestations, DeFi rails, company token); status: early production
