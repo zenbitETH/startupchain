@@ -12,6 +12,7 @@ export type WalletAuthContextValue = {
   user: User
   primaryAddress: string | undefined
   displayLabel: string | undefined
+  chainId: number | undefined
   connect: () => Promise<void>
   disconnect: () => Promise<void>
 }
@@ -28,6 +29,7 @@ export function WalletAuthProvider({ children }: { children: React.ReactNode }) 
   const primaryWallet = wallets[0]
   const primaryAddress =
     primaryWallet?.address || user?.wallet?.address || undefined
+  const chainId = toNumericChainId(primaryWallet?.chainId)
 
   const displayLabel = useMemo(() => {
     if (user?.email?.address) return user.email.address
@@ -50,6 +52,7 @@ export function WalletAuthProvider({ children }: { children: React.ReactNode }) 
       user,
       primaryAddress,
       displayLabel,
+      chainId,
       connect,
       disconnect,
     }),
@@ -59,6 +62,7 @@ export function WalletAuthProvider({ children }: { children: React.ReactNode }) 
       user,
       primaryAddress,
       displayLabel,
+      chainId,
       connect,
       disconnect,
     ]
@@ -73,4 +77,14 @@ export function WalletAuthProvider({ children }: { children: React.ReactNode }) 
 
 export function useWalletAuthContext() {
   return useContext(WalletAuthContext)
+}
+
+function toNumericChainId(chainId?: string | number) {
+  if (typeof chainId === 'number') return chainId
+  if (!chainId) return undefined
+
+  const normalized = chainId.includes(':') ? chainId.split(':')[1] : chainId
+  const parsed = Number(normalized)
+
+  return Number.isNaN(parsed) ? undefined : parsed
 }
