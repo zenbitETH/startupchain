@@ -63,9 +63,8 @@ type Props = {
   l2ChainId?: L2ChainId
 }
 
-const evmChainIdToCoinType = (chainId: number) => {
-  return (0x80000000 | chainId) >>> 0
-}
+const evmChainIdToCoinType = (chainId: number): bigint =>
+  BigInt((0x80000000 | chainId) >>> 0)
 
 export function useL2NameBad({ address, l1ChainId, l2ChainId }: Props) {
   const connectedChainId = useChainId() as WagmiConfigChainId

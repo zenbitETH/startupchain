@@ -18,11 +18,28 @@ type RealPrivyProviderProps = ComponentProps<typeof RealPrivyProvider>
 // Re-export types for external consumers
 export type { UsePrivyReturn, UseWalletsReturn }
 
-export function PrivyProvider(props: RealPrivyProviderProps) {
+/**
+ * Wrapper around Privy's provider that switches between real and mock implementations.
+ * Note: The RealPrivyProvider may emit a React key warning due to its internal Fragment
+ * usage. This is a known library issue with React 19 and will be fixed upstream.
+ */
+export function PrivyProvider({
+  children,
+  appId,
+  config,
+}: RealPrivyProviderProps) {
   if (isMockPrivy) {
-    return <PrivyProviderMock key="privy-provider-mock" {...props} />
+    return (
+      <PrivyProviderMock appId={appId} config={config}>
+        {children}
+      </PrivyProviderMock>
+    )
   }
-  return <RealPrivyProvider key="privy-provider" {...props} />
+  return (
+    <RealPrivyProvider appId={appId} config={config}>
+      {children}
+    </RealPrivyProvider>
+  )
 }
 
 export const usePrivy: () => UsePrivyReturn = isMockPrivy
