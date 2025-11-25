@@ -9,7 +9,15 @@ export function AccountInfo() {
 
   const copyAddress = () => {
     if (primaryAddress) {
-      navigator.clipboard.writeText(primaryAddress)
+      navigator.clipboard
+        .writeText(primaryAddress)
+        .then(() => {
+          // TODO. Show success toast, just a tick animation 
+        })
+        .catch((err) => {
+          console.error('Failed to copy address:', err)
+          // Show error toast
+        })
     }
   }
 
