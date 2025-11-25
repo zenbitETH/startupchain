@@ -34,7 +34,7 @@ export function WalletBalance() {
       </div>
 
       <div className="space-y-4">
-        <div className="from-primary/5 to-accent/5 rounded-2xl bg-gradient-to-r p-6 text-center">
+        <div className="from-primary/5 to-accent/5 rounded-2xl bg-linear-to-r p-6 text-center">
           <div className="text-foreground mb-2 text-3xl font-bold">
             ${balanceInUsd.toFixed(2)}
           </div>
