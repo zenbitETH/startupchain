@@ -63,16 +63,19 @@ contract StartupChainTest is Test {
     MockENSRegistrar public ensRegistrar;
     MockENSResolver public ensResolver;
 
-    address public owner = address(1);
+    address public deployer = address(1);
     address public founder1 = address(2);
     address public founder2 = address(3);
     address public nonOwner = address(4);
+    // namehash('eth')
+    bytes32 constant ETH_NODE = 0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae;
 
     function setUp() public {
         ensRegistry = new MockENSRegistry();
         ensRegistrar = new MockENSRegistrar();
         ensResolver = new MockENSResolver();
 
+        vm.prank(deployer);
         startupChain = new StartupChain(
             address(ensRegistry),
             address(ensRegistrar),
@@ -85,8 +88,13 @@ contract StartupChainTest is Test {
         founders[0] = founder1;
         founders[1] = founder2;
 
-        vm.prank(owner);
-        uint256 companyId = startupChain.registerCompany("testcompany", founders);
+        // Mock ENS ownership
+        bytes32 label = keccak256(bytes("testcompany"));
+        bytes32 node = keccak256(abi.encodePacked(ETH_NODE, label));
+        ensRegistry.setOwner(node, founder1);
+
+        vm.prank(deployer);
+        uint256 companyId = startupChain.registerCompany("testcompany", founders, founder1);
 
         assertEq(companyId, 1);
         assertEq(startupChain.getTotalCompanies(), 1);
@@ -100,7 +108,7 @@ contract StartupChainTest is Test {
         ) = startupChain.getCompany(companyId);
 
         assertEq(id, companyId);
-        assertEq(companyAddress, owner);
+        assertEq(companyAddress, founder1);
         assertEq(ensName, "testcompany");
         assertEq(returnedFounders.length, 2);
         assertEq(returnedFounders[0], founder1);
@@ -111,11 +119,16 @@ contract StartupChainTest is Test {
         address[] memory founders = new address[](1);
         founders[0] = founder1;
 
-        vm.startPrank(owner);
-        startupChain.registerCompany("company1", founders);
+        // Mock ENS ownership
+        bytes32 label1 = keccak256(bytes("company1"));
+        bytes32 node1 = keccak256(abi.encodePacked(ETH_NODE, label1));
+        ensRegistry.setOwner(node1, founder1);
+
+        vm.startPrank(deployer);
+        startupChain.registerCompany("company1", founders, founder1);
 
         vm.expectRevert("Company already registered for this address");
-        startupChain.registerCompany("company2", founders);
+        startupChain.registerCompany("company2", founders, founder1);
         vm.stopPrank();
     }
 
@@ -123,22 +136,32 @@ contract StartupChainTest is Test {
         address[] memory founders = new address[](1);
         founders[0] = founder1;
 
-        vm.prank(owner);
-        startupChain.registerCompany("testcompany", founders);
+        // Mock ENS ownership
+        bytes32 label = keccak256(bytes("testcompany"));
+        bytes32 node = keccak256(abi.encodePacked(ETH_NODE, label));
+        ensRegistry.setOwner(node, founder1);
 
-        vm.prank(nonOwner);
+        vm.prank(deployer);
+        startupChain.registerCompany("testcompany", founders, founder1);
+
+        vm.prank(deployer); // Only owner can register
         vm.expectRevert("ENS name already taken");
-        startupChain.registerCompany("testcompany", founders);
+        startupChain.registerCompany("testcompany", founders, nonOwner);
     }
 
     function testCreateSubdomain() public {
         address[] memory founders = new address[](1);
         founders[0] = founder1;
 
-        vm.prank(owner);
-        uint256 companyId = startupChain.registerCompany("testcompany", founders);
+        // Mock ENS ownership
+        bytes32 label = keccak256(bytes("testcompany"));
+        bytes32 node = keccak256(abi.encodePacked(ETH_NODE, label));
+        ensRegistry.setOwner(node, founder1);
 
-        vm.prank(owner);
+        vm.prank(deployer);
+        uint256 companyId = startupChain.registerCompany("testcompany", founders, founder1);
+
+        vm.prank(founder1);
         startupChain.createSubdomain(companyId, "john", founder1);
 
         (
@@ -158,13 +181,18 @@ contract StartupChainTest is Test {
         address[] memory founders = new address[](1);
         founders[0] = founder1;
 
-        vm.prank(owner);
-        uint256 companyId = startupChain.registerCompany("testcompany", founders);
+        // Mock ENS ownership
+        bytes32 label = keccak256(bytes("testcompany"));
+        bytes32 node = keccak256(abi.encodePacked(ETH_NODE, label));
+        ensRegistry.setOwner(node, founder1);
 
-        vm.prank(owner);
+        vm.prank(deployer);
+        uint256 companyId = startupChain.registerCompany("testcompany", founders, founder1);
+
+        vm.prank(founder1);
         startupChain.createSubdomain(companyId, "john", founder1);
 
-        vm.prank(owner);
+        vm.prank(founder1);
         vm.expectRevert("Subdomain already exists");
         startupChain.createSubdomain(companyId, "john", founder2);
     }
@@ -173,13 +201,18 @@ contract StartupChainTest is Test {
         address[] memory founders = new address[](1);
         founders[0] = founder1;
 
-        vm.prank(owner);
-        uint256 companyId = startupChain.registerCompany("testcompany", founders);
+        // Mock ENS ownership
+        bytes32 label = keccak256(bytes("testcompany"));
+        bytes32 node = keccak256(abi.encodePacked(ETH_NODE, label));
+        ensRegistry.setOwner(node, founder1);
 
-        vm.prank(owner);
+        vm.prank(deployer);
+        uint256 companyId = startupChain.registerCompany("testcompany", founders, founder1);
+
+        vm.prank(founder1);
         startupChain.createSubdomain(companyId, "john", founder1);
 
-        vm.prank(owner);
+        vm.prank(founder1);
         startupChain.revokeSubdomain(companyId, "john");
 
         (,,, bool active) = startupChain.getSubdomain(companyId, "john");
@@ -190,11 +223,16 @@ contract StartupChainTest is Test {
         address[] memory founders = new address[](1);
         founders[0] = founder1;
 
-        vm.prank(owner);
-        uint256 companyId = startupChain.registerCompany("testcompany", founders);
+        // Mock ENS ownership
+        bytes32 label = keccak256(bytes("testcompany"));
+        bytes32 node = keccak256(abi.encodePacked(ETH_NODE, label));
+        ensRegistry.setOwner(node, founder1);
+
+        vm.prank(deployer);
+        uint256 companyId = startupChain.registerCompany("testcompany", founders, founder1);
 
         address safeAddress = address(0x123);
-        vm.prank(owner);
+        vm.prank(founder1);
         startupChain.setSafeAddress(companyId, safeAddress);
 
         assertEq(startupChain.getSafeAddress(companyId), safeAddress);
@@ -204,11 +242,16 @@ contract StartupChainTest is Test {
         address[] memory founders = new address[](1);
         founders[0] = founder1;
 
-        vm.prank(owner);
-        uint256 companyId = startupChain.registerCompany("testcompany", founders);
+        // Mock ENS ownership
+        bytes32 label = keccak256(bytes("testcompany"));
+        bytes32 node = keccak256(abi.encodePacked(ETH_NODE, label));
+        ensRegistry.setOwner(node, founder1);
+
+        vm.prank(deployer);
+        uint256 companyId = startupChain.registerCompany("testcompany", founders, founder1);
 
         address governanceAddress = address(0x456);
-        vm.prank(owner);
+        vm.prank(founder1);
         startupChain.setGovernanceAddress(companyId, governanceAddress);
 
         assertEq(startupChain.getGovernanceAddress(companyId), governanceAddress);
@@ -218,8 +261,13 @@ contract StartupChainTest is Test {
         address[] memory founders = new address[](1);
         founders[0] = founder1;
 
-        vm.prank(owner);
-        uint256 companyId = startupChain.registerCompany("testcompany", founders);
+        // Mock ENS ownership
+        bytes32 label = keccak256(bytes("testcompany"));
+        bytes32 node = keccak256(abi.encodePacked(ETH_NODE, label));
+        ensRegistry.setOwner(node, founder1);
+
+        vm.prank(deployer);
+        uint256 companyId = startupChain.registerCompany("testcompany", founders, founder1);
 
         vm.prank(nonOwner);
         vm.expectRevert("Only company owner can create subdomains");
@@ -230,14 +278,19 @@ contract StartupChainTest is Test {
         address[] memory founders = new address[](1);
         founders[0] = founder1;
 
-        vm.prank(owner);
-        uint256 companyId = startupChain.registerCompany("testcompany", founders);
+        // Mock ENS ownership
+        bytes32 label = keccak256(bytes("testcompany"));
+        bytes32 node = keccak256(abi.encodePacked(ETH_NODE, label));
+        ensRegistry.setOwner(node, founder1);
+
+        vm.prank(deployer);
+        uint256 companyId = startupChain.registerCompany("testcompany", founders, founder1);
 
         (uint256 id, address companyAddress, string memory ensName,,) =
-            startupChain.getCompanyByAddress(owner);
+            startupChain.getCompanyByAddress(founder1);
 
         assertEq(id, companyId);
-        assertEq(companyAddress, owner);
+        assertEq(companyAddress, founder1);
         assertEq(ensName, "testcompany");
     }
 
@@ -245,14 +298,19 @@ contract StartupChainTest is Test {
         address[] memory founders = new address[](1);
         founders[0] = founder1;
 
-        vm.prank(owner);
-        uint256 companyId = startupChain.registerCompany("testcompany", founders);
+        // Mock ENS ownership
+        bytes32 label = keccak256(bytes("testcompany"));
+        bytes32 node = keccak256(abi.encodePacked(ETH_NODE, label));
+        ensRegistry.setOwner(node, founder1);
+
+        vm.prank(deployer);
+        uint256 companyId = startupChain.registerCompany("testcompany", founders, founder1);
 
         (uint256 id, address companyAddress, string memory ensName,,) =
             startupChain.getCompanyByENS("testcompany");
 
         assertEq(id, companyId);
-        assertEq(companyAddress, owner);
+        assertEq(companyAddress, founder1);
         assertEq(ensName, "testcompany");
     }
 
@@ -260,10 +318,15 @@ contract StartupChainTest is Test {
         address[] memory founders = new address[](1);
         founders[0] = founder1;
 
-        vm.prank(owner);
-        uint256 companyId = startupChain.registerCompany("testcompany", founders);
+        // Mock ENS ownership
+        bytes32 label = keccak256(bytes("testcompany"));
+        bytes32 node = keccak256(abi.encodePacked(ETH_NODE, label));
+        ensRegistry.setOwner(node, founder1);
 
-        vm.startPrank(owner);
+        vm.prank(deployer);
+        uint256 companyId = startupChain.registerCompany("testcompany", founders, founder1);
+
+        vm.startPrank(founder1);
         startupChain.createSubdomain(companyId, "john", founder1);
         startupChain.createSubdomain(companyId, "jane", founder2);
         vm.stopPrank();
@@ -272,5 +335,29 @@ contract StartupChainTest is Test {
         assertEq(subdomains.length, 2);
         assertEq(subdomains[0], "john");
         assertEq(subdomains[1], "jane");
+    }
+
+    function testRequestRegistration() public {
+        address[] memory founders = new address[](2);
+        founders[0] = founder1;
+        founders[1] = founder2;
+
+        vm.deal(founder1, 1 ether);
+        vm.prank(founder1);
+        startupChain.requestRegistration{value: 0.01 ether}("testcompany", founders);
+
+        // Verify event emission (would need vm.expectEmit)
+        // For now just checking it doesn't revert
+    }
+
+    function testRequestRegistrationInsufficientPayment() public {
+        address[] memory founders = new address[](2);
+        founders[0] = founder1;
+        founders[1] = founder2;
+
+        vm.deal(founder1, 1 ether);
+        vm.prank(founder1);
+        vm.expectRevert("Insufficient payment");
+        startupChain.requestRegistration{value: 0.001 ether}("testcompany", founders);
     }
 }
