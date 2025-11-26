@@ -1,12 +1,14 @@
 # AGENTS.md
 
 ### Do
+- **READ THIS FIRST**: Refer to `docs/general/modern-react-nextjs-guide.md` for the latest React 19 & Next.js 16 patterns (Async APIs, Server Actions, `use` hook).
 - look in `docs/general/` for the active plan/context before making changes
 - skim `README.md` for product framing when kicking off new work
 - StartupChain = onchain company OS (ENS identity, Safe treasury, EAS attestations, DeFi rails, company token); status: early production
 - Core flow: connect/create wallet (Privy built in) → search company ENS → register → manage from dashboard
 - use shadCN UI with tailwind v4
 - assume Next.js 16 + React 19—prefer server components + server actions/form actions, and only opt into `use client` when required
+- Next.js 16 uses `src/proxy.ts` for middleware—keep it there (no rename to `middleware.ts`)
 - use and keep styles in src/style.css
 - favor built-in React patterns (context, hooks, server components) for shared state
 - lean on forms, URL/search params, or server actions when state needs to persist across sessions

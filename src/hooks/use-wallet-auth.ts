@@ -9,6 +9,7 @@ const fallbackAuth = {
   user: null,
   primaryAddress: undefined,
   displayLabel: undefined,
+  chainId: undefined,
   connect: async () => {},
   disconnect: async () => {},
 } as const
