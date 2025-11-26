@@ -21,6 +21,9 @@ contract StartupChain {
         bool active;
     }
 
+    bytes32 constant ETH_NODE = 0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae;
+    address public owner;
+    uint256 public nextRequestId = 1;
     uint256 private nextCompanyId = 1;
     mapping(uint256 => Company) public companies;
     mapping(address => uint256) public addressToCompanyId;
@@ -29,11 +32,11 @@ contract StartupChain {
     // Subdomain mappings: companyId => subdomain name => Subdomain
     mapping(uint256 => mapping(string => Subdomain)) public subdomains;
     mapping(uint256 => string[]) public companySubdomains;
-    
+
     IENS public immutable ensRegistry;
     IENSRegistrar public immutable ensRegistrar;
     IENSResolver public immutable ensResolver;
-    
+
     event CompanyRegistered(
         uint256 indexed companyId,
         address indexed companyAddress,
@@ -71,81 +74,94 @@ contract StartupChain {
         uint256 indexed companyId,
         address indexed governanceAddress
     );
-    
+
+    event RegistrationRequested(
+        uint256 indexed requestId,
+        string ensName,
+        address indexed owner,
+        address[] founders
+    );
+
     constructor(
         address _ensRegistry,
         address _ensRegistrar,
         address _ensResolver
     ) {
+        owner = msg.sender;
         ensRegistry = IENS(_ensRegistry);
         ensRegistrar = IENSRegistrar(_ensRegistrar);
         ensResolver = IENSResolver(_ensResolver);
     }
-    
+
+    function requestRegistration(string memory _ensName, address[] memory _founders) external payable {
+        require(msg.value >= 0.01 ether, "Insufficient payment");
+        emit RegistrationRequested(nextRequestId++, _ensName, msg.sender, _founders);
+    }
+
     function registerCompany(
         string memory _ensName,
-        address[] memory _founders
+        address[] memory _founders,
+        address _owner
     ) external returns (uint256) {
+        require(msg.sender == owner, "Only owner can register companies");
         require(_founders.length > 0, "At least one founder required");
         require(bytes(_ensName).length > 0, "ENS name required");
-        require(addressToCompanyId[msg.sender] == 0, "Company already registered for this address");
+        require(addressToCompanyId[_owner] == 0, "Company already registered for this address");
         require(ensNameToCompanyId[_ensName] == 0, "ENS name already taken");
-        
+
         for (uint i = 0; i < _founders.length; i++) {
             require(_founders[i] != address(0), "Invalid founder address");
         }
-        
+
         bytes32 label = keccak256(bytes(_ensName));
-        require(ensRegistrar.available(label), "ENS name not available");
-        
-        ensRegistrar.register(label, msg.sender);
-        
-        bytes32 node = keccak256(abi.encodePacked(bytes32(0), label));
-        ensResolver.setAddr(node, msg.sender);
-        
+        bytes32 node = keccak256(abi.encodePacked(ETH_NODE, label));
+
+        // Verify backend did its job
+        require(ensRegistry.owner(node) == _owner, "ENS name not owned by company owner");
+
         uint256 companyId = nextCompanyId++;
-        
+
         Company storage newCompany = companies[companyId];
         newCompany.id = companyId;
-        newCompany.companyAddress = msg.sender;
+        newCompany.companyAddress = _owner;
         newCompany.ensName = _ensName;
         newCompany.creationDate = block.timestamp;
         newCompany.founders = _founders;
-        
-        addressToCompanyId[msg.sender] = companyId;
+
+        addressToCompanyId[_owner] = companyId;
         ensNameToCompanyId[_ensName] = companyId;
-        
+
         emit CompanyRegistered(
             companyId,
-            msg.sender,
+            _owner,
             _ensName,
             block.timestamp,
             _founders
         );
-        
+
         return companyId;
     }
-    
+
     function transferENS(uint256 _companyId, address _newOwner) external {
         require(companies[_companyId].id != 0, "Company does not exist");
         require(companies[_companyId].companyAddress == msg.sender, "Only company owner can transfer ENS");
         require(_newOwner != address(0), "Invalid new owner address");
-        
+
         Company storage company = companies[_companyId];
         string memory ensName = company.ensName;
         bytes32 label = keccak256(bytes(ensName));
-        bytes32 node = keccak256(abi.encodePacked(bytes32(0), label));
-        
+        bytes32 node = keccak256(abi.encodePacked(ETH_NODE, label));
+
         ensRegistry.setOwner(node, _newOwner);
         ensResolver.setAddr(node, _newOwner);
-        
+
         addressToCompanyId[msg.sender] = 0;
         addressToCompanyId[_newOwner] = _companyId;
         company.companyAddress = _newOwner;
-        
+
         emit ENSTransferred(_companyId, ensName, msg.sender, _newOwner);
     }
-    
+
     function getCompany(uint256 _companyId) external view returns (
         uint256 id,
         address companyAddress,
@@ -163,7 +179,7 @@ contract StartupChain {
             company.founders
         );
     }
-    
+
     function getCompanyByAddress(address _address) external view returns (
         uint256 id,
         address companyAddress,
@@ -182,7 +198,7 @@ contract StartupChain {
             company.founders
         );
     }
-    
+
     function getCompanyByENS(string memory _ensName) external view returns (
         uint256 id,
         address companyAddress,
@@ -201,12 +217,12 @@ contract StartupChain {
             company.founders
         );
     }
-    
+
     function getCompanyFounders(uint256 _companyId) external view returns (address[] memory) {
         require(companies[_companyId].id != 0, "Company does not exist");
         return companies[_companyId].founders;
     }
-    
+
     function getTotalCompanies() external view returns (uint256) {
         return nextCompanyId - 1;
     }
@@ -224,7 +240,7 @@ contract StartupChain {
         require(!subdomains[_companyId][_subdomain].active, "Subdomain already exists");
 
         Company storage company = companies[_companyId];
-        bytes32 companyNode = keccak256(abi.encodePacked(bytes32(0), keccak256(bytes(company.ensName))));
+        bytes32 companyNode = keccak256(abi.encodePacked(ETH_NODE, keccak256(bytes(company.ensName))));
         bytes32 subdomainLabel = keccak256(bytes(_subdomain));
 
         // Create subdomain in ENS
@@ -256,7 +272,7 @@ contract StartupChain {
         address previousOwner = subdomain.owner;
 
         Company storage company = companies[_companyId];
-        bytes32 companyNode = keccak256(abi.encodePacked(bytes32(0), keccak256(bytes(company.ensName))));
+        bytes32 companyNode = keccak256(abi.encodePacked(ETH_NODE, keccak256(bytes(company.ensName))));
         bytes32 subdomainLabel = keccak256(bytes(_subdomain));
 
         // Revoke subdomain in ENS by setting owner to zero address
@@ -269,7 +285,7 @@ contract StartupChain {
 
     function getSubdomain(uint256 _companyId, string memory _subdomain) external view returns (
         string memory name,
-        address owner,
+        address subdomainOwner,
         uint256 createdAt,
         bool active
     ) {
