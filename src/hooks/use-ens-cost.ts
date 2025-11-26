@@ -10,8 +10,14 @@ export function useEnsCost(ensName: string, isOpen: boolean) {
       // Get registration cost
       const costData = await getRegistrationCost(ensName, 1) // 1 year
 
-      // Get wallet balance
-      const balanceData = await checkWalletBalance()
+      // Get wallet balance (optional, might not be connected yet)
+      let balanceData = null
+      try {
+        balanceData = await checkWalletBalance()
+      } catch (err) {
+        // Ignore no wallet error, user might not be connected yet
+        console.log('Could not check balance (user might not be connected):', err)
+      }
 
       return {
         costs: costData,
