@@ -42,7 +42,7 @@ const STARTUPCHAIN_ABI = [
   ),
 ] as const
 
-export async function GET() {
+export async function GET(request: Request) {
   if (!STARTUPCHAIN_ADDRESS) {
     return NextResponse.json(
       { error: 'NEXT_PUBLIC_STARTUPCHAIN_ADDRESS not set' },
@@ -51,6 +51,10 @@ export async function GET() {
   }
 
   try {
+    const { searchParams } = new URL(request.url)
+    const fromBlockParam = searchParams.get('fromBlock')
+    const toBlockParam = searchParams.get('toBlock')
+
     console.log('🤖 Starting registration worker...')
 
     // 1. Setup Clients
@@ -78,19 +82,51 @@ export async function GET() {
       throw new Error(`No resolver configured for chain ${chainId}`)
     }
 
-    // 2. Poll Events (Last 1000 blocks for MVP)
+    // 2. Poll Events
     const latestBlock = await publicClient.getBlockNumber()
-    const fromBlock = latestBlock - 1000n
+    let startBlock: bigint
+    let endBlock: bigint
+
+    if (fromBlockParam && toBlockParam) {
+      startBlock = BigInt(fromBlockParam)
+      endBlock = BigInt(toBlockParam)
+      console.log(
+        `🔧 Manual trigger: processing blocks ${startBlock} to ${endBlock}`
+      )
+    } else {
+      // Default: Last 10 blocks due to Alchemy Free Tier limit
+      startBlock = latestBlock - 10n
+      endBlock = latestBlock
+    }
+
     console.log(
-      `🔍 Polling logs from ${fromBlock} to ${latestBlock} on ${clientConfig.chain.name}`
+      `🔍 Polling logs from ${startBlock} to ${endBlock} on ${clientConfig.chain.name}`
     )
 
-    const logs = await publicClient.getLogs({
-      address: STARTUPCHAIN_ADDRESS,
-      event: STARTUPCHAIN_ABI[0], // RegistrationRequested
-      fromBlock,
-      toBlock: latestBlock,
-    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const logs: any[] = []
+    const MAX_BLOCK_RANGE = 10n
+
+    for (
+      let currentFrom = startBlock;
+      currentFrom <= endBlock;
+      currentFrom += MAX_BLOCK_RANGE
+    ) {
+      const currentTo =
+        currentFrom + MAX_BLOCK_RANGE - 1n > endBlock
+          ? endBlock
+          : currentFrom + MAX_BLOCK_RANGE - 1n
+
+      console.log(`  - Fetching logs from ${currentFrom} to ${currentTo}...`)
+
+      const chunkLogs = await publicClient.getLogs({
+        address: STARTUPCHAIN_ADDRESS,
+        event: STARTUPCHAIN_ABI[0], // RegistrationRequested
+        fromBlock: currentFrom,
+        toBlock: currentTo,
+      })
+      logs.push(...chunkLogs)
+    }
 
     console.log(`found ${logs.length} registration requests`)
 
