@@ -4,6 +4,7 @@ import Link from 'next/link'
 
 import { useProvidersReady } from '@/components/providers/providers-shell'
 import { Button } from '@/components/ui/button'
+import { NetworkSwitcher } from '@/components/ui/network-switcher'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 
 import { ChainLogo } from '../ui/chain-logo'
@@ -46,21 +47,27 @@ function NavbarAuthControls() {
 
   return (
     <>
-      <NavbarButtonRow
-        className="flex items-center md:hidden"
-        buttonSize="sm"
-        ready={ready}
-        authenticated={authenticated}
-        onConnect={connect}
-      />
-      <NavbarButtonRow
-        className="hidden items-center space-x-4 md:flex"
-        buttonSize="lg"
-        ready={ready}
-        authenticated={authenticated}
-        onConnect={connect}
-        displayLabel={displayLabel}
-      />
+      <div className="flex items-center gap-2 md:hidden">
+        {authenticated && <NetworkSwitcher />}
+        <NavbarButtonRow
+          className="flex items-center"
+          buttonSize="sm"
+          ready={ready}
+          authenticated={authenticated}
+          onConnect={connect}
+        />
+      </div>
+      <div className="hidden items-center gap-4 md:flex">
+        {authenticated && <NetworkSwitcher />}
+        <NavbarButtonRow
+          className="flex items-center gap-3"
+          buttonSize="lg"
+          ready={ready}
+          authenticated={authenticated}
+          onConnect={connect}
+          displayLabel={displayLabel}
+        />
+      </div>
     </>
   )
 }
@@ -73,7 +80,7 @@ function NavbarLoadingState() {
           <LoadingSpinner size="sm" className="text-foreground" />
         </Button>
       </div>
-      <div className="hidden items-center space-x-4 md:flex">
+      <div className="hidden items-center gap-4 md:flex">
         <Button size="lg" variant="ghost" disabled className="min-w-[140px]">
           <LoadingSpinner size="lg" className="text-foreground" />
         </Button>
