@@ -1,17 +1,33 @@
 'use client'
 
-import { useEffect } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Plus, Trash2, Loader2 } from 'lucide-react'
+import { parseEther } from 'viem'
+import { useWriteContract } from 'wagmi'
 
-import { ENSCostEstimate } from '@/components/ens/ens-cost-estimate'
-import { CountdownModal } from '@/components/modals/countdown-modal'
-import { CongratulationsModal } from '@/components/modals/congratulations-modal'
-import { useSmartWallet } from '@/hooks/use-smart-wallet'
+import { useEnsCost } from '@/hooks/use-ens-cost'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import {
   useDraftStore,
   type Shareholder,
 } from '@/lib/store/draft'
+
+// StartupChain ABI for requestRegistration
+const STARTUP_CHAIN_ABI = [
+  {
+    inputs: [
+      { internalType: 'string', name: '_ensName', type: 'string' },
+      { internalType: 'address[]', name: '_founders', type: 'address[]' },
+    ],
+    name: 'requestRegistration',
+    outputs: [],
+    stateMutability: 'payable',
+    type: 'function',
+  },
+] as const
+
+// TODO: Get this from env or config
+const STARTUP_CHAIN_ADDRESS = process.env.NEXT_PUBLIC_STARTUPCHAIN_ADDRESS as `0x${string}`
 
 interface SetupWizardProps {
   initialEnsName: string
@@ -19,16 +35,9 @@ interface SetupWizardProps {
 
 export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   const { connect, authenticated, user } = useWalletAuth()
-  const {
-    createBusinessAccount,
-    isCreating,
-    error,
-    businessAccount,
-    transactionHashes,
-    showCongratulations,
-    setShowCongratulations,
-    commitmentCountdown,
-  } = useSmartWallet()
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [registrationTxHash, setRegistrationTxHash] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const draft = useDraftStore((state) => state.draft)
   const initializeDraft = useDraftStore((state) => state.initializeDraft)
@@ -40,6 +49,12 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   const setRegisterToDifferentAddress = useDraftStore(
     (state) => state.setRegisterToDifferentAddress
   )
+
+  // Get ENS cost estimate
+  const { data: costData, isLoading: isLoadingCost } = useEnsCost(initialEnsName, true)
+
+  // Wagmi write contract hook
+  const { writeContractAsync } = useWriteContract()
 
   useEffect(() => {
     if (!draft) {
@@ -105,28 +120,91 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
       return
     }
 
+    if (!costData?.costs?.costEth) {
+      setError('Unable to calculate registration cost. Please try again.')
+      return
+    }
+
+    setIsRegistering(true)
+    setError(null)
+
     try {
-      const registrationAddress = draft.registerToDifferentAddress
-        ? draft.customAddress
-        : undefined
+      const founders = draft.shareholders.map((f) => f.walletAddress as `0x${string}`)
 
-      const founders = draft.shareholders.map(({
-        walletAddress,
-        equityPercentage,
-      }) => ({
-        address: walletAddress,
-        equity: equityPercentage.toString(),
-      }))
+      // Calculate total value to send (ENS cost + buffer)
+      // We use the cost calculated by useEnsCost which already includes buffer
+      const valueToSend = costData.costs.costWei
 
-      await createBusinessAccount(initialEnsName, founders, registrationAddress)
+      console.log('📝 Requesting registration...', {
+        ensName: initialEnsName,
+        founders,
+        value: valueToSend.toString(),
+      })
+
+      const txHash = await writeContractAsync({
+        address: STARTUP_CHAIN_ADDRESS,
+        abi: STARTUP_CHAIN_ABI,
+        functionName: 'requestRegistration',
+        args: [initialEnsName, founders],
+        value: valueToSend,
+      })
+
+      console.log('✅ Registration requested:', txHash)
+      setRegistrationTxHash(txHash)
+
     } catch (err) {
       console.error('Failed to create business:', err)
+      const message = err instanceof Error ? err.message : 'Failed to create business'
+      setError(message)
+    } finally {
+      setIsRegistering(false)
     }
   }
 
+  // Success State
+  if (registrationTxHash) {
+    return (
+      <div className="flex flex-col items-center justify-center space-y-6 py-12 text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </div>
+
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold">Registration in Progress</h2>
+          <p className="mx-auto max-w-md text-muted-foreground">
+            We are securing <span className="font-semibold text-foreground">{initialEnsName}.eth</span>.
+            This takes about 2-3 minutes. You can close this page.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-4 text-left text-sm">
+          <p className="font-medium text-foreground">Transaction Sent</p>
+          <p className="mt-1 font-mono text-xs text-muted-foreground break-all">
+            {registrationTxHash}
+          </p>
+          <a
+            href={`https://sepolia.etherscan.io/tx/${registrationTxHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-block text-xs text-primary hover:underline"
+          >
+            View on Etherscan
+          </a>
+        </div>
+
+        <a
+          href="/dashboard"
+          className="rounded-xl bg-secondary px-6 py-3 text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
+        >
+          Go to Dashboard
+        </a>
+      </div>
+    )
+  }
+
   const disableCreateButton =
-    isCreating ||
-    commitmentCountdown !== null ||
+    isRegistering ||
+    isLoadingCost ||
     (!authenticated && draft.shareholders.some((founder) => !founder.walletAddress.trim())) ||
     (draft.isMultipleFounders && Math.abs(totalEquity - 100) > 0.01) ||
     (draft.registerToDifferentAddress && !draft.customAddress.trim())
@@ -351,42 +429,20 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
           disabled={disableCreateButton}
           className={createButtonClasses}
         >
-          {commitmentCountdown !== null
-            ? `Waiting… ${commitmentCountdown}s`
-            : isCreating
-            ? 'Creating Business…'
-            : !authenticated
-            ? 'Connect Wallet & Create'
-            : 'Create Business'}
+          {isRegistering ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Processing…
+            </span>
+          ) : !authenticated ? (
+            'Connect Wallet & Create'
+          ) : isLoadingCost ? (
+            'Calculating Cost…'
+          ) : (
+            `Register & Create (Pay ${costData?.costs?.costEth || '...'} ETH)`
+          )}
         </button>
       </div>
-
-      {businessAccount && (
-        <CongratulationsModal
-          isOpen={showCongratulations}
-          onClose={() => setShowCongratulations(false)}
-          ensName={businessAccount.ensName.replace('.eth', '')}
-          smartWalletAddress={businessAccount.smartAccountAddress}
-          commitTxHash={transactionHashes.commitTx}
-          registrationTxHash={transactionHashes.registrationTx}
-          onContinue={() => {
-            setShowCongratulations(false)
-            window.location.href = '/dashboard'
-          }}
-        />
-      )}
-
-      <ENSCostEstimate
-        ensName={initialEnsName}
-        isOpen={false}
-        onProceed={() => {}}
-        onCancel={() => {}}
-      />
-
-      <CountdownModal
-        isOpen={commitmentCountdown !== null}
-        countdown={commitmentCountdown ?? 0}
-      />
     </div>
   )
 }
