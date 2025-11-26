@@ -1,5 +1,3 @@
-'use server'
-
 import { createPublicClient, http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { mainnet, sepolia } from 'viem/chains'
@@ -10,10 +8,12 @@ if (!mainnetRpcUrl) throw new Error('MAINNET_RPC_URL is not set')
 const sepoliaRpcUrl = process.env.SEPOLIA_RPC_URL
 if (!sepoliaRpcUrl) throw new Error('SEPOLIA_RPC_URL is not set')
 
-const signerKey = process.env.STARTUPCHAIN_SIGNER_KEY as
-  | `0x${string}`
-  | undefined
+let signerKey = process.env.STARTUPCHAIN_SIGNER_KEY
 if (!signerKey) throw new Error('STARTUPCHAIN_SIGNER_KEY is not set')
+
+if (!signerKey.startsWith('0x')) {
+  signerKey = `0x${signerKey}`
+}
 
 const CHAINS = {
   '1': {
@@ -39,5 +39,5 @@ export const publicClient = createPublicClient({
 export const startupChainClient = async () => ({
   chain: target.chain,
   transport: http(target.rpcUrl),
-  account: privateKeyToAccount(signerKey),
+  account: privateKeyToAccount(signerKey as `0x${string}`),
 })
