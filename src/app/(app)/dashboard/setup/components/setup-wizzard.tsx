@@ -70,7 +70,7 @@ function RegistrationStatus({
     functionName: 'ensNameToCompanyId',
     args: [ensName],
     query: {
-      refetchInterval: 3000, // Poll every 3 seconds
+      refetchInterval: 10000, // Poll every 10 seconds to avoid RPC spam
       enabled: isTxConfirmed, // Only start polling after tx is confirmed
     },
   })
