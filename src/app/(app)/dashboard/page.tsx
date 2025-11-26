@@ -3,7 +3,12 @@
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
+import {
+  type CompanyData,
+  getCompanyAction,
+} from '@/app/(app)/dashboard/actions'
 import { AccountInfo } from '@/app/(app)/dashboard/components/account-info'
+import { CompanyDashboard } from '@/app/(app)/dashboard/components/company-dashboard'
 import { EnsSearch } from '@/app/(app)/dashboard/components/ens-search'
 import { QuickActions } from '@/app/(app)/dashboard/components/quick-actions'
 import { WalletBalance } from '@/app/(app)/dashboard/components/wallet-balance'
@@ -11,8 +16,10 @@ import { useWalletAuth } from '@/hooks/use-wallet-auth'
 
 export default function Dashboard() {
   const searchParams = useSearchParams()
-  const { authenticated, ready } = useWalletAuth()
+  const { authenticated, ready, primaryAddress } = useWalletAuth()
   const [ensName, setEnsName] = useState('')
+  const [company, setCompany] = useState<CompanyData | null>(null)
+  const [loadingCompany, setLoadingCompany] = useState(false)
 
   // Handle ENS name from URL params
   useEffect(() => {
@@ -22,7 +29,28 @@ export default function Dashboard() {
     }
   }, [searchParams])
 
-  if (!authenticated || !ready) {
+  // Fetch company data
+  useEffect(() => {
+    async function fetchCompany() {
+      if (primaryAddress) {
+        setLoadingCompany(true)
+        try {
+          const data = await getCompanyAction(primaryAddress)
+          setCompany(data)
+        } catch (error) {
+          console.error('Error fetching company:', error)
+        } finally {
+          setLoadingCompany(false)
+        }
+      }
+    }
+
+    if (ready && authenticated) {
+      fetchCompany()
+    }
+  }, [primaryAddress, ready, authenticated])
+
+  if (!authenticated || !ready || loadingCompany) {
     return (
       <div className="bg-background flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -47,8 +75,12 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* ENS Search Section */}
-        <EnsSearch initialEnsName={ensName} />
+        {/* ENS Search Section or Company Dashboard */}
+        {company ? (
+          <CompanyDashboard company={company} />
+        ) : (
+          <EnsSearch initialEnsName={ensName} />
+        )}
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* User Info Card */}
