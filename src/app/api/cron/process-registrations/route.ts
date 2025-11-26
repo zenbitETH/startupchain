@@ -6,7 +6,6 @@ import {
   createPublicClient,
   createWalletClient,
   encodeFunctionData,
-  http,
   parseAbiItem,
 } from 'viem'
 
