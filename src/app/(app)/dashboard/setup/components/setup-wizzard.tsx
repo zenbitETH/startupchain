@@ -1,9 +1,14 @@
 'use client'
 
-import { Loader2, Plus, Trash2 } from 'lucide-react'
+import { Check, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { parseEther } from 'viem'
-import { useWriteContract } from 'wagmi'
+import {
+  useReadContract,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from 'wagmi'
 
 import { useEnsCost } from '@/hooks/use-ens-cost'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
@@ -23,11 +28,216 @@ const STARTUP_CHAIN_ABI = [
     stateMutability: 'payable',
     type: 'function',
   },
+  {
+    inputs: [{ internalType: 'string', name: '', type: 'string' }],
+    name: 'ensNameToCompanyId',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
 ] as const
 
 // TODO: Get this from env or config
 const STARTUP_CHAIN_ADDRESS = process.env
   .NEXT_PUBLIC_STARTUPCHAIN_ADDRESS as `0x${string}`
+
+interface RegistrationStatusProps {
+  txHash: `0x${string}`
+  ensName: string
+  onSuccess: () => void
+}
+
+function RegistrationStatus({
+  txHash,
+  ensName,
+  onSuccess,
+}: RegistrationStatusProps) {
+  const router = useRouter()
+  const [step, setStep] = useState(1)
+  const [logs, setLogs] = useState<string[]>([
+    `Transaction submitted: ${txHash.slice(0, 6)}...${txHash.slice(-4)}`,
+  ])
+
+  // 1. Wait for transaction receipt
+  const { isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  })
+
+  // 2. Poll for company registration
+  const { data: companyId } = useReadContract({
+    address: STARTUP_CHAIN_ADDRESS,
+    abi: STARTUP_CHAIN_ABI,
+    functionName: 'ensNameToCompanyId',
+    args: [ensName],
+    query: {
+      refetchInterval: 3000, // Poll every 3 seconds
+      enabled: isTxConfirmed, // Only start polling after tx is confirmed
+    },
+  })
+
+  // Step transitions
+  useEffect(() => {
+    if (isTxConfirmed && step === 1) {
+      setStep(2)
+      setLogs((prev) => [...prev, 'Transaction confirmed on-chain.'])
+      // Auto-advance to processing after a brief pause to show the "Confirmed" state
+      setTimeout(() => {
+        setStep(3)
+        setLogs((prev) => [
+          ...prev,
+          'Waiting for background registration process...',
+          'This includes a mandatory 60s ENS waiting period.',
+        ])
+      }, 1500)
+    }
+  }, [isTxConfirmed, step])
+
+  useEffect(() => {
+    if (companyId && companyId > 0n && step === 3) {
+      setStep(4)
+      setLogs((prev) => [
+        ...prev,
+        'Registration successful! Company ID: ' + companyId.toString(),
+      ])
+      // Small delay before triggering success callback
+      setTimeout(() => {
+        onSuccess()
+        router.push('/dashboard')
+      }, 2000)
+    }
+  }, [companyId, step, onSuccess, router])
+
+  const steps = [
+    {
+      id: 1,
+      name: 'Transaction Submitted',
+      status: step > 1 ? 'complete' : 'current',
+    },
+    {
+      id: 2,
+      name: 'Transaction Confirmed',
+      status: step > 2 ? 'complete' : step === 2 ? 'current' : 'upcoming',
+    },
+    {
+      id: 3,
+      name: 'Registration Processing',
+      status: step > 3 ? 'complete' : step === 3 ? 'current' : 'upcoming',
+    },
+    {
+      id: 4,
+      name: 'Complete!',
+      status: step === 4 ? 'complete' : 'upcoming',
+    },
+  ]
+
+  return (
+    <div className="flex flex-col items-center justify-center space-y-8 py-8">
+      <div className="w-full max-w-2xl space-y-8">
+        {/* Stepper */}
+        <nav aria-label="Progress">
+          <ol role="list" className="flex items-center justify-between w-full">
+            {steps.map((s, stepIdx) => (
+              <li
+                key={s.name}
+                className={`${
+                  stepIdx !== steps.length - 1 ? 'flex-1' : ''
+                } relative flex flex-col items-center`}
+              >
+                <div className="flex items-center w-full">
+                  <div
+                    className={`relative flex h-8 w-8 items-center justify-center rounded-full border-2 z-10 ${
+                      s.status === 'complete'
+                        ? 'bg-primary border-primary'
+                        : s.status === 'current'
+                          ? 'border-primary bg-background'
+                          : 'border-muted bg-background'
+                    }`}
+                  >
+                    {s.status === 'complete' ? (
+                      <Check className="h-5 w-5 text-white" aria-hidden="true" />
+                    ) : s.status === 'current' ? (
+                      <span
+                        className="bg-primary h-2.5 w-2.5 rounded-full"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <span
+                        className="bg-transparent h-2.5 w-2.5 rounded-full"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </div>
+                  {stepIdx !== steps.length - 1 && (
+                    <div
+                      className={`flex-1 h-0.5 -ml-1 ${
+                        s.status === 'complete' ? 'bg-primary' : 'bg-muted'
+                      }`}
+                    />
+                  )}
+                </div>
+                <div className="mt-2 text-xs font-medium text-gray-500 text-center absolute top-8 w-32 -ml-12">
+                  {s.name}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </nav>
+
+        <div className="space-y-4 text-center pt-8">
+          <h2 className="text-2xl font-bold">
+            {step === 4 ? 'Company Registered!' : 'Registration in Progress'}
+          </h2>
+          <p className="text-muted-foreground mx-auto max-w-xs">
+            We are securing{' '}
+            <span className="text-foreground font-semibold">
+              {ensName}.eth
+            </span>
+            . This takes about 2-3 minutes.
+          </p>
+        </div>
+
+        {/* Logs */}
+        <div className="border-border bg-muted/30 rounded-xl border p-4 text-left text-sm">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-foreground font-medium">Status Log</p>
+            {step < 4 && <Loader2 className="text-primary h-3 w-3 animate-spin" />}
+          </div>
+          <div className="scrollbar-thin scrollbar-thumb-muted-foreground/20 max-h-32 space-y-1 overflow-y-auto font-mono text-xs">
+            {logs.map((log, i) => (
+              <div key={i} className="text-muted-foreground">
+                <span className="text-primary mr-2">{'>'}</span>
+                {log}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Transaction Link */}
+        <div className="flex justify-center">
+          <a
+            href={`https://sepolia.etherscan.io/tx/${txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:text-primary/80 flex items-center gap-2 text-sm font-medium transition-colors"
+          >
+            View Transaction on Etherscan
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        </div>
+
+        {step === 4 && (
+          <button
+            type="button"
+            onClick={() => router.push('/dashboard')}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 block w-full rounded-xl py-4 text-center text-lg font-semibold transition-all"
+          >
+            Go to Dashboard
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
 
 interface SetupWizardProps {
   initialEnsName: string
@@ -175,44 +385,14 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   // Success State
   if (registrationTxHash) {
     return (
-      <div className="flex flex-col items-center justify-center space-y-6 py-12 text-center">
-        <div className="bg-primary/10 flex h-20 w-20 items-center justify-center rounded-full">
-          <Loader2 className="text-primary h-10 w-10 animate-spin" />
-        </div>
-
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold">Registration in Progress</h2>
-          <p className="text-muted-foreground mx-auto max-w-md">
-            We are securing{' '}
-            <span className="text-foreground font-semibold">
-              {initialEnsName}.eth
-            </span>
-            . This takes about 2-3 minutes. You can close this page.
-          </p>
-        </div>
-
-        <div className="border-border bg-card rounded-xl border p-4 text-left text-sm">
-          <p className="text-foreground font-medium">Transaction Sent</p>
-          <p className="text-muted-foreground mt-1 font-mono text-xs break-all">
-            {registrationTxHash}
-          </p>
-          <a
-            href={`https://sepolia.etherscan.io/tx/${registrationTxHash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary mt-2 inline-block text-xs hover:underline"
-          >
-            View on Etherscan
-          </a>
-        </div>
-
-        <a
-          href="/dashboard"
-          className="bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-xl px-6 py-3 text-sm font-medium"
-        >
-          Go to Dashboard
-        </a>
-      </div>
+      <RegistrationStatus
+        txHash={registrationTxHash as `0x${string}`}
+        ensName={initialEnsName}
+        onSuccess={() => {
+          // Optional: Auto-redirect or just let the user click the button
+          // router.push('/dashboard')
+        }}
+      />
     )
   }
 
