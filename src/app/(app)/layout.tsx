@@ -1,4 +1,4 @@
-import { Navbar } from '@/components/navigation/navbar'
+
 
 export default function AuthenticatedLayout({
   children,
@@ -7,7 +7,6 @@ export default function AuthenticatedLayout({
 }) {
   return (
     <>
-      <Navbar />
       {children}
     </>
   )
