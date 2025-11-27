@@ -10,6 +10,7 @@ Build a responsive, sidebar-based dashboard layout with modular widgets for comp
 - React 19
 - Tailwind CSS v4
 - Lucide React (Icons)
+- **shadcn/ui** (Component Library)
 
 ## 🛠 Component Architecture
 
@@ -100,6 +101,8 @@ Create these in `src/app/(app)/dashboard/components/` (or a new `layout` folder 
 8. **Build `ActivityFeed`**: Mock notification list.
 
 ## 💡 Tips for Interview Prep
+- **UI Components**: Use **shadcn/ui** components whenever possible. If a specific component is missing, build it on top of **Radix UI** primitives following the shadcn design patterns and styling.
+- **Mock Label**: As requested, add a visible 'Mock' badge to any component using mock data. This helps distinguish real vs fake data during development.
 - **Types**: Define interfaces for your mock data (e.g., `interface Transaction { id: string; type: 'sent' | 'received'; ... }`).
 - **Composition**: Keep components small. If a card has a list, maybe make a `TransactionRow` component.
 - **Tailwind**: Use `flex`, `grid`, `gap`, and `space-y` utilities effectively.
