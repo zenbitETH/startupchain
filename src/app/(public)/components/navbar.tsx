@@ -6,8 +6,8 @@ import { useProvidersReady } from '@/components/providers/providers-shell'
 import { Button } from '@/components/ui/button'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 
-import { ChainLogo } from '../ui/chain-logo'
-import { LoadingSpinner } from '../ui/loading-spinner'
+import { ChainLogo } from '../../../components/ui/chain-logo'
+import { LoadingSpinner } from '../../../components/ui/loading-spinner'
 
 export function Navbar() {
   const { ready: providersReady } = useProvidersReady()
