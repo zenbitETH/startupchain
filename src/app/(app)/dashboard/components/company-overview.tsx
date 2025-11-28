@@ -1,6 +1,8 @@
 import { BadgeCheck, Settings, Wallet } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { shortenAddress } from '@/lib/utils'
+
 import { MockBadge } from './mock-badge'
 
 type CompanyOverviewProps = {
@@ -11,16 +13,13 @@ type CompanyOverviewProps = {
   }
 }
 
-const shorten = (value: string) =>
-  value.length > 10 ? `${value.slice(0, 6)}...${value.slice(-4)}` : value
-
 export function CompanyOverview({ data }: CompanyOverviewProps) {
   return (
-    <section className="bg-card border-border shadow-sm rounded-2xl border p-6">
+    <section className="bg-card border-border rounded-2xl border p-6 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-muted-foreground text-sm">Company Overview</p>
-          <h2 className="text-foreground text-2xl font-semibold leading-tight">
+          <h2 className="text-foreground text-2xl leading-tight font-semibold">
             {data.name}
           </h2>
         </div>
@@ -46,7 +45,9 @@ export function CompanyOverview({ data }: CompanyOverviewProps) {
           <p className="text-muted-foreground text-xs">Primary Safe Wallet</p>
           <div className="flex items-center gap-2 pt-2 text-sm font-semibold">
             <Wallet className="text-primary h-4 w-4" />
-            <span className="font-mono">{shorten(data.safeAddress)}</span>
+            <span className="font-mono">
+              {shortenAddress(data.safeAddress)}
+            </span>
           </div>
         </div>
       </div>
