@@ -3,16 +3,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import {
-  BadgeCheck,
-  Coins,
-  LayoutDashboard,
-  LineChart,
-  LogOut,
-  Settings,
-  ShieldCheck,
-  WalletCards,
-} from 'lucide-react'
 
 import {
   Sidebar,
@@ -28,19 +18,7 @@ import {
 } from '@/components/ui/sidebar'
 import { useIsMobile } from '@/hooks/use-mobile'
 
-export const appNavItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'ENS Company Names', url: '/dashboard/ens', icon: BadgeCheck },
-  { title: 'Multichain Safe', url: '/dashboard/safe', icon: ShieldCheck },
-  { title: 'EAS Attestations', url: '/dashboard/attestations', icon: WalletCards },
-  { title: 'DeFi Rails', url: '/dashboard/defi', icon: LineChart },
-  { title: 'Company Tokens', url: '/dashboard/tokens', icon: Coins },
-]
-
-const footerItems = [
-  { title: 'Settings', url: '/dashboard/settings', icon: Settings },
-  { title: 'Log out', url: '/logout', icon: LogOut },
-]
+import { appNavItems, footerItems } from '../config/navigation'
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -63,8 +41,8 @@ export function AppSidebar() {
             priority
           />
           <div>
-            <p className="text-sm font-semibold leading-tight">StartUpChain</p>
-            <p className="text-xs text-sidebar-foreground/70">Onchain OS</p>
+            <p className="text-sm leading-tight font-semibold">StartUpChain</p>
+            <p className="text-sidebar-foreground/70 text-xs">Onchain OS</p>
           </div>
         </Link>
       </SidebarHeader>
