@@ -1,9 +1,11 @@
 import { ArrowDownLeft, ArrowUpRight, Link2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+
 import { MockBadge } from './mock-badge'
 
-type Transaction = {
+export type Transaction = {
   id: string
   title: string
   subtitle: string
@@ -22,7 +24,7 @@ type TreasurySummaryProps = {
 
 export function TreasurySummary({ data }: TreasurySummaryProps) {
   return (
-    <section className="bg-card border-border shadow-sm rounded-2xl border p-6">
+    <section className="bg-card border-border rounded-2xl border p-6 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-muted-foreground text-sm">Treasury Summary</p>
@@ -32,7 +34,11 @@ export function TreasurySummary({ data }: TreasurySummaryProps) {
         </div>
         <div className="flex items-center gap-2">
           <MockBadge />
-          <Button variant="link" size="sm" className="px-0 text-sm font-semibold">
+          <Button
+            variant="link"
+            size="sm"
+            className="px-0 text-sm font-semibold"
+          >
             View All
             <Link2 className="h-4 w-4" />
           </Button>
@@ -41,7 +47,7 @@ export function TreasurySummary({ data }: TreasurySummaryProps) {
 
       <div className="mt-6">
         <p className="text-muted-foreground text-xs">Total Balance</p>
-        <p className="text-foreground text-4xl font-bold leading-tight">
+        <p className="text-foreground text-4xl leading-tight font-bold">
           {data.totalBalance}
         </p>
       </div>
@@ -60,9 +66,10 @@ export function TreasurySummary({ data }: TreasurySummaryProps) {
             >
               <div className="flex items-center gap-3">
                 <span
-                  className={`${
+                  className={cn(
+                    'bg-background/80 flex h-8 w-8 items-center justify-center rounded-full',
                     isOutgoing ? 'text-destructive' : 'text-primary'
-                  } flex h-8 w-8 items-center justify-center rounded-full bg-background/80`}
+                  )}
                 >
                   <DirectionIcon className="h-4 w-4" />
                 </span>
