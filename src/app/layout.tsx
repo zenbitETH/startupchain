@@ -68,10 +68,8 @@ export default async function RootLayout({
       <head />
       <body className="antialiased">
         <ProvidersShell initialSession={session || undefined}>
-          <main>
-            {children}
-            <AIChatTrigger />
-          </main>
+          {children}
+          <AIChatTrigger />
         </ProvidersShell>
         <Analytics />
         <SpeedInsights />
