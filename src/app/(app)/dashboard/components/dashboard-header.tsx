@@ -1,14 +1,15 @@
 'use client'
 
+import { Copy, Globe2, Menu, WalletMinimal } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
-import { Copy, Globe2, Menu, WalletMinimal } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
-import { appNavItems } from '@/app/(app)/dashboard/components/sidebar'
+import { appNavItems } from '@/app/(app)/dashboard/config/navigation'
 import { Button } from '@/components/ui/button'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
+import { shortenAddress } from '@/lib/utils'
 
 const chainNames: Record<number, string> = {
   1: 'Ethereum',
@@ -29,10 +30,12 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
   const [showMobileNav, setShowMobileNav] = useState(false)
 
   const formattedAddress = primaryAddress
-    ? `${primaryAddress.slice(0, 6)}...${primaryAddress.slice(-4)}`
+    ? shortenAddress(primaryAddress)
     : 'No wallet connected'
 
-  const networkLabel = chainId ? chainNames[chainId] ?? 'Unknown network' : 'Network unavailable'
+  const networkLabel = chainId
+    ? (chainNames[chainId] ?? 'Unknown network')
+    : 'Network unavailable'
 
   const handleCopy = async () => {
     if (!primaryAddress) return
@@ -44,7 +47,9 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
   }
 
   const avatarFallback =
-    user?.email?.address?.[0]?.toUpperCase() ?? user?.id?.[0]?.toUpperCase() ?? 'U'
+    user?.email?.address?.[0]?.toUpperCase() ??
+    user?.id?.[0]?.toUpperCase() ??
+    'U'
 
   const handleNavChange = (value: string) => {
     if (!value) return
@@ -56,7 +61,7 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
     <div className="border-border bg-background/90 sticky top-0 z-10 border-b px-4 py-3 backdrop-blur md:px-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2 md:hidden">
-          <Link href="/" className="flex items-center gap-3 flex-1">
+          <Link href="/" className="flex flex-1 items-center gap-3">
             <Image
               src="/logo.svg"
               alt="StartUpChain logo"
@@ -66,15 +71,13 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
               priority
             />
             <div className="leading-tight">
-              <p className="text-foreground text-lg font-semibold">StartUpChain</p>
+              <p className="text-foreground text-lg font-semibold">
+                StartUpChain
+              </p>
               <p className="text-muted-foreground text-xs">Onchain OS</p>
             </div>
           </Link>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-full px-3"
-          >
+          <Button variant="outline" size="sm" className="rounded-full px-3">
             <Globe2 className="h-4 w-4" />
             <span className="text-sm font-medium">{networkLabel}</span>
           </Button>
@@ -89,7 +92,7 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
           </Button>
         </div>
 
-        <div className="md:hidden flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-2 md:hidden">
           <Button
             variant="outline"
             size="sm"
@@ -105,7 +108,7 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
 
         <div className="hidden md:flex md:items-center md:justify-between">
           <div>
-            <p className="text-foreground text-xl font-semibold leading-tight">
+            <p className="text-foreground text-xl leading-tight font-semibold">
               {title}
             </p>
           </div>
@@ -129,11 +132,11 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
         </div>
 
         {showMobileNav && (
-          <div className="bg-card border-border shadow-md absolute right-4 top-[72px] flex w-48 flex-col rounded-xl border p-2 md:hidden">
+          <div className="bg-card border-border absolute top-[72px] right-4 flex w-48 flex-col rounded-xl border p-2 shadow-md md:hidden">
             {appNavItems.map((item) => (
               <button
                 key={item.url}
-                className="text-left text-sm font-medium text-foreground rounded-lg px-3 py-2 hover:bg-muted"
+                className="text-foreground hover:bg-muted rounded-lg px-3 py-2 text-left text-sm font-medium"
                 onClick={() => handleNavChange(item.url)}
               >
                 {item.title}
