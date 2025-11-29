@@ -27,6 +27,8 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     showCongratulations,
     setShowCongratulations,
     commitmentCountdown,
+    pendingTxHash,
+    isWaitingForReceipt,
   } = useSmartWallet()
 
   const draft = useDraftStore((state) => state.draft)
@@ -124,6 +126,8 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
 
   const disableCreateButton =
     isCreating ||
+    isWaitingForReceipt ||
+    pendingTxHash !== null ||
     commitmentCountdown !== null ||
     (!authenticated &&
       draft.shareholders.some((founder) => !founder.walletAddress.trim())) ||
@@ -361,15 +365,15 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
           type="button"
           onClick={handleCreateBusiness}
           disabled={disableCreateButton}
-          className={createButtonClasses}
-        >
-          {commitmentCountdown !== null
-            ? `Waiting… ${commitmentCountdown}s`
-            : isCreating
-              ? 'Creating Business…'
-              : !authenticated
-                ? 'Connect Wallet & Create'
-                : 'Create Business'}
+      className={createButtonClasses}
+    >
+      {commitmentCountdown !== null
+        ? `Waiting… ${commitmentCountdown}s`
+        : isCreating || isWaitingForReceipt || pendingTxHash
+          ? 'Registering company…'
+          : !authenticated
+            ? 'Connect Wallet & Create'
+            : 'Create Business'}
         </button>
       </div>
 
