@@ -11,7 +11,7 @@ export function useEnsCost(ensName: string, isOpen: boolean) {
       const costData = await getRegistrationCost(ensName, 1) // 1 year
 
       // Get wallet balance
-      const balanceData = await checkWalletBalance()
+      const balanceData = await checkWalletBalance(ensName)
 
       return {
         costs: costData,
