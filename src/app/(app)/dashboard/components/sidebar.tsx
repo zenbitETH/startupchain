@@ -2,7 +2,9 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { LogOut } from 'lucide-react'
+import { useState } from 'react'
 
 import {
   Sidebar,
@@ -17,12 +19,16 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { useWalletAuth } from '@/hooks/use-wallet-auth'
 
 import { appNavItems, footerItems } from '../config/navigation'
 
 export function AppSidebar() {
   const pathname = usePathname()
   const isMobile = useIsMobile()
+  const router = useRouter()
+  const { disconnect } = useWalletAuth()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   if (isMobile) {
     return null
@@ -75,7 +81,12 @@ export function AppSidebar() {
         <SidebarMenu>
           {footerItems.map((item) => (
             <SidebarMenuItem key={item.url}>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton
+                asChild
+                isActive={
+                  pathname === item.url || pathname.startsWith(`${item.url}/`)
+                }
+              >
                 <Link href={item.url}>
                   <item.icon className="h-4 w-4" />
                   <span>{item.title}</span>
@@ -83,6 +94,24 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              className="text-destructive hover:bg-destructive/10 focus-visible:ring-destructive/40"
+              disabled={isLoggingOut}
+              onClick={async () => {
+                setIsLoggingOut(true)
+                try {
+                  await disconnect()
+                  router.replace('/')
+                } finally {
+                  setIsLoggingOut(false)
+                }
+              }}
+            >
+              <LogOut className="h-4 w-4" />
+              <span>{isLoggingOut ? 'Logging out...' : 'Log out'}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
 
