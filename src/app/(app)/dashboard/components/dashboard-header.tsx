@@ -1,6 +1,6 @@
 'use client'
 
-import { Copy, Globe2, Menu, WalletMinimal } from 'lucide-react'
+import { Copy, Menu, WalletMinimal } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -8,17 +8,9 @@ import { useState } from 'react'
 
 import { appNavItems } from '@/app/(app)/dashboard/config/navigation'
 import { Button } from '@/components/ui/button'
+import { NetworkSwitcher } from '@/components/ui/network-switcher'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { shortenAddress } from '@/lib/utils'
-
-const chainNames: Record<number, string> = {
-  1: 'Ethereum',
-  10: 'Optimism',
-  8453: 'Base',
-  11155111: 'Sepolia',
-  11155420: 'Optimism Sepolia',
-  84532: 'Base Sepolia',
-}
 
 type DashboardHeaderProps = {
   title: string
@@ -32,10 +24,6 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
   const formattedAddress = primaryAddress
     ? shortenAddress(primaryAddress)
     : 'No wallet connected'
-
-  const networkLabel = chainId
-    ? (chainNames[chainId] ?? 'Unknown network')
-    : 'Network unavailable'
 
   const handleCopy = async () => {
     if (!primaryAddress) return
@@ -77,10 +65,7 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
               <p className="text-muted-foreground text-xs">Onchain OS</p>
             </div>
           </Link>
-          <Button variant="outline" size="sm" className="rounded-full px-3">
-            <Globe2 className="h-4 w-4" />
-            <span className="text-sm font-medium">{networkLabel}</span>
-          </Button>
+          <NetworkSwitcher />
           <Button
             variant="outline"
             size="icon-sm"
@@ -113,10 +98,7 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 md:justify-end">
-            <Button variant="outline" size="sm" className="rounded-full px-3">
-              <Globe2 className="h-4 w-4" />
-              <span className="text-sm font-medium">{networkLabel}</span>
-            </Button>
+            <NetworkSwitcher />
             <Button
               variant="outline"
               size="sm"
