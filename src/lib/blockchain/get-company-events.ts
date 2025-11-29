@@ -1,18 +1,18 @@
 import { startupChainAbi } from './startupchain-abi'
+import { publicClient } from './startupchain-client'
 import {
   DEFAULT_ENS_RESOLVER,
   STARTUPCHAIN_ADDRESS,
 } from './startupchain-config'
-import { publicClient } from './startupchain-client'
 
 type CompanyEvent = {
   companyId: string
   ensName: string
-  companyAddress: `0x${string}`
+  safeAddress: `0x${string}`
+  threshold: number
   blockNumber: bigint
   transactionHash: `0x${string}`
   createdAt?: Date
-  founders: `0x${string}`[]
 }
 
 const companyRegisteredEvent = startupChainAbi.find(
@@ -20,15 +20,15 @@ const companyRegisteredEvent = startupChainAbi.find(
 )
 
 export async function getCompanyEvents(
-  companyAddress: string | undefined
+  safeAddress: string | undefined
 ): Promise<CompanyEvent[]> {
-  if (!companyAddress || !companyRegisteredEvent) return []
+  if (!safeAddress || !companyRegisteredEvent) return []
 
   try {
     const logs = await publicClient.getLogs({
       address: STARTUPCHAIN_ADDRESS,
       event: companyRegisteredEvent,
-      args: { companyAddress: companyAddress as `0x${string}` },
+      args: { safeAddress: safeAddress as `0x${string}` },
       fromBlock: 0n,
     })
 
@@ -42,14 +42,14 @@ export async function getCompanyEvents(
         const block = blocks[index]
         return {
           companyId: parsed.companyId?.toString() ?? '',
-          companyAddress: parsed.companyAddress as `0x${string}`,
+          safeAddress: parsed.safeAddress as `0x${string}`,
           ensName: parsed.ensName ?? '',
+          threshold: Number(parsed.threshold ?? 1),
           blockNumber: log.blockNumber,
           transactionHash: log.transactionHash,
           createdAt: block?.timestamp
             ? new Date(Number(block.timestamp) * 1000)
             : undefined,
-          founders: (parsed.founders ?? []) as `0x${string}`[],
         }
       })
       .sort((a, b) => Number(b.blockNumber - a.blockNumber))
