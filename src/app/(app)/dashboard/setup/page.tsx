@@ -45,7 +45,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             href="/"
             className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center rounded-full px-6 py-3 text-sm font-semibold transition"
           >
-            Go back to start
+            Check ENS Availability
           </Link>
         </div>
       </div>
