@@ -3,10 +3,10 @@ import { Suspense } from 'react'
 
 import { SetupWizard } from './components/setup-wizzard'
 
-interface SetupPageProps {
-  searchParams: {
+type SetupPageProps = {
+  searchParams: Promise<{
     ensName?: string
-  }
+  }>
 }
 
 function SetupPageContent({ ensName }: { ensName: string }) {
@@ -26,8 +26,9 @@ function SetupPageContent({ ensName }: { ensName: string }) {
   )
 }
 
-export default function SetupPage({ searchParams }: SetupPageProps) {
-  const normalizedEnsName = searchParams.ensName?.trim().toLowerCase()
+export default async function SetupPage({ searchParams }: SetupPageProps) {
+  const params = await searchParams
+  const normalizedEnsName = params.ensName?.trim().toLowerCase()
 
   if (!normalizedEnsName) {
     return (
