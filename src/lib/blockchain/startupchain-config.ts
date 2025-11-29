@@ -1,0 +1,14 @@
+export const STARTUPCHAIN_ADDRESS = process.env
+  .NEXT_PUBLIC_STARTUPCHAIN_ADDRESS as `0x${string}`
+
+if (!STARTUPCHAIN_ADDRESS) {
+  throw new Error('Missing NEXT_PUBLIC_STARTUPCHAIN_ADDRESS')
+}
+
+export const STARTUPCHAIN_CHAIN_ID = Number(
+  process.env.NEXT_PUBLIC_CHAIN_ID ?? '11155111'
+)
+
+export const DEFAULT_ENS_RESOLVER = (process.env
+  .NEXT_PUBLIC_ENS_RESOLVER_ADDRESS ??
+  '0x8FADE66B79cC9f707aB26799354482EB93a5B7dD') as `0x${string}`
