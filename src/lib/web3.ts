@@ -1,8 +1,8 @@
-import { createConfig, http, fallback } from 'wagmi'
-import { base, baseSepolia, mainnet, sepolia } from 'wagmi/chains'
-import { createClient as createViemClient } from 'viem'
-import { ccipRequest } from '@ensdomains/ensjs/utils'
 import { addEnsContracts } from '@ensdomains/ensjs'
+import { ccipRequest } from '@ensdomains/ensjs/utils'
+import { createClient as createViemClient } from 'viem'
+import { createConfig, fallback, http } from 'wagmi'
+import { base, baseSepolia, mainnet, sepolia } from 'wagmi/chains'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 
@@ -11,33 +11,42 @@ export const sepoliaWithEns = {
   ...addEnsContracts(sepolia),
   contracts: {
     ...addEnsContracts(sepolia).contracts,
-    ensEthRegistrarController: { address: '0xFED6a969AaA60E4961FCD3EBF1A2e8913ac65B72' as const },
-    ensPublicResolver: { address: '0x8FADE66B79cC9f707aB26799354482EB93a5B7dD' as const },
-    ensReverseRegistrar: { address: '0xA0a1AbcDAe1a2a4A2EF8e9113Ff0e02DD81DC0C6' as const },
+    ensEthRegistrarController: {
+      address: '0xFED6a969AaA60E4961FCD3EBF1A2e8913ac65B72' as const,
+    },
+    ensPublicResolver: {
+      address: '0x8FADE66B79cC9f707aB26799354482EB93a5B7dD' as const,
+    },
+    ensReverseRegistrar: {
+      address: '0xA0a1AbcDAe1a2a4A2EF8e9113Ff0e02DD81DC0C6' as const,
+    },
   },
   subgraphs: {
     ens: {
-      url: 'https://api.studio.thegraph.com/query/49574/enssepoliav2/version/latest'
-    }
-  }
+      url: 'https://api.studio.thegraph.com/query/49574/enssepoliav2/version/latest',
+    },
+  },
 } as const
 
 export const mainnetWithEns = {
   ...addEnsContracts(mainnet),
   subgraphs: {
     ens: {
-      url: 'https://api.studio.thegraph.com/query/49574/ens/version/latest'
-    }
-  }
+      url: 'https://api.studio.thegraph.com/query/49574/ens/version/latest',
+    },
+  },
 } as const
 
-const chains = isDevelopment 
-  ? [sepoliaWithEns, mainnetWithEns, baseSepolia, base] as const
-  : [mainnetWithEns, sepoliaWithEns, base, baseSepolia] as const
+const chains = isDevelopment
+  ? ([sepoliaWithEns, mainnetWithEns, baseSepolia, base] as const)
+  : ([mainnetWithEns, sepoliaWithEns, base, baseSepolia] as const)
 
 const transports = {
   [mainnet.id]: fallback([http(), http('https://eth.llamarpc.com')]),
-  [sepolia.id]: fallback([http(), http('https://ethereum-sepolia-rpc.publicnode.com')]),
+  [sepolia.id]: fallback([
+    http(),
+    http('https://ethereum-sepolia-rpc.publicnode.com'),
+  ]),
   [base.id]: http(),
   [baseSepolia.id]: http(),
 }
