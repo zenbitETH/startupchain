@@ -25,7 +25,7 @@ export function CompanyOverview({ data }: CompanyOverviewProps) {
           </h2>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+          <span className="bg-primary/10 text-primary rounded-full px-2 py-1 text-xs">
             {data.chainName}
           </span>
           <Button variant="outline" size="sm" className="rounded-full">
@@ -52,7 +52,7 @@ export function CompanyOverview({ data }: CompanyOverviewProps) {
               {shortenAddress(data.safeAddress)}
             </span>
           </div>
-          <p className="text-muted-foreground text-xs mt-1">
+          <p className="text-muted-foreground mt-1 text-xs">
             {data.threshold} of {data.founderCount} signatures required
           </p>
         </div>
@@ -61,7 +61,9 @@ export function CompanyOverview({ data }: CompanyOverviewProps) {
           <p className="text-muted-foreground text-xs">Founders</p>
           <div className="flex items-center gap-2 pt-2 text-sm font-semibold">
             <Users className="text-primary h-4 w-4" />
-            <span>{data.founderCount} founder{data.founderCount !== 1 ? 's' : ''}</span>
+            <span>
+              {data.founderCount} founder{data.founderCount !== 1 ? 's' : ''}
+            </span>
           </div>
         </div>
       </div>
