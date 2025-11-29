@@ -20,7 +20,10 @@ function getChainConfig(chainId: number): { chain: Chain; rpcUrl: string } {
   if (chainId === 1) {
     return { chain: mainnet, rpcUrl: 'https://eth.llamarpc.com' }
   }
-  return { chain: sepolia, rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com' }
+  return {
+    chain: sepolia,
+    rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
+  }
 }
 
 /**
