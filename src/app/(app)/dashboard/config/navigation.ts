@@ -24,5 +24,4 @@ export const appNavItems = [
 
 export const footerItems = [
   { title: 'Settings', url: '/dashboard/settings', icon: Settings },
-  { title: 'Log out', url: '/logout', icon: LogOut },
 ]
