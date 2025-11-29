@@ -80,7 +80,7 @@ export function AIChatWidget({
         </div>
       </header>
 
-      <div className="bg-muted/40 text-foreground/90 flex-1 space-y-3 overflow-y-auto p-4 text-sm">
+      <div className="bg-muted/40 text-foreground/90 min-h-76 flex-1 space-y-3 overflow-y-auto p-4 text-sm">
         {messages.length === 0 && (
           <div className="border-border bg-card text-muted-foreground rounded-lg border p-3 text-xs leading-relaxed shadow-sm">
             <p className="text-foreground font-medium">
