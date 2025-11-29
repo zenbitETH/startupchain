@@ -1,10 +1,6 @@
-import { publicClient } from '@/lib/blockchain/startupchain-client'
-
-const STARTUPCHAIN_ADDRESS = process.env
-  .NEXT_PUBLIC_STARTUPCHAIN_ADDRESS as `0x${string}`
-
-if (!STARTUPCHAIN_ADDRESS)
-  throw new Error('Missing NEXT_PUBLIC_STARTUPCHAIN_ADDRESS')
+import { startupChainAbi } from './startupchain-abi'
+import { STARTUPCHAIN_ADDRESS } from './startupchain-config'
+import { publicClient } from './startupchain-client'
 
 export async function getCompanyByAddress(address: string) {
   if (!address) return null
@@ -12,21 +8,7 @@ export async function getCompanyByAddress(address: string) {
   try {
     const data = await publicClient.readContract({
       address: STARTUPCHAIN_ADDRESS,
-      abi: [
-        {
-          inputs: [{ name: '_address', type: 'address' }],
-          name: 'getCompanyByAddress',
-          outputs: [
-            { name: 'id', type: 'uint256' },
-            { name: 'companyAddress', type: 'address' },
-            { name: 'ensName', type: 'string' },
-            { name: 'creationDate', type: 'uint256' },
-            { name: 'founders', type: 'address[]' },
-          ],
-          stateMutability: 'view',
-          type: 'function',
-        },
-      ],
+      abi: startupChainAbi,
       functionName: 'getCompanyByAddress',
       args: [address as `0x${string}`],
     })
