@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 
 import { getServerSession } from '@/lib/auth/server-session'
-import { getCompanyByAddress, type Company } from '@/lib/blockchain/get-company'
+import { type Company, getCompanyByAddress } from '@/lib/blockchain/get-company'
 import {
   CHAIN_NAMES,
   STARTUPCHAIN_CHAIN_ID,
@@ -77,7 +77,7 @@ export default async function DashboardPage() {
           </div>
 
           <div className="bg-card border-border rounded-2xl border p-8 text-center">
-            <h2 className="text-xl font-semibold mb-2">Get Started</h2>
+            <h2 className="mb-2 text-xl font-semibold">Get Started</h2>
             <p className="text-muted-foreground mb-4">
               Register your company with an ENS name and Safe multisig to get
               started.
@@ -123,7 +123,7 @@ export default async function DashboardPage() {
             <p className="text-muted-foreground">
               Welcome back, here&apos;s an overview of your on-chain company.
             </p>
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+            <span className="text-muted-foreground bg-muted rounded-full px-2 py-1 text-xs">
               {chainName}
             </span>
           </div>
