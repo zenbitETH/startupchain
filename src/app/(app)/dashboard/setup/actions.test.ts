@@ -1,8 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const mockClient = {
+  getEnsAddress: vi.fn(),
+}
+
+const mockGetPrice = vi.fn()
+const mockGetOwner = vi.fn()
+
 vi.mock('@ensdomains/ensjs/public', () => ({
-  getOwner: vi.fn(),
-  getPrice: vi.fn(),
+  getOwner: mockGetOwner,
+  getPrice: mockGetPrice,
 }))
 
 vi.mock('@ensdomains/ensjs', () => ({
@@ -19,12 +26,7 @@ vi.mock('viem/ens', () => ({
 vi.mock('../../../../lib/ens.js', () => import('../../../../lib/ens.js'))
 
 vi.mock('viem', () => {
-  const mockClient = {
-    getEnsAddress: vi.fn(),
-  }
-
   return {
-    __mockClient: mockClient,
     createPublicClient: vi.fn(() => mockClient),
     http: vi.fn(() => ({})),
     formatEther: (wei: bigint) => (Number(wei) / 1e18).toString(),
@@ -53,13 +55,12 @@ describe('ENS server actions', () => {
   })
 
   it('returns availability data from the public client', async () => {
-    const { __mockClient } = await import('viem')
-    __mockClient.getEnsAddress.mockResolvedValue(null)
+    mockClient.getEnsAddress.mockResolvedValue(null)
 
     const { checkEnsAvailabilityAction } = await loadActions()
     const result = await checkEnsAvailabilityAction('acme')
 
-    expect(__mockClient.getEnsAddress).toHaveBeenCalledWith({
+    expect(mockClient.getEnsAddress).toHaveBeenCalledWith({
       name: 'acme.eth',
     })
     expect(result.available).toBe(true)
@@ -67,8 +68,7 @@ describe('ENS server actions', () => {
   })
 
   it('returns buffered registration cost', async () => {
-    const { getPrice } = await import('@ensdomains/ensjs/public')
-    getPrice.mockResolvedValue({
+    mockGetPrice.mockResolvedValue({
       base: BigInt(1_000_000_000_000_000_000n),
       premium: BigInt(0),
     })
@@ -84,8 +84,7 @@ describe('ENS server actions', () => {
   })
 
   it('returns owner when present and null when zero address', async () => {
-    const { getOwner } = await import('@ensdomains/ensjs/public')
-    getOwner.mockResolvedValueOnce({
+    mockGetOwner.mockResolvedValueOnce({
       owner: '0x0000000000000000000000000000000000000000',
     })
 
@@ -93,7 +92,7 @@ describe('ENS server actions', () => {
     const emptyResult = await getEnsOwnerAction('empty')
     expect(emptyResult.owner).toBeNull()
 
-    getOwner.mockResolvedValueOnce({ owner: '0xabc' })
+    mockGetOwner.mockResolvedValueOnce({ owner: '0xabc' })
     const ownedResult = await getEnsOwnerAction('owned')
     expect(ownedResult.owner).toBe('0xabc')
   })
