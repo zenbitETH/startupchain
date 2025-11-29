@@ -4,17 +4,17 @@ import { baseSepolia } from 'viem/chains'
 import { useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 
 import {
-  startupChainAbi,
-  type FounderStruct,
-} from '@/lib/blockchain/startupchain-abi'
-import {
-  getStartupChainAddress,
-  STARTUPCHAIN_CHAIN_ID,
-} from '@/lib/blockchain/startupchain-config'
-import {
   calculateThreshold,
   predictSafeAddress,
 } from '@/lib/blockchain/safe-factory'
+import {
+  type FounderStruct,
+  startupChainAbi,
+} from '@/lib/blockchain/startupchain-abi'
+import {
+  STARTUPCHAIN_CHAIN_ID,
+  getStartupChainAddress,
+} from '@/lib/blockchain/startupchain-config'
 import { usePrivy, useWallets } from '@/lib/privy'
 
 import { useEnsRegistration } from './use-ens-registration'
@@ -216,7 +216,12 @@ export function useSmartWallet() {
           address: contractAddress,
           abi: startupChainAbi,
           functionName: 'registerCompany',
-          args: [normalizedEns, ownerAddress, foundersWithEquityBps, BigInt(threshold)],
+          args: [
+            normalizedEns,
+            ownerAddress,
+            foundersWithEquityBps,
+            BigInt(threshold),
+          ],
           chainId: STARTUPCHAIN_CHAIN_ID,
         })
 
@@ -376,7 +381,11 @@ export function useSmartWallet() {
 
   const smartWallet = getSmartWallet()
   const embeddedWallet = getEmbeddedWallet()
-  const primaryWalletAddress = smartWallet?.address || embeddedWallet?.address || user?.wallet?.address || null
+  const primaryWalletAddress =
+    smartWallet?.address ||
+    embeddedWallet?.address ||
+    user?.wallet?.address ||
+    null
 
   return {
     businessAccount,
