@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
 
-import { SetupWizard } from './components/setup-wizzard'
+import { SetupWizard } from './components/setup-wizard'
 
 type SetupPageProps = {
   searchParams: Promise<{
