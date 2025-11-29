@@ -3,22 +3,36 @@ import { Address, formatEther, isAddress, parseEther } from 'viem'
 import { baseSepolia } from 'viem/chains'
 import { useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 
-import { startupChainAbi } from '@/lib/blockchain/startupchain-abi'
 import {
-  DEFAULT_ENS_RESOLVER,
-  STARTUPCHAIN_ADDRESS,
+  startupChainAbi,
+  type FounderStruct,
+} from '@/lib/blockchain/startupchain-abi'
+import {
+  getStartupChainAddress,
   STARTUPCHAIN_CHAIN_ID,
 } from '@/lib/blockchain/startupchain-config'
+import {
+  calculateThreshold,
+  predictSafeAddress,
+} from '@/lib/blockchain/safe-factory'
 import { usePrivy, useWallets } from '@/lib/privy'
 
 import { useEnsRegistration } from './use-ens-registration'
 
 export interface BusinessAccount {
   smartAccountAddress: Address
+  safeAddress: Address
   ensName: string
   owners: string[]
   ownerEquity: Record<string, number>
+  threshold: number
   isDeployed: boolean
+}
+
+export type FounderInput = {
+  address: string
+  equity: string // percentage as string, e.g. "50"
+  role?: string
 }
 
 export function useSmartWallet() {
@@ -38,7 +52,10 @@ export function useSmartWallet() {
 
   // Get ENS registration functionality
   const ensRegistration = useEnsRegistration()
+
+  // Contract write hook for registering company
   const { writeContractAsync } = useWriteContract()
+
   const {
     data: registrationReceipt,
     isLoading: isWaitingForReceipt,
@@ -73,16 +90,21 @@ export function useSmartWallet() {
 
   // Get embedded wallet for signing
   const getEmbeddedWallet = useCallback(() => {
-    return wallets.find(
+    // First try to find Privy embedded wallet
+    const embedded = wallets.find(
       (w) => w.walletClientType === 'privy' && w.connectorType === 'embedded'
     )
+    if (embedded) return embedded
+
+    // Fallback to any connected wallet
+    return wallets[0] ?? null
   }, [wallets])
 
-  // Create business account (associates ENS with smart wallet)
+  // Create business account with Safe deployment + ENS registration
   const createBusinessAccount = useCallback(
     async (
       ensName: string,
-      founders: { address: string; equity: string }[],
+      founders: FounderInput[],
       registrationAddress?: string
     ) => {
       if (!authenticated || !user) {
@@ -94,29 +116,32 @@ export function useSmartWallet() {
       setPendingTxHash(null)
 
       try {
-      // Check if user has a smart wallet or embedded wallet
-      let smartWallet = getSmartWallet()
-      let embeddedWallet = getEmbeddedWallet()
+        // Check if user has a smart wallet or embedded wallet
+        let smartWallet = getSmartWallet()
+        let embeddedWallet = getEmbeddedWallet()
 
         let businessWalletAddress: Address
 
-      if (smartWallet) {
-        businessWalletAddress = smartWallet.address
-      } else if (embeddedWallet) {
-        businessWalletAddress = embeddedWallet.address as Address
-      } else {
-        // Try to prompt login to surface an embedded wallet
-        await login()
-        smartWallet = getSmartWallet()
-        embeddedWallet = getEmbeddedWallet()
         if (smartWallet) {
           businessWalletAddress = smartWallet.address
         } else if (embeddedWallet) {
           businessWalletAddress = embeddedWallet.address as Address
+        } else if (user?.wallet?.address) {
+          // Fallback to user's primary wallet from Privy
+          businessWalletAddress = user.wallet.address as Address
         } else {
-          throw new Error('No wallet found. Please ensure you are logged in.')
+          // Try to prompt login to surface an embedded wallet
+          await login()
+          smartWallet = getSmartWallet()
+          embeddedWallet = getEmbeddedWallet()
+          if (smartWallet) {
+            businessWalletAddress = smartWallet.address
+          } else if (embeddedWallet) {
+            businessWalletAddress = embeddedWallet.address as Address
+          } else {
+            throw new Error('No wallet found. Please ensure you are logged in.')
+          }
         }
-      }
 
         const isAvailable = await ensRegistration.checkAvailability(ensName)
         if (!isAvailable) {
@@ -130,6 +155,7 @@ export function useSmartWallet() {
             ? ensName.slice(0, -4)
             : ensName
 
+        // Validate founder addresses
         const founderAddresses = founders
           .map((founder) => founder.address as `0x${string}`)
           .filter(
@@ -143,48 +169,67 @@ export function useSmartWallet() {
           throw new Error('Please provide valid founder wallet addresses')
         }
 
-        const ownerAddress = (registrationAddress ||
-          businessWalletAddress) as Address
-        if (!ownerAddress || !isAddress(ownerAddress)) {
-          throw new Error('Owner address is invalid')
+        // Validate equity totals (must be <= 100%)
+        const totalEquity = founders.reduce(
+          (sum, f) => sum + parseFloat(f.equity),
+          0
+        )
+        if (totalEquity > 100) {
+          throw new Error('Total equity cannot exceed 100%')
         }
 
-        const durationSeconds = BigInt(365 * 24 * 60 * 60) // 1 year
-        const secret = `0x${Array.from(
-          crypto.getRandomValues(new Uint8Array(32))
-        )
-          .map((b) => b.toString(16).padStart(2, '0'))
-          .join('')}` as `0x${string}`
+        // Calculate threshold automatically
+        const threshold = calculateThreshold(founderAddresses.length)
 
+        // Predict Safe address (for display purposes)
+        const predictedSafeAddress = await predictSafeAddress({
+          owners: founderAddresses,
+          chainId: STARTUPCHAIN_CHAIN_ID,
+          threshold,
+        })
+
+        // Convert equity percentage to basis points (100% = 10000 bps)
+        const foundersWithEquityBps: FounderStruct[] = founders.map((f) => ({
+          wallet: f.address as `0x${string}`,
+          equityBps: BigInt(Math.round(parseFloat(f.equity) * 100)), // percentage to bps
+          role: f.role || '',
+        }))
+
+        // Get contract address for current chain
+        const contractAddress = getStartupChainAddress(STARTUPCHAIN_CHAIN_ID)
+
+        // Use Safe address if provided, otherwise use predicted address
+        const ownerAddress = registrationAddress
+          ? (registrationAddress as `0x${string}`)
+          : predictedSafeAddress
+
+        console.log('📝 Registering company on StartupChainSimple:', {
+          ensName: normalizedEns,
+          ownerAddress,
+          founders: foundersWithEquityBps,
+          threshold,
+          contractAddress,
+        })
+
+        // Call the new simplified contract
         const txHash = await writeContractAsync({
-          address: STARTUPCHAIN_ADDRESS,
+          address: contractAddress,
           abi: startupChainAbi,
           functionName: 'registerCompany',
-          args: [
-            normalizedEns,
-            ownerAddress,
-            founderAddresses,
-            durationSeconds,
-            secret,
-            DEFAULT_ENS_RESOLVER,
-            [] as `0x${string}`[],
-            true,
-            0,
-          ],
+          args: [normalizedEns, ownerAddress, foundersWithEquityBps, BigInt(threshold)],
           chainId: STARTUPCHAIN_CHAIN_ID,
         })
+
+        console.log('✅ Company registration tx:', txHash)
 
         setTransactionHashes({
           registrationTx: txHash,
         })
         setPendingTxHash(txHash)
 
-        // Step 5: Deploy business contracts (future implementation)
-        // TODO: Deploy revenue splitting contracts
-        // TODO: Configure multi-sig if needed
-
         const account: BusinessAccount = {
           smartAccountAddress: businessWalletAddress,
+          safeAddress: ownerAddress,
           ensName: `${normalizedEns}.eth`,
           owners: founders.map((f) => f.address),
           ownerEquity: founders.reduce(
@@ -194,6 +239,7 @@ export function useSmartWallet() {
             },
             {} as Record<string, number>
           ),
+          threshold,
           isDeployed: true,
         }
 
@@ -201,6 +247,9 @@ export function useSmartWallet() {
 
         // Persist to localStorage
         localStorage.setItem(`business-${user.id}`, JSON.stringify(account))
+
+        // Show congratulations after waiting for tx
+        // (Will be triggered by useEffect watching registrationReceipt)
 
         return account
       } catch (err) {
@@ -213,15 +262,15 @@ export function useSmartWallet() {
       }
     },
     [
-    authenticated,
-    user,
-    getSmartWallet,
-    getEmbeddedWallet,
-    ensRegistration,
-    writeContractAsync,
-    login,
-  ]
-)
+      authenticated,
+      user,
+      getSmartWallet,
+      getEmbeddedWallet,
+      ensRegistration,
+      login,
+      writeContractAsync,
+    ]
+  )
 
   useEffect(() => {
     if (receiptError instanceof Error) {
@@ -327,11 +376,11 @@ export function useSmartWallet() {
 
   const smartWallet = getSmartWallet()
   const embeddedWallet = getEmbeddedWallet()
+  const primaryWalletAddress = smartWallet?.address || embeddedWallet?.address || user?.wallet?.address || null
 
   return {
     businessAccount,
-    businessWalletAddress:
-      smartWallet?.address || embeddedWallet?.address || null,
+    businessWalletAddress: primaryWalletAddress as Address | null,
     createBusinessAccount,
     sendFromBusinessWallet,
     getBusinessWalletBalance,
@@ -339,7 +388,7 @@ export function useSmartWallet() {
     error,
     hasSmartWallet: !!smartWallet,
     hasEmbeddedWallet: !!embeddedWallet,
-    isWalletReady: !!(smartWallet || embeddedWallet),
+    isWalletReady: !!(smartWallet || embeddedWallet || user?.wallet?.address),
     transactionHashes,
     showCongratulations,
     setShowCongratulations,
