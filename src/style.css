@@ -132,13 +132,13 @@
 .dark {
   --background: #121528;
   --foreground: oklch(0.9053 0.0245 293.557);
-  --card: #131A2A;
+  --card: #131a2a;
   --card-foreground: oklch(0.9053 0.0245 293.557);
   --popover: oklch(0.2544 0.0301 292.7315);
   --popover-foreground: oklch(0.9053 0.0245 293.557);
   --primary: oklch(0.7213 0.1066 217.67);
   --primary-foreground: oklch(0.2166 0.0215 292.8474);
-  --secondary: oklch(0.6253 0.1408 35.39);
+  --secondary: oklch(0.5561 0.0964 35.02 / 77.45%);
   --secondary-foreground: oklch(0.9053 0.0245 293.557);
   --muted: oklch(0.256 0.032 294.838);
   --muted-foreground: oklch(0.6974 0.0282 300.0614);
