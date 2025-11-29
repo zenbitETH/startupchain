@@ -98,10 +98,10 @@ export default async function EnsDashboardPage() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     {company.founders.map((founder) => (
                       <span
-                        key={founder}
+                        key={founder.wallet}
                         className="bg-background border-border rounded-full border px-3 py-1 text-xs font-mono"
                       >
-                        {founder}
+                        {founder.wallet}
                       </span>
                     ))}
                   </div>
@@ -222,7 +222,7 @@ export default async function EnsDashboardPage() {
                       <ExternalLink className="h-3 w-3" />
                     </a>
                     <span className="text-muted-foreground">
-                      Founders: {event.founders.length}
+                      Threshold: {event.threshold}
                     </span>
                   </div>
                 </div>
