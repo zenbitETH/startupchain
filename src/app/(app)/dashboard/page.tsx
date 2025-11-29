@@ -85,7 +85,6 @@ export default function DashboardPage() {
             <p className="text-muted-foreground">
               Welcome back, here&apos;s an overview of your on-chain company.
             </p>
-            <MockBadge className="self-start" />
           </div>
         </div>
 
