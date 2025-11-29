@@ -5,6 +5,12 @@ import { MessageCircle } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
 import { AIChatWidget } from '@/components/ai-chat/ai-chat-widget'
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from '@/components/ui/sheet'
+import { cn } from '@/lib/utils'
 
 export function AIChatTrigger() {
   const [isOpen, setIsOpen] = useState(false)
@@ -31,37 +37,62 @@ export function AIChatTrigger() {
     }
   }, [inputValue, sendMessage, status])
 
-  const handleClose = useCallback(() => {
-    setIsOpen(false)
+  const handleClose = useCallback(
+    (nextOpen: boolean) => {
+      setIsOpen(nextOpen)
+      if (!nextOpen && error) {
+        clearError()
+      }
+    },
+    [clearError, error]
+  )
+
+  const handleSheetChange = useCallback(
+    (nextOpen: boolean) => {
+      handleClose(nextOpen)
+    },
+    [handleClose]
+  )
+
+  const handleWidgetClose = useCallback(() => {
+    handleClose(false)
     if (error) {
       clearError()
     }
-  }, [clearError, error])
+  }, [clearError, error, handleClose])
 
   return (
-    <>
-      {!isOpen && (
+    <Sheet open={isOpen} onOpenChange={handleSheetChange}>
+      <SheetTrigger asChild>
         <button
           onClick={toggleChat}
-          className="fixed right-4 bottom-4 z-50 flex cursor-pointer items-center gap-2 rounded-full bg-[#917772] px-5 py-2 text-sm font-semibold text-slate-900 shadow-[0_18px_40px_-18px_rgba(97,199,255,0.65)] transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#61c7ff]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 sm:right-6 sm:bottom-6 dark:bg-gray-700 dark:text-white dark:hover:bg-[#74d0ff]/40"
+          className={cn(
+            'fixed right-4 bottom-4 z-50 flex cursor-pointer items-center gap-2 rounded-full bg-[#917772] px-5 py-2 text-sm font-semibold text-slate-900 shadow-[0_18px_40px_-18px_rgba(97,199,255,0.65)] transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#61c7ff]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 sm:right-6 sm:bottom-6 dark:bg-gray-700 dark:text-white dark:hover:bg-[#74d0ff]/40',
+            isOpen && 'pointer-events-none opacity-0'
+          )}
           aria-label="Open chat"
         >
           <MessageCircle className="h-4 w-4" />
           Ask a question
         </button>
-      )}
+      </SheetTrigger>
 
-      <AIChatWidget
-        isOpen={isOpen}
-        onClose={handleClose}
-        messages={messages}
-        inputValue={inputValue}
-        onInputChange={setInputValue}
-        onSend={handleSendMessage}
-        status={status}
-        stop={stop}
-        error={error}
-      />
-    </>
+      <SheetContent
+        side="right"
+        className="flex h-auto max-h-[82vh] w-full translate-y-0 flex-col gap-0 p-0 sm:max-w-md sm:bottom-6 sm:right-6 sm:top-auto"
+      >
+        <AIChatWidget
+          isOpen={isOpen}
+          onClose={handleWidgetClose}
+          messages={messages}
+          inputValue={inputValue}
+          onInputChange={setInputValue}
+          onSend={handleSendMessage}
+          status={status}
+          stop={stop}
+          error={error}
+        />
+      </SheetContent>
+    </Sheet>
   )
 }
