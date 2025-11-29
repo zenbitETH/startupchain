@@ -1,7 +1,7 @@
 'use client'
 
 import { useWallets } from '@privy-io/react-auth'
-import { Check, ChevronDown, Globe2 } from 'lucide-react'
+import { ChevronDown, Globe2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -76,7 +76,7 @@ export function NetworkSwitcher() {
             </span>
             {chainId === chain.id && (
               <div className="flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-sidebar-accent" />
+                <div className="bg-sidebar-accent h-1.5 w-1.5 rounded-full" />
               </div>
             )}
           </DropdownMenuItem>
