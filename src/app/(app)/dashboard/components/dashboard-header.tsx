@@ -108,7 +108,7 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
 
         <div className="hidden md:flex md:items-center md:justify-between">
           <div>
-            <p className="text-foreground text-xl leading-tight font-semibold">
+            <p className="text-foreground text-2xl leading-tight font-semibold">
               {title}
             </p>
           </div>
