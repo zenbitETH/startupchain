@@ -1,5 +1,3 @@
-import Link from 'next/link'
-import { cookies } from 'next/headers'
 import {
   ArrowRight,
   BadgeCheck,
@@ -8,12 +6,14 @@ import {
   Info,
   ListChecks,
 } from 'lucide-react'
+import { cookies } from 'next/headers'
+import Link from 'next/link'
 
 import { DashboardHeader } from '@/app/(app)/dashboard/components/dashboard-header'
+import { getServerSession } from '@/lib/auth/server-session'
 import { getCompanyByAddress } from '@/lib/blockchain/get-company'
 import { getCompanyEvents } from '@/lib/blockchain/get-company-events'
 import { STARTUPCHAIN_CHAIN_ID } from '@/lib/blockchain/startupchain-config'
-import { getServerSession } from '@/lib/auth/server-session'
 
 const explorerBase =
   STARTUPCHAIN_CHAIN_ID === 1
@@ -89,9 +89,7 @@ export default async function EnsDashboardPage() {
                 </div>
                 <div className="bg-muted/40 border-border/70 rounded-xl border p-4">
                   <p className="text-muted-foreground text-xs">Created</p>
-                  <p className="text-sm">
-                    {formatDate(company.creationDate)}
-                  </p>
+                  <p className="text-sm">{formatDate(company.creationDate)}</p>
                 </div>
                 <div className="bg-muted/40 border-border/70 rounded-xl border p-4 sm:col-span-2">
                   <p className="text-muted-foreground text-xs">Founders</p>
@@ -99,14 +97,14 @@ export default async function EnsDashboardPage() {
                     {company.founders.map((founder) => (
                       <span
                         key={founder.wallet}
-                        className="bg-background border-border rounded-full border px-3 py-1 text-xs font-mono"
+                        className="bg-background border-border rounded-full border px-3 py-1 font-mono text-xs"
                       >
                         {founder.wallet}
                       </span>
                     ))}
                   </div>
                 </div>
-                <div className="bg-muted/40 border-border/70 rounded-xl border p-4 sm:col-span-2 flex flex-wrap gap-2">
+                <div className="bg-muted/40 border-border/70 flex flex-wrap gap-2 rounded-xl border p-4 sm:col-span-2">
                   <Link
                     href={`${ensAppBase}/${company.ensName}`}
                     className="hover:bg-primary/10 inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold transition"
@@ -128,8 +126,8 @@ export default async function EnsDashboardPage() {
                 </div>
               </div>
             ) : (
-              <div className="mt-4 rounded-xl border border-dashed border-border/60 p-6 text-sm text-muted-foreground">
-                <p className="mb-3 font-medium text-foreground">
+              <div className="border-border/60 text-muted-foreground mt-4 rounded-xl border border-dashed p-6 text-sm">
+                <p className="text-foreground mb-3 font-medium">
                   No company found for your wallet.
                 </p>
                 <p>
@@ -208,7 +206,7 @@ export default async function EnsDashboardPage() {
                       {formatDate(event.createdAt)}
                     </span>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs font-mono">
+                  <div className="mt-3 flex flex-wrap gap-2 font-mono text-xs">
                     <span className="bg-background border-border rounded-full border px-3 py-1">
                       Block {event.blockNumber.toString()}
                     </span>
