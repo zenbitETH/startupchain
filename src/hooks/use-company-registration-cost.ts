@@ -2,11 +2,14 @@
  * Combined cost estimation for company registration
  * Includes: ENS registration + Safe deployment + 25% service fee
  */
-
 import { useQuery } from '@tanstack/react-query'
-import { useEnsRegistration } from '@/hooks/use-ens-registration'
-import { estimateSafeDeploymentGas, calculateThreshold } from '@/lib/blockchain/safe-factory'
 import { usePublicClient } from 'wagmi'
+
+import { useEnsRegistration } from '@/hooks/use-ens-registration'
+import {
+  calculateThreshold,
+  estimateSafeDeploymentGas,
+} from '@/lib/blockchain/safe-factory'
 
 // Service fee: 25% (2500 basis points)
 const SERVICE_FEE_BPS = 2500n
@@ -15,7 +18,7 @@ const BPS_DENOMINATOR = 10000n
 export type CompanyRegistrationCost = {
   // ENS costs
   ensRegistrationCost: bigint
-  
+
   // Safe deployment costs
   safeDeploymentGas: bigint
   safeDeploymentCost: bigint
@@ -55,7 +58,12 @@ export function useCompanyRegistrationCost({
   const publicClient = usePublicClient()
 
   return useQuery({
-    queryKey: ['company-registration-cost', ensName, founderCount, durationYears],
+    queryKey: [
+      'company-registration-cost',
+      ensName,
+      founderCount,
+      durationYears,
+    ],
     queryFn: async (): Promise<CompanyRegistrationCost> => {
       // Get ENS registration cost
       const ensCostData = await getRegistrationCost(ensName, durationYears)
@@ -165,16 +173,16 @@ export function useWalletBalanceCheck({
     queryFn: async () => {
       const balanceData = await checkWalletBalance(ensName)
       const requiredAmount = costQuery.data?.total ?? 0n
-      const balanceWei = BigInt(Math.floor(parseFloat(balanceData?.balance ?? '0') * 1e18))
+      const balanceWei = BigInt(
+        Math.floor(parseFloat(balanceData?.balance ?? '0') * 1e18)
+      )
 
       return {
         balance: balanceWei,
         required: requiredAmount,
         sufficient: balanceWei >= requiredAmount,
         shortfall:
-          requiredAmount > balanceWei
-            ? requiredAmount - balanceWei
-            : 0n,
+          requiredAmount > balanceWei ? requiredAmount - balanceWei : 0n,
       }
     },
     enabled: enabled && !!costQuery.data,
