@@ -1,23 +1,22 @@
 'use client'
 
-import { useEffect } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
 import { ENSCostEstimate } from '@/components/ens/ens-cost-estimate'
-import { CountdownModal } from '@/components/modals/countdown-modal'
 import { CongratulationsModal } from '@/components/modals/congratulations-modal'
+import { CountdownModal } from '@/components/modals/countdown-modal'
 import { useSmartWallet } from '@/hooks/use-smart-wallet'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
-import {
-  useDraftStore,
-  type Shareholder,
-} from '@/lib/store/draft'
+import { type Shareholder, useDraftStore } from '@/lib/store/draft'
 
 interface SetupWizardProps {
   initialEnsName: string
 }
 
 export function SetupWizard({ initialEnsName }: SetupWizardProps) {
+  const router = useRouter()
   const { connect, authenticated, user } = useWalletAuth()
   const {
     createBusinessAccount,
@@ -59,7 +58,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   }, [authenticated, user, draft, addShareholder])
 
   if (!draft) {
-    return <div className="text-sm text-muted-foreground">Loading wizard…</div>
+    return <div className="text-muted-foreground text-sm">Loading wizard…</div>
   }
 
   const totalEquity = draft.shareholders.reduce(
@@ -110,13 +109,12 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
         ? draft.customAddress
         : undefined
 
-      const founders = draft.shareholders.map(({
-        walletAddress,
-        equityPercentage,
-      }) => ({
-        address: walletAddress,
-        equity: equityPercentage.toString(),
-      }))
+      const founders = draft.shareholders.map(
+        ({ walletAddress, equityPercentage }) => ({
+          address: walletAddress,
+          equity: equityPercentage.toString(),
+        })
+      )
 
       await createBusinessAccount(initialEnsName, founders, registrationAddress)
     } catch (err) {
@@ -127,7 +125,8 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   const disableCreateButton =
     isCreating ||
     commitmentCountdown !== null ||
-    (!authenticated && draft.shareholders.some((founder) => !founder.walletAddress.trim())) ||
+    (!authenticated &&
+      draft.shareholders.some((founder) => !founder.walletAddress.trim())) ||
     (draft.isMultipleFounders && Math.abs(totalEquity - 100) > 0.01) ||
     (draft.registerToDifferentAddress && !draft.customAddress.trim())
 
@@ -143,46 +142,52 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     <div className="space-y-8">
       <div className="mb-8">
         <div className="mb-2 flex justify-between">
-          {['Company Details', 'Founders & Equity', 'Review & Deploy'].map((step, index) => (
-            <div
-              key={step}
-              className={`flex-1 text-center ${
-                index <= draft.currentStep ? 'text-primary' : 'text-muted-foreground'
-              }`}
-            >
-              {step}
-            </div>
-          ))}
+          {['Company Details', 'Founders & Equity', 'Review & Deploy'].map(
+            (step, index) => (
+              <div
+                key={step}
+                className={`flex-1 text-center ${
+                  index <= draft.currentStep
+                    ? 'text-primary'
+                    : 'text-muted-foreground'
+                }`}
+              >
+                {step}
+              </div>
+            )
+          )}
         </div>
-        <div className="h-2 w-full rounded-full bg-muted">
+        <div className="bg-muted h-2 w-full rounded-full">
           <div
-            className="h-2 rounded-full bg-primary transition-all duration-300"
-            style={{ width: `${((draft.currentStep + 1) / draft.totalSteps) * 100}%` }}
+            className="bg-primary h-2 rounded-full transition-all duration-300"
+            style={{
+              width: `${((draft.currentStep + 1) / draft.totalSteps) * 100}%`,
+            }}
           />
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="border-border bg-card rounded-2xl border p-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-secondary to-primary">
+          <div className="from-secondary to-primary flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br">
             <div className="text-xl font-bold text-white">
               {initialEnsName.charAt(0).toUpperCase()}
             </div>
           </div>
           <div>
-            <p className="text-xl font-semibold text-foreground">
+            <p className="text-foreground text-xl font-semibold">
               {initialEnsName}.eth
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Your ENS business name
             </p>
           </div>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="border-border bg-card rounded-2xl border p-6">
         <h3 className="mb-4 text-lg font-semibold">Company Structure</h3>
-        <div className="flex rounded-2xl bg-background p-1">
+        <div className="bg-background flex rounded-2xl p-1">
           <button
             type="button"
             onClick={() => handleFounderModeChange(false)}
@@ -209,7 +214,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
       </div>
 
       {!draft.isMultipleFounders && (
-        <div className="rounded-2xl border border-border bg-card p-6">
+        <div className="border-border bg-card rounded-2xl border p-6">
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
@@ -218,9 +223,12 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
               onChange={(event) =>
                 setRegisterToDifferentAddress(event.currentTarget.checked)
               }
-              className="rounded border border-border text-primary focus:ring-primary"
+              className="border-border text-primary focus:ring-primary rounded border"
             />
-            <label htmlFor="different-address" className="text-sm text-foreground">
+            <label
+              htmlFor="different-address"
+              className="text-foreground text-sm"
+            >
               Register ENS to a different address
             </label>
           </div>
@@ -231,17 +239,18 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
                 placeholder="Enter ETH address (0x...)"
                 value={draft.customAddress}
                 onChange={(event) => setCustomAddress(event.target.value)}
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-lg transition-all duration-200 placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary"
+                className="border-border bg-background placeholder:text-muted-foreground focus:border-primary focus:ring-primary w-full rounded-2xl border px-4 py-3 text-lg transition-all duration-200 focus:ring-2"
               />
-              <p className="mt-2 text-sm text-muted-foreground">
-                The ENS name will be registered to this address instead of your wallet.
+              <p className="text-muted-foreground mt-2 text-sm">
+                The ENS name will be registered to this address instead of your
+                wallet.
               </p>
             </div>
           )}
         </div>
       )}
 
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="border-border bg-card rounded-2xl border p-6">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xl font-semibold">
             {draft.isMultipleFounders ? 'Founders & Equity' : 'Your Details'}
@@ -261,7 +270,10 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
 
         <div className="space-y-3">
           {draft.shareholders.map((founder) => (
-            <div key={founder.id} className="rounded-xl border border-border p-4">
+            <div
+              key={founder.id}
+              className="border-border rounded-xl border p-4"
+            >
               <div className="flex items-center gap-3">
                 <div className="flex-1">
                   <input
@@ -275,7 +287,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
                         event.target.value
                       )
                     }
-                    className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-lg transition-all duration-200 placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary"
+                    className="border-border bg-background placeholder:text-muted-foreground focus:border-primary focus:ring-primary w-full rounded-2xl border px-4 py-3 text-lg transition-all duration-200 focus:ring-2"
                   />
                 </div>
 
@@ -295,9 +307,9 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
                             event.target.value
                           )
                         }
-                        className="w-full rounded-2xl border border-border bg-background px-3 py-3 pr-8 text-center text-lg transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary"
+                        className="border-border bg-background focus:border-primary focus:ring-primary w-full rounded-2xl border px-3 py-3 pr-8 text-center text-lg transition-all duration-200 focus:ring-2"
                       />
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                      <div className="text-muted-foreground absolute top-1/2 right-2 -translate-y-1/2 text-sm">
                         %
                       </div>
                     </div>
@@ -308,7 +320,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
                   <button
                     type="button"
                     onClick={() => handleRemoveFounder(founder.id)}
-                    className="rounded-2xl p-2 text-muted-foreground transition-colors hover:text-destructive"
+                    className="text-muted-foreground hover:text-destructive rounded-2xl p-2 transition-colors"
                   >
                     <Trash2 className="h-5 w-5" />
                   </button>
@@ -321,7 +333,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
             <button
               type="button"
               onClick={handleAddFounder}
-              className="mx-auto flex items-center justify-center gap-2 rounded-xl border border-dashed px-6 py-4 text-lg font-medium transition-colors hover:bg-primary hover:text-background"
+              className="hover:bg-primary hover:text-background mx-auto flex items-center justify-center gap-2 rounded-xl border border-dashed px-6 py-4 text-lg font-medium transition-colors"
             >
               <Plus className="h-5 w-5" />
               Add Founder
@@ -330,8 +342,8 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
         </div>
 
         {draft.isMultipleFounders && Math.abs(totalEquity - 100) > 0.01 && (
-          <div className="mt-4 rounded-2xl border border-destructive/20 bg-destructive/10 p-3">
-            <p className="text-sm font-medium text-destructive">
+          <div className="border-destructive/20 bg-destructive/10 mt-4 rounded-2xl border p-3">
+            <p className="text-destructive text-sm font-medium">
               Equity must total 100%. Currently: {totalEquity.toFixed(1)}%
             </p>
           </div>
@@ -339,8 +351,8 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-3">
-          <p className="text-sm font-medium text-destructive">{error}</p>
+        <div className="border-destructive/20 bg-destructive/10 rounded-2xl border p-3">
+          <p className="text-destructive text-sm font-medium">{error}</p>
         </div>
       )}
 
@@ -354,10 +366,10 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
           {commitmentCountdown !== null
             ? `Waiting… ${commitmentCountdown}s`
             : isCreating
-            ? 'Creating Business…'
-            : !authenticated
-            ? 'Connect Wallet & Create'
-            : 'Create Business'}
+              ? 'Creating Business…'
+              : !authenticated
+                ? 'Connect Wallet & Create'
+                : 'Create Business'}
         </button>
       </div>
 
@@ -371,7 +383,8 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
           registrationTxHash={transactionHashes.registrationTx}
           onContinue={() => {
             setShowCongratulations(false)
-            window.location.href = '/dashboard'
+            router.push('/dashboard')
+            router.refresh()
           }}
         />
       )}
