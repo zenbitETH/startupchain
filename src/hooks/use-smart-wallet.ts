@@ -24,7 +24,6 @@ export function useSmartWallet() {
     registrationTx?: string
   }>({})
   const [showCongratulations, setShowCongratulations] = useState(false)
-  const [commitmentCountdown, setCommitmentCountdown] = useState<number | null>(null)
 
   // Get ENS registration functionality
   const ensRegistration = useEnsRegistration()
@@ -78,82 +77,42 @@ export function useSmartWallet() {
       let businessWalletAddress: Address
 
       if (smartWallet) {
-        // User has a smart wallet (Safe) - use it as business wallet
         businessWalletAddress = smartWallet.address
-        console.log('🏦 Using existing Smart Wallet (Safe) as business wallet:', businessWalletAddress)
       } else if (embeddedWallet) {
-        // User has embedded wallet - use it as business wallet for now
         businessWalletAddress = embeddedWallet.address as Address
-        console.log('👤 Using embedded wallet as business wallet:', businessWalletAddress)
       } else {
         throw new Error('No wallet found. Please ensure you are logged in.')
       }
 
-      console.log('🏢 Creating business account:', {
-        businessWallet: businessWalletAddress,
-        ensName,
-        founders,
-        walletType: smartWallet ? 'Smart Wallet (Safe)' : 'Embedded Wallet',
-      })
-
-      // ENS Registration on Sepolia (Real transactions!)
-      console.log('📝 Starting real ENS registration on Sepolia...')
-      console.log('💧 Make sure you have Sepolia ETH: https://sepoliafaucet.com/')
-      
       try {
-        // Real ENS registration on Sepolia
-        try {
-          console.log(`🔍 Checking availability for "${ensName}"...`)
-          const isAvailable = await ensRegistration.checkAvailability(ensName)
-          if (!isAvailable) {
-            throw new Error(`ENS name "${ensName}" is not available for registration`)
-          }
-          console.log(`✅ "${ensName}" is available for registration!`)
-
-          console.log('🔐 Making ENS commitment...')
-          const commitTxHash = await ensRegistration.makeCommitment({
-            name: ensName,
-            durationYears: 1,
-            reverseRecord: true,
-            owner: registrationAddress as Address,
-          })
-
-          console.log('⏳ Waiting for commitment period (61 seconds)...')
-          console.log('⚠️ You can close this and check back later - the process will continue')
-          
-          // Wait 61 seconds for commitment period with UI countdown
-          setCommitmentCountdown(61)
-          for (let i = 61; i > 0; i--) {
-            setCommitmentCountdown(i)
-            console.log(`⏳ ${i} seconds remaining...`)
-            await new Promise(resolve => setTimeout(resolve, 1000))
-          }
-          setCommitmentCountdown(null)
-          console.log('✅ Commitment period complete!')
-
-          console.log('📝 Registering ENS name...')
-          const registrationTxHash = await ensRegistration.register({
-            name: ensName,
-            durationYears: 1,
-            reverseRecord: true,
-            owner: registrationAddress as Address,
-          })
-          
-          // Store transaction hashes
-          setTransactionHashes({
-            commitTx: commitTxHash,
-            registrationTx: registrationTxHash
-          })
-
-          console.log('✅ ENS name registered successfully!')
-        } catch (ensError) {
-          console.error('ENS registration failed:', ensError)
-          console.log('⚠️ Continuing with business creation without ENS...')
-          // Continue without ENS registration
+        const isAvailable = await ensRegistration.checkAvailability(ensName)
+        if (!isAvailable) {
+          throw new Error(`ENS name "${ensName}" is not available for registration`)
         }
+
+        const commitTxHash = await ensRegistration.makeCommitment({
+          name: ensName,
+          durationYears: 1,
+          reverseRecord: true,
+          owner: registrationAddress as Address,
+        })
+
+        await ensRegistration.waitForRegisterWindow()
+
+        const registrationTxHash = await ensRegistration.register({
+          name: ensName,
+          durationYears: 1,
+          reverseRecord: true,
+          owner: registrationAddress as Address,
+        })
+
+        setTransactionHashes({
+          commitTx: commitTxHash,
+          registrationTx: registrationTxHash,
+        })
       } catch (ensError) {
-        console.error('ENS registration failed:', ensError)
-        console.log('⚠️ Continuing with business creation without ENS...')
+        setError(ensError instanceof Error ? ensError.message : 'ENS registration failed')
+        throw ensError
       }
 
       // Step 5: Deploy business contracts (future implementation)
@@ -290,12 +249,13 @@ export function useSmartWallet() {
     transactionHashes,
     showCongratulations,
     setShowCongratulations,
-    commitmentCountdown,
+    commitmentCountdown: ensRegistration.commitmentCountdown,
     // ENS registration functionality
     ensRegistration: {
       checkAvailability: ensRegistration.checkAvailability,
       getRegistrationCost: ensRegistration.getRegistrationCost,
       checkWalletBalance: ensRegistration.checkWalletBalance,
+      waitForRegisterWindow: ensRegistration.waitForRegisterWindow,
       isCommitting: ensRegistration.isCommitting,
       isRegistering: ensRegistration.isRegistering,
       commitment: ensRegistration.commitment,
