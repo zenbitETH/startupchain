@@ -1,6 +1,9 @@
 import { startupChainAbi } from './startupchain-abi'
-import { getStartupChainAddress, STARTUPCHAIN_CHAIN_ID } from './startupchain-config'
 import { publicClient } from './startupchain-client'
+import {
+  STARTUPCHAIN_CHAIN_ID,
+  getStartupChainAddress,
+} from './startupchain-config'
 
 export type Founder = {
   wallet: `0x${string}`
