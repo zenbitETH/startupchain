@@ -14,22 +14,19 @@ describe('getCompanyEvents', () => {
   })
 
   it('maps logs into timeline entries', async () => {
-    const { publicClient } = await import('./startupchain-client')
-    const { getCompanyEvents } = await import('./get-company-events')
+    const { publicClient } = await import('./startupchain-client.js')
+    const { getCompanyEvents } = await import('./get-company-events.js')
 
     const logArgs = {
       companyId: 1n,
-      companyAddress: '0x2222222222222222222222222222222222222222',
+      safeAddress: '0x2222222222222222222222222222222222222222',
       ensName: 'acme',
       creationDate: 10n,
-      founders: [
-        '0x3333333333333333333333333333333333333333',
-        '0x4444444444444444444444444444444444444444',
-      ],
+      threshold: 2n,
     }
 
-    // @ts-expect-error mock shape
-    publicClient.getLogs.mockResolvedValue([
+    const logsMock = publicClient.getLogs as ReturnType<typeof vi.fn>
+    logsMock.mockResolvedValue([
       {
         blockNumber: 100n,
         transactionHash: '0xaaaa',
@@ -37,8 +34,8 @@ describe('getCompanyEvents', () => {
       },
     ])
 
-    // @ts-expect-error mock shape
-    publicClient.getBlock.mockResolvedValue({
+    const blockMock = publicClient.getBlock as ReturnType<typeof vi.fn>
+    blockMock.mockResolvedValue({
       timestamp: 1700000000n,
     })
 
@@ -49,12 +46,12 @@ describe('getCompanyEvents', () => {
     expect(events).toHaveLength(1)
     expect(events[0].companyId).toBe('1')
     expect(events[0].ensName).toBe('acme')
-    expect(events[0].founders).toHaveLength(2)
+    expect(events[0].threshold).toBe(2)
     expect(events[0].createdAt?.getFullYear()).toBe(2023)
     expect(publicClient.getLogs).toHaveBeenCalledWith(
       expect.objectContaining({
         args: {
-          companyAddress: '0x2222222222222222222222222222222222222222',
+          safeAddress: '0x2222222222222222222222222222222222222222',
         },
       })
     )
