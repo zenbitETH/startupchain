@@ -37,7 +37,7 @@ const chains = isDevelopment
 
 const transports = {
   [mainnet.id]: fallback([http(), http('https://eth.llamarpc.com')]),
-  [sepolia.id]: fallback([http(), http('https://rpc.sepolia.org')]),
+  [sepolia.id]: fallback([http(), http('https://ethereum-sepolia-rpc.publicnode.com')]),
   [base.id]: http(),
   [baseSepolia.id]: http(),
 }
