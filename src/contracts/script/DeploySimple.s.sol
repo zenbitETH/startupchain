@@ -16,7 +16,7 @@ contract DeploySimple is Script {
 
         // Deploy with deployer as fee recipient
         StartupChainSimple startupChain = new StartupChainSimple(deployer);
-        
+
         console.log("StartupChainSimple deployed at:", address(startupChain));
 
         vm.stopBroadcast();
