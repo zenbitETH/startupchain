@@ -173,14 +173,12 @@ export function useSmartWallet() {
 
         console.log('📝 Registering company on backend:', {
           ensName: normalizedEns,
-          ownerAddress,
           founders: backendFounders,
           threshold,
         })
 
         const commitResult = await commitEnsRegistrationAction({
           ensName: normalizedEns,
-          safeAddress: ownerAddress,
           founders: backendFounders,
           threshold,
         })

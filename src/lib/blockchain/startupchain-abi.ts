@@ -70,26 +70,8 @@ export const startupChainAbi = [
   },
 
   // Functions - Registration
-  {
-    type: 'function',
-    name: 'registerCompany',
-    stateMutability: 'payable',
-    inputs: [
-      { name: '_ensName', type: 'string' },
-      { name: '_ownerAddress', type: 'address' },
-      {
-        name: '_founders',
-        type: 'tuple[]',
-        components: [
-          { name: 'wallet', type: 'address' },
-          { name: 'equityBps', type: 'uint256' },
-          { name: 'role', type: 'string' },
-        ],
-      },
-      { name: '_threshold', type: 'uint256' },
-    ],
-    outputs: [{ name: '', type: 'uint256' }],
-  },
+  // Note: registerCompany removed - ENS registration is handled off-chain via server actions
+  // Only recordCompany is used (records company after ENS is registered externally)
   {
     type: 'function',
     name: 'recordCompany',

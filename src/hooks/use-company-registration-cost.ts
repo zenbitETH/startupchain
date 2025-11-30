@@ -3,17 +3,11 @@
  * Includes: ENS registration + Safe deployment + 25% service fee
  */
 import { useQuery } from '@tanstack/react-query'
-import { usePublicClient } from 'wagmi'
+import { useBalance } from 'wagmi'
 
-import { useEnsRegistration } from '@/hooks/use-ens-registration'
-import {
-  calculateThreshold,
-  estimateSafeDeploymentGas,
-} from '@/lib/blockchain/safe-factory'
-
-// Service fee: 25% (2500 basis points)
-const SERVICE_FEE_BPS = 2500n
-const BPS_DENOMINATOR = 10000n
+import { getEnsRegistrationCostAction } from '@/app/(app)/dashboard/setup/actions'
+import { useWalletAuth } from '@/hooks/use-wallet-auth'
+import { calculateThreshold } from '@/lib/blockchain/safe-factory'
 
 export type CompanyRegistrationCost = {
   // ENS costs
@@ -54,9 +48,6 @@ export function useCompanyRegistrationCost({
   durationYears?: number
   enabled?: boolean
 }) {
-  const { getRegistrationCost } = useEnsRegistration()
-  const publicClient = usePublicClient()
-
   return useQuery({
     queryKey: [
       'company-registration-cost',
@@ -65,25 +56,14 @@ export function useCompanyRegistrationCost({
       durationYears,
     ],
     queryFn: async (): Promise<CompanyRegistrationCost> => {
-      // Get ENS registration cost
-      const ensCostData = await getRegistrationCost(ensName, durationYears)
-      const ensRegistrationCost = ensCostData?.costWei ?? 0n
+      // Get all costs from server action (includes ENS, Safe gas, service fee)
+      const costData = await getEnsRegistrationCostAction(ensName, durationYears, founderCount)
 
-      // Get current gas price
-      const gasPrice = (await publicClient?.getGasPrice()) ?? 0n
-
-      // Estimate Safe deployment gas
-      const safeDeploymentGas = await estimateSafeDeploymentGas(founderCount)
-      const safeDeploymentCost = safeDeploymentGas * gasPrice
-
-      // Calculate subtotal (before service fee)
+      const ensRegistrationCost = BigInt(costData.costWei)
+      const safeDeploymentCost = BigInt(costData.safeGasWei)
+      const serviceFee = BigInt(costData.serviceFeeWei)
+      const total = BigInt(costData.totalWei)
       const subtotal = ensRegistrationCost + safeDeploymentCost
-
-      // Calculate service fee (25% of subtotal)
-      const serviceFee = (subtotal * SERVICE_FEE_BPS) / BPS_DENOMINATOR
-
-      // Calculate total
-      const total = subtotal + serviceFee
 
       // Calculate threshold for display
       const threshold = calculateThreshold(founderCount)
@@ -107,14 +87,14 @@ export function useCompanyRegistrationCost({
 
       return {
         ensRegistrationCost,
-        safeDeploymentGas,
+        safeDeploymentGas: 0n, // Not needed anymore, server calculates cost directly
         safeDeploymentCost,
         serviceFee,
         subtotal,
         total,
         threshold,
         founderCount,
-        gasPrice,
+        gasPrice: 0n, // Not needed anymore
         breakdown,
       }
     },
@@ -160,7 +140,10 @@ export function useWalletBalanceCheck({
   durationYears?: number
   enabled?: boolean
 }) {
-  const { checkWalletBalance } = useEnsRegistration()
+  const { primaryAddress } = useWalletAuth()
+  const { data: balanceData } = useBalance({
+    address: primaryAddress as `0x${string}` | undefined,
+  })
   const costQuery = useCompanyRegistrationCost({
     ensName,
     founderCount,
@@ -169,13 +152,10 @@ export function useWalletBalanceCheck({
   })
 
   return useQuery({
-    queryKey: ['wallet-balance-check', ensName, founderCount],
+    queryKey: ['wallet-balance-check', ensName, founderCount, primaryAddress],
     queryFn: async () => {
-      const balanceData = await checkWalletBalance(ensName)
       const requiredAmount = costQuery.data?.total ?? 0n
-      const balanceWei = BigInt(
-        Math.floor(parseFloat(balanceData?.balance ?? '0') * 1e18)
-      )
+      const balanceWei = balanceData?.value ?? 0n
 
       return {
         balance: balanceWei,
@@ -185,6 +165,6 @@ export function useWalletBalanceCheck({
           requiredAmount > balanceWei ? requiredAmount - balanceWei : 0n,
       }
     },
-    enabled: enabled && !!costQuery.data,
+    enabled: enabled && !!costQuery.data && !!primaryAddress,
   })
 }
