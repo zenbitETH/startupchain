@@ -9,7 +9,7 @@
  */
 import SafeApiKit from '@safe-global/api-kit'
 import Safe, { type SafeAccountConfig } from '@safe-global/protocol-kit'
-import { type Chain, type PublicClient, type WalletClient } from 'viem'
+import { type Account, type Chain, type PublicClient, type Transport, type WalletClient } from 'viem'
 import { mainnet, sepolia } from 'viem/chains'
 
 import { isSupportedChain } from './startupchain-config'
@@ -54,7 +54,7 @@ export function getThresholdDescription(
 export type DeploySafeParams = {
   owners: `0x${string}`[]
   chainId: number
-  walletClient: WalletClient
+  walletClient: WalletClient<Transport, Chain, Account>
   publicClient: PublicClient
   threshold?: number // Optional override, otherwise auto-calculated
 }
@@ -128,18 +128,15 @@ export async function deploySafe({
   const deploymentTransaction =
     await protocolKit.createSafeDeploymentTransaction()
 
-  // Execute the deployment using the wallet client
-  const client = await protocolKit.getSafeProvider().getExternalSigner()
-  if (!client) {
-    throw new Error('No external signer available')
-  }
-
-  const txHash = await client.sendTransaction({
+  // Execute the deployment using the passed wallet client (not Safe SDK's internal signer)
+  // Safe SDK's getExternalSigner() doesn't work with public RPC nodes that don't support eth_sendTransaction
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const txHash = await (walletClient as any).sendTransaction({
     to: deploymentTransaction.to as `0x${string}`,
     value: BigInt(deploymentTransaction.value),
     data: deploymentTransaction.data as `0x${string}`,
     chain,
-  })
+  }) as `0x${string}`
 
   // Wait for transaction receipt
   await publicClient.waitForTransactionReceipt({ hash: txHash })
