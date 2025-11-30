@@ -47,7 +47,6 @@ contract StartupChain {
     mapping(uint256 => string[]) public companySubdomains;
 
     IENS public immutable ensRegistry;
-    IENSRegistrar public immutable ensRegistrar;
     IENSResolver public immutable ensResolver;
 
     // Events
@@ -133,12 +132,10 @@ contract StartupChain {
 
     constructor(
         address _ensRegistry,
-        address _ensRegistrar,
         address _ensResolver,
         address _feeRecipient
     ) {
         ensRegistry = IENS(_ensRegistry);
-        ensRegistrar = IENSRegistrar(_ensRegistrar);
         ensResolver = IENSResolver(_ensResolver);
         feeRecipient = _feeRecipient;
         owner = msg.sender;
@@ -183,96 +180,6 @@ contract StartupChain {
             (bool sent, ) = feeRecipient.call{value: fee}("");
             require(sent, "Fee transfer failed");
         }
-
-        uint256 companyId = nextCompanyId++;
-
-        Company storage newCompany = companies[companyId];
-        newCompany.id = companyId;
-        newCompany.companyAddress = _safeAddress;
-        newCompany.ensName = _ensName;
-        newCompany.creationDate = block.timestamp;
-        newCompany.safeAddress = _safeAddress;
-        newCompany.threshold = _threshold;
-
-        // Store founders in cap table
-        for (uint i = 0; i < _founders.length; i++) {
-            companyFounders[companyId].push(_founders[i]);
-        }
-
-        addressToCompanyId[_safeAddress] = companyId;
-        ensNameToCompanyId[_ensName] = companyId;
-
-        // Emit events
-        emit CompanyRegistered(
-            companyId,
-            _safeAddress,
-            _ensName,
-            block.timestamp,
-            _threshold
-        );
-
-        emit SafeLinked(companyId, _safeAddress, _threshold);
-
-        if (fee > 0) {
-            emit FeeCollected(companyId, fee, feeRecipient);
-        }
-
-        // Emit founders data
-        address[] memory wallets = new address[](_founders.length);
-        uint256[] memory equities = new uint256[](_founders.length);
-        string[] memory roles = new string[](_founders.length);
-        for (uint i = 0; i < _founders.length; i++) {
-            wallets[i] = _founders[i].wallet;
-            equities[i] = _founders[i].equityBps;
-            roles[i] = _founders[i].role;
-        }
-        emit FoundersSet(companyId, wallets, equities, roles);
-
-        return companyId;
-    }
-
-    /// @notice Register a new company with Safe as ENS owner
-    /// @param _ensName The ENS name to register (without .eth)
-    /// @param _safeAddress The Safe multisig that will own the ENS
-    /// @param _founders Array of founder data (wallet, equityBps, role)
-    /// @param _threshold The Safe signing threshold
-    function registerCompany(
-        string memory _ensName,
-        address _safeAddress,
-        Founder[] memory _founders,
-        uint256 _threshold
-    ) external payable returns (uint256) {
-        require(_founders.length > 0, "At least one founder required");
-        require(bytes(_ensName).length > 0, "ENS name required");
-        require(_safeAddress != address(0), "Invalid Safe address");
-        require(addressToCompanyId[_safeAddress] == 0, "Company already registered for this Safe");
-        require(ensNameToCompanyId[_ensName] == 0, "ENS name already taken");
-        require(_threshold > 0 && _threshold <= _founders.length, "Invalid threshold");
-
-        // Validate founders and equity totals
-        uint256 totalEquity = 0;
-        for (uint i = 0; i < _founders.length; i++) {
-            require(_founders[i].wallet != address(0), "Invalid founder address");
-            require(_founders[i].equityBps <= BPS_DENOMINATOR, "Invalid equity amount");
-            totalEquity += _founders[i].equityBps;
-        }
-        require(totalEquity <= BPS_DENOMINATOR, "Total equity exceeds 100%");
-
-        // Collect service fee
-        uint256 fee = (msg.value * SERVICE_FEE_BPS) / BPS_DENOMINATOR;
-        if (fee > 0 && feeRecipient != address(0)) {
-            (bool sent, ) = feeRecipient.call{value: fee}("");
-            require(sent, "Fee transfer failed");
-        }
-
-        bytes32 label = keccak256(bytes(_ensName));
-        require(ensRegistrar.available(label), "ENS name not available");
-
-        // Register ENS with Safe as owner
-        ensRegistrar.register(label, _safeAddress);
-
-        bytes32 node = keccak256(abi.encodePacked(bytes32(0), label));
-        ensResolver.setAddr(node, _safeAddress);
 
         uint256 companyId = nextCompanyId++;
 
