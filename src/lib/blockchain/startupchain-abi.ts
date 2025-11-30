@@ -90,6 +90,26 @@ export const startupChainAbi = [
     ],
     outputs: [{ name: '', type: 'uint256' }],
   },
+  {
+    type: 'function',
+    name: 'recordCompany',
+    stateMutability: 'payable',
+    inputs: [
+      { name: '_ensName', type: 'string' },
+      { name: '_safeAddress', type: 'address' },
+      {
+        name: '_founders',
+        type: 'tuple[]',
+        components: [
+          { name: 'wallet', type: 'address' },
+          { name: 'equityBps', type: 'uint256' },
+          { name: 'role', type: 'string' },
+        ],
+      },
+      { name: '_threshold', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
 
   // Functions - Getters
   {
