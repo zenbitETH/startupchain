@@ -85,7 +85,7 @@ export default async function EnsDashboardPage() {
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div className="bg-muted/40 border-border/70 rounded-xl border p-4">
                   <p className="text-muted-foreground text-xs">Owner</p>
-                  <p className="font-mono text-sm">{company.companyAddress}</p>
+                  <p className="font-mono text-sm">{company.ownerAddress}</p>
                 </div>
                 <div className="bg-muted/40 border-border/70 rounded-xl border p-4">
                   <p className="text-muted-foreground text-xs">Created</p>
