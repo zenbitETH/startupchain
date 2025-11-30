@@ -1,5 +1,5 @@
 import { startupChainAbi } from './startupchain-abi'
-import { publicClient } from './startupchain-client'
+import { getPublicClient } from './startupchain-client'
 import {
   STARTUPCHAIN_CHAIN_ID,
   getStartupChainAddress,
@@ -30,9 +30,10 @@ export async function getCompanyByAddress(
 
   try {
     const contractAddress = getStartupChainAddress(chainId)
+    const client = getPublicClient(chainId)
 
     // Get basic company info
-    const data = await publicClient.readContract({
+    const data = await client.readContract({
       address: contractAddress,
       abi: startupChainAbi,
       functionName: 'getCompanyByAddress',
@@ -43,7 +44,7 @@ export async function getCompanyByAddress(
       data
 
     // Get founders with equity
-    const foundersData = await publicClient.readContract({
+    const foundersData = await client.readContract({
       address: contractAddress,
       abi: startupChainAbi,
       functionName: 'getCompanyFounders',
@@ -80,13 +81,14 @@ export async function getCompanyByENS(
 
   try {
     const contractAddress = getStartupChainAddress(chainId)
+    const client = getPublicClient(chainId)
 
     // Normalize ENS name (remove .eth if present)
     const normalizedName = ensName.endsWith('.eth')
       ? ensName.slice(0, -4)
       : ensName
 
-    const data = await publicClient.readContract({
+    const data = await client.readContract({
       address: contractAddress,
       abi: startupChainAbi,
       functionName: 'getCompanyByENS',
@@ -96,7 +98,7 @@ export async function getCompanyByENS(
     const [id, ownerAddress, name, creationDate, safeAddress, threshold] = data
 
     // Get founders with equity
-    const foundersData = await publicClient.readContract({
+    const foundersData = await client.readContract({
       address: contractAddress,
       abi: startupChainAbi,
       functionName: 'getCompanyFounders',
@@ -130,8 +132,9 @@ export async function getCompanyById(
 ): Promise<Company | null> {
   try {
     const contractAddress = getStartupChainAddress(chainId)
+    const client = getPublicClient(chainId)
 
-    const data = await publicClient.readContract({
+    const data = await client.readContract({
       address: contractAddress,
       abi: startupChainAbi,
       functionName: 'getCompany',
@@ -142,7 +145,7 @@ export async function getCompanyById(
       data
 
     // Get founders with equity
-    const foundersData = await publicClient.readContract({
+    const foundersData = await client.readContract({
       address: contractAddress,
       abi: startupChainAbi,
       functionName: 'getCompanyFounders',
@@ -175,8 +178,9 @@ export async function getTotalCompanies(
 ): Promise<number> {
   try {
     const contractAddress = getStartupChainAddress(chainId)
+    const client = getPublicClient(chainId)
 
-    const total = await publicClient.readContract({
+    const total = await client.readContract({
       address: contractAddress,
       abi: startupChainAbi,
       functionName: 'getTotalCompanies',
