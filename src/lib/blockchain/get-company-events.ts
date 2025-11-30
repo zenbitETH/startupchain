@@ -1,8 +1,9 @@
 import { startupChainAbi } from './startupchain-abi'
-import { publicClient } from './startupchain-client'
+import { getPublicClient } from './startupchain-client'
 import {
   DEFAULT_ENS_RESOLVER,
-  STARTUPCHAIN_ADDRESS,
+  STARTUPCHAIN_CHAIN_ID,
+  getStartupChainAddress,
 } from './startupchain-config'
 
 type CompanyEvent = {
@@ -20,19 +21,23 @@ const companyRegisteredEvent = startupChainAbi.find(
 )
 
 export async function getCompanyEvents(
-  ownerAddress: string | undefined
+  ownerAddress: string | undefined,
+  chainId: number = STARTUPCHAIN_CHAIN_ID
 ): Promise<CompanyEvent[]> {
   if (!ownerAddress || !companyRegisteredEvent) return []
 
   try {
+    const client = getPublicClient(chainId)
+    const contractAddress = getStartupChainAddress(chainId)
+
     // Alchemy free tier only supports 10 block range for eth_getLogs
     // We'll just check the last 10 blocks for now to avoid the error
     // In production with a paid plan, we could scan a larger range or use an indexer
-    const currentBlock = await publicClient.getBlockNumber()
+    const currentBlock = await client.getBlockNumber()
     const fromBlock = currentBlock - 9n
 
-    const logs = await publicClient.getLogs({
-      address: STARTUPCHAIN_ADDRESS,
+    const logs = await client.getLogs({
+      address: contractAddress,
       event: companyRegisteredEvent,
       args: { ownerAddress: ownerAddress as `0x${string}` },
       fromBlock: fromBlock > 0n ? fromBlock : 0n,
@@ -40,7 +45,7 @@ export async function getCompanyEvents(
     })
 
     const blocks = await Promise.all(
-      logs.map((log) => publicClient.getBlock({ blockNumber: log.blockNumber }))
+      logs.map((log) => client.getBlock({ blockNumber: log.blockNumber }))
     )
 
     return logs
