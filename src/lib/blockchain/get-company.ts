@@ -14,10 +14,9 @@ export type Founder = {
 
 export type Company = {
   id: string
-  companyAddress: `0x${string}`
+  ownerAddress: `0x${string}`
   ensName: string
   creationDate: Date
-  safeAddress: `0x${string}`
   threshold: number
   founders: Founder[]
 }
@@ -39,8 +38,7 @@ export async function getCompanyByAddress(
       args: [address as `0x${string}`],
     })
 
-    const [id, companyAddress, ensName, creationDate, safeAddress, threshold] =
-      data
+    const [id, ownerAddress, ensName, creationDate, threshold] = data
 
     // Get founders with equity
     const foundersData = await publicClient.readContract({
@@ -59,10 +57,9 @@ export async function getCompanyByAddress(
 
     return {
       id: id.toString(),
-      companyAddress,
+      ownerAddress,
       ensName: ensName.endsWith('.eth') ? ensName : `${ensName}.eth`,
       creationDate: new Date(Number(creationDate) * 1000),
-      safeAddress,
       threshold: Number(threshold),
       founders,
     }
@@ -93,8 +90,7 @@ export async function getCompanyByENS(
       args: [normalizedName],
     })
 
-    const [id, companyAddress, name, creationDate, safeAddress, threshold] =
-      data
+    const [id, ownerAddress, name, creationDate, threshold] = data
 
     // Get founders with equity
     const foundersData = await publicClient.readContract({
@@ -113,10 +109,9 @@ export async function getCompanyByENS(
 
     return {
       id: id.toString(),
-      companyAddress,
+      ownerAddress,
       ensName: name.endsWith('.eth') ? name : `${name}.eth`,
       creationDate: new Date(Number(creationDate) * 1000),
-      safeAddress,
       threshold: Number(threshold),
       founders,
     }
@@ -139,8 +134,7 @@ export async function getCompanyById(
       args: [companyId],
     })
 
-    const [id, companyAddress, ensName, creationDate, safeAddress, threshold] =
-      data
+    const [id, ownerAddress, ensName, creationDate, threshold] = data
 
     // Get founders with equity
     const foundersData = await publicClient.readContract({
@@ -159,10 +153,9 @@ export async function getCompanyById(
 
     return {
       id: id.toString(),
-      companyAddress,
+      ownerAddress,
       ensName: ensName.endsWith('.eth') ? ensName : `${ensName}.eth`,
       creationDate: new Date(Number(creationDate) * 1000),
-      safeAddress,
       threshold: Number(threshold),
       founders,
     }
