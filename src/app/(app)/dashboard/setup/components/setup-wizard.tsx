@@ -51,6 +51,10 @@ function CostBreakdownCard({
           <span className="font-mono">{costs.ensRegistrationCostEth} ETH</span>
         </div>
         <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Safe Wallet Deployment</span>
+          <span className="font-mono">~{costs.safeDeploymentCostEth} ETH</span>
+        </div>
+        <div className="flex items-center justify-between">
           <span className="text-muted-foreground">
             Service Fee (25%)
             <span className="ml-1 text-xs opacity-70">
@@ -58,10 +62,6 @@ function CostBreakdownCard({
             </span>
           </span>
           <span className="font-mono">{costs.serviceFeeEth} ETH</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Estimated Gas</span>
-          <span className="font-mono">~{costs.estimatedGasEth} ETH</span>
         </div>
         <div className="border-border border-t pt-3">
           <div className="flex items-center justify-between">
@@ -91,8 +91,9 @@ function RegistrationProgress({
     checking: 'Checking availability...',
     committing: 'Submitting commitment transaction...',
     waiting: `Waiting for commitment window (${countdown ?? 0}s remaining)`,
-    'registering-ens': 'Registering ENS name...',
-    'registering-company': 'Creating company on-chain...',
+    'deploying-safe': 'Creating your Safe wallet...',
+    'registering-ens': 'Registering ENS name to your Safe...',
+    'registering-company': 'Recording company on-chain...',
     completed: 'Registration complete!',
     failed: 'Registration failed',
   }
@@ -100,10 +101,11 @@ function RegistrationProgress({
   const stepProgress: Record<string, number> = {
     idle: 0,
     checking: 10,
-    committing: 25,
-    waiting: 40,
-    'registering-ens': 60,
-    'registering-company': 80,
+    committing: 20,
+    waiting: 35,
+    'deploying-safe': 50,
+    'registering-ens': 70,
+    'registering-company': 85,
     completed: 100,
     failed: 0,
   }
@@ -139,7 +141,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     startRegistration,
     completeRegistration,
     reset,
-    walletAddress,
+    safeAddress,
   } = useCompanyRegistration()
 
   const [isLoadingCosts, setIsLoadingCosts] = useState(false)
@@ -169,30 +171,26 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
       return
     }
 
-    const fallbackAddress =
-      [walletAddress, user.wallet?.address].find(
-        (address): address is `0x${string}` =>
-          Boolean(address) && isAddress(address as `0x${string}`)
-      ) ?? ''
-
-    if (fallbackAddress) {
-      addShareholder(fallbackAddress, 100)
+    const userWallet = user.wallet?.address
+    if (userWallet && isAddress(userWallet)) {
+      addShareholder(userWallet, 100)
     }
-  }, [authenticated, user, draft, addShareholder, walletAddress])
+  }, [authenticated, user, draft, addShareholder])
 
   // Load costs when draft is ready
   useEffect(() => {
     if (!draft || !authenticated) return
 
     setIsLoadingCosts(true)
-    calculateCosts(initialEnsName, 1)
+    const founderCount = Math.max(1, draft.shareholders.length)
+    calculateCosts(initialEnsName, 1, founderCount)
       .catch((err) => {
         console.error('Failed to calculate costs:', err)
       })
       .finally(() => {
         setIsLoadingCosts(false)
       })
-  }, [draft, authenticated, initialEnsName, calculateCosts])
+  }, [draft, authenticated, initialEnsName, calculateCosts, draft?.shareholders.length])
 
   // Auto-complete registration when commitment window is ready
   useEffect(() => {
@@ -268,15 +266,10 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
 
       const threshold = calculateThreshold(founders.length)
 
-      const ownerAddress = draft.registerToDifferentAddress
-        ? (draft.customAddress as `0x${string}`)
-        : undefined
-
       await startRegistration({
         ensName: initialEnsName,
         founders,
         threshold,
-        ownerAddress,
         durationYears: 1,
       })
 
