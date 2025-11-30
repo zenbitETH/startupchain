@@ -260,11 +260,16 @@ StartupChain is an onchain company OS that allows founders to:
 │                     StartupChain Contract (Sepolia/Mainnet)                                  │
 │                                                                                              │
 │   Functions:                                                                                 │
-│   ├── registerCompany(label, owner, founders[], threshold)                                  │
+│   ├── recordCompany(label, safeAddress, founders[], threshold)                              │
 │   ├── getCompanyByAddress(address) → (id, owner, ensName, createdAt, threshold)             │
 │   ├── getCompanyByENS(ensLabel) → company data                                              │
 │   ├── getCompanyFounders(companyId) → Founder[]                                             │
+│   ├── createSubdomain(companyId, subdomain, owner) → create ENS subdomain                   │
+│   ├── revokeSubdomain(companyId, subdomain) → revoke subdomain                              │
 │   └── getTotalCompanies() → count                                                           │
+│                                                                                              │
+│   Note: ENS registration is handled OFF-CHAIN via server actions using @ensdomains/ensjs    │
+│         The contract only records company data after ENS is already registered.             │
 │                                                                                              │
 │   Data Structures:                                                                           │
 │   └── Founder { wallet: address, equityBps: uint256, role: string }                         │
@@ -272,13 +277,16 @@ StartupChain is an onchain company OS that allows founders to:
 └─────────────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│                     ENS Registry (Ethereum)                                                  │
+│                     ENS Registry (Ethereum) - Via Server Actions                             │
 │                                                                                              │
-│   Via @ensdomains/ensjs:                                                                     │
+│   Via @ensdomains/ensjs (off-chain, server-side):                                           │
 │   ├── getOwner(name) → check availability                                                   │
 │   ├── getPrice(name, duration) → registration cost                                          │
-│   ├── commitName(params) → phase 1 commitment                                               │
+│   ├── commitName(params) → phase 1 commitment (60s wait required)                           │
 │   └── registerName(params, value) → phase 2 registration                                    │
+│                                                                                              │
+│   Why off-chain? The ENS commit-reveal scheme requires holding a secret for 60s.            │
+│   This cannot be done on-chain without exposing the secret (defeating frontrun protection). │
 │                                                                                              │
 └─────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
