@@ -19,14 +19,19 @@ StartupChain is an OSS dApp for Onchain Company Services, built so founders can 
 
 ## How it works
 
-1) Connect or create a wallet (Privy is built in if you’re new).
-2) Search for your company’s ENS name and start registration.
-3) Confirm the transaction, then manage everything from the dashboard.
+1) Connect or create a wallet (Privy is built in if you're new).
+2) Search for your company's ENS name and configure your company (founders, equity).
+3) Send a one-time payment to StartupChain treasury.
+4) StartupChain handles all the blockchain transactions automatically:
+   - ENS commitment & registration
+   - Safe wallet deployment
+   - Company recording on-chain
+5) Manage everything from your dashboard.
 
 ## What you need
 
 - An Ethereum wallet or a Privy login.
-- A small amount of ETH for gas when registering.
+- ETH to cover: ENS registration + Safe deployment + 25% service fee.
 
 ## Support & thanks
 
