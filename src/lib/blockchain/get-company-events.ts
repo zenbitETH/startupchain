@@ -25,11 +25,18 @@ export async function getCompanyEvents(
   if (!ownerAddress || !companyRegisteredEvent) return []
 
   try {
+    // Alchemy free tier only supports 10 block range for eth_getLogs
+    // We'll just check the last 10 blocks for now to avoid the error
+    // In production with a paid plan, we could scan a larger range or use an indexer
+    const currentBlock = await publicClient.getBlockNumber()
+    const fromBlock = currentBlock - 9n
+
     const logs = await publicClient.getLogs({
       address: STARTUPCHAIN_ADDRESS,
       event: companyRegisteredEvent,
       args: { ownerAddress: ownerAddress as `0x${string}` },
-      fromBlock: 0n,
+      fromBlock: fromBlock > 0n ? fromBlock : 0n,
+      toBlock: currentBlock,
     })
 
     const blocks = await Promise.all(
