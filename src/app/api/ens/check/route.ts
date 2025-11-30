@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createPublicClient, http } from 'viem'
 import { sepolia } from 'viem/chains'
 import { normalize } from 'viem/ens'
+import { addEnsContracts } from '@ensdomains/ensjs'
+import { getOwner } from '@ensdomains/ensjs/public'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +15,7 @@ const rpcUrl = alchemyKey
   : sepolia.rpcUrls.default.http[0]
 
 const client = createPublicClient({
-  chain: sepolia,
+  chain: addEnsContracts(sepolia),
   transport: http(rpcUrl),
 })
 
@@ -30,12 +32,15 @@ export async function GET(request: NextRequest) {
     }
 
     const normalizedName = normalize(`${name}.eth`)
-    const address = await client.getEnsAddress({ name: normalizedName })
+    const result = await getOwner(client, { name: normalizedName })
+    const owner = result?.owner;
+    console.log(owner)
+    const available = !owner || owner === '0x0000000000000000000000000000000000000000'
 
     return NextResponse.json({
       name: normalizedName,
-      available: !address,
-      address: address || null,
+      available,
+      address: owner || null,
       checked: true,
     })
   } catch (error) {
