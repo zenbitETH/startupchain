@@ -10,10 +10,17 @@ import { cookies } from 'next/headers'
 import Link from 'next/link'
 
 import { DashboardHeader } from '@/app/(app)/dashboard/components/dashboard-header'
+import { RegistrationProgress } from '@/app/(app)/dashboard/components/registration-progress'
 import { getServerSession } from '@/lib/auth/server-session'
-import { getCompanyByAddress } from '@/lib/blockchain/get-company'
+import {
+  getCompanyByAddress,
+  getCompanyByENS,
+  getCompanyByFounderWallet,
+} from '@/lib/blockchain/get-company'
 import { getCompanyEvents } from '@/lib/blockchain/get-company-events'
 import { STARTUPCHAIN_CHAIN_ID } from '@/lib/blockchain/startupchain-config'
+import { getPendingRegistration } from '@/lib/auth/pending-registration'
+import { finalizeEnsRegistrationAction } from '../setup/actions'
 
 const explorerBase =
   STARTUPCHAIN_CHAIN_ID === 1
@@ -34,10 +41,54 @@ export default async function EnsDashboardPage() {
   const session = await getServerSession({ cookies: cookieStore })
   const walletAddress = session?.walletAddress
 
-  const company = walletAddress
+  const pendingCookie = await getPendingRegistration()
+  const isPendingForWallet =
+    pendingCookie &&
+    walletAddress &&
+    pendingCookie.owner.toLowerCase() === walletAddress.toLowerCase()
+  let pending = isPendingForWallet ? pendingCookie : null
+
+  if (
+    pending &&
+    pending.status !== 'completed' &&
+    pending.status !== 'failed' &&
+    Date.now() >= pending.readyAt
+  ) {
+    try {
+      pending = await finalizeEnsRegistrationAction({ ensName: pending.ensName })
+    } catch (err) {
+      console.error('Auto-finalize ENS registration failed', err)
+      // If it failed, keep pending state as-is for retry
+    }
+  }
+
+  // Try multiple methods to find the company:
+  // 1. By user's wallet address (if they are the owner)
+  // 2. By pending registration's owner address (Safe address)
+  // 3. By pending registration's ENS name
+  // 4. By founder wallet address (searches all companies)
+  let company = walletAddress
     ? await getCompanyByAddress(walletAddress)
     : null
-  const events = walletAddress ? await getCompanyEvents(walletAddress) : []
+
+  // If not found by direct address, try by pending registration owner
+  if (!company && pending?.owner) {
+    company = await getCompanyByAddress(pending.owner)
+  }
+
+  // If still not found, try by ENS name from completed registration
+  if (!company && pending?.ensName && pending.status === 'completed') {
+    company = await getCompanyByENS(pending.ensName)
+  }
+
+  // Last resort: search by founder wallet (slower but comprehensive)
+  if (!company && walletAddress) {
+    company = await getCompanyByFounderWallet(walletAddress)
+  }
+
+  // Get events by owner address (either user's wallet or pending registration owner)
+  const eventsOwner = company?.ownerAddress || pending?.owner || walletAddress
+  const events = eventsOwner ? await getCompanyEvents(eventsOwner) : []
 
   const latestEvent = events[0]
 
@@ -64,6 +115,18 @@ export default async function EnsDashboardPage() {
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
+
+        {pending && pending.status !== 'completed' && (
+          <RegistrationProgress
+            ensName={pending.ensName}
+            readyAt={pending.readyAt}
+            commitTxHash={pending.commitTxHash}
+            status={pending.status}
+            registrationTxHash={pending.registrationTxHash}
+            companyTxHash={pending.companyTxHash}
+            explorerBase={explorerBase}
+          />
+        )}
 
         <div className="grid gap-4 lg:grid-cols-3">
           <section className="bg-card border-border rounded-2xl border p-6 shadow-sm lg:col-span-2">
