@@ -234,7 +234,7 @@ export function useCompanyRegistration() {
   // Step 3: After payment confirmed, proceed with registration
   const proceedAfterPayment = useCallback(async () => {
     console.log(LOG_PREFIX, '=== proceedAfterPayment START ===')
-    
+
     if (!ensNameRef.current) {
       const message = 'No pending registration found'
       setError(message)
