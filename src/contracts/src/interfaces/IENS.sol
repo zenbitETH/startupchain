@@ -14,8 +14,3 @@ interface IENSResolver {
     function setAddr(bytes32 node, address addr) external;
     function addr(bytes32 node) external view returns (address);
 }
-
-interface IENSRegistrar {
-    function register(bytes32 label, address owner) external;
-    function available(bytes32 label) external view returns (bool);
-}
