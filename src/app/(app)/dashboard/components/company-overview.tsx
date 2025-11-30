@@ -7,7 +7,7 @@ type CompanyOverviewProps = {
   data: {
     name: string
     ensName: string
-    safeAddress: string
+    ownerAddress: string
     threshold: number
     founderCount: number
     chainName: string
@@ -45,11 +45,11 @@ export function CompanyOverview({ data }: CompanyOverviewProps) {
         </div>
 
         <div className="bg-muted/40 border-border/80 rounded-xl border p-4">
-          <p className="text-muted-foreground text-xs">Company Safe</p>
+          <p className="text-muted-foreground text-xs">Company Owner</p>
           <div className="flex items-center gap-2 pt-2 text-sm font-semibold">
             <Wallet className="text-primary h-4 w-4" />
             <span className="font-mono">
-              {shortenAddress(data.safeAddress)}
+              {shortenAddress(data.ownerAddress)}
             </span>
           </div>
           <p className="text-muted-foreground mt-1 text-xs">
