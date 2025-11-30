@@ -2,13 +2,29 @@
 
 This captures the company representation we just aligned on: a Safe-centric company identity with ENS ownership, cap table, and governance hooks.
 
-## Payment Model
+## Payment Model (Prepay)
 
-**User pays for everything with a 25% service fee margin:**
+**User prepays to StartupChain treasury, then StartupChain executes all transactions:**
 
-| Cost Component | Paid By | Recipient |
-|----------------|---------|-----------|
-| ENS Registration (1 year) | User | ENS Protocol |
+| Cost Component | Flow | Recipient |
+|----------------|------|-----------|
+| ENS Registration (1 year) | User → Treasury → ENS Protocol | ENS Protocol |
+| Safe Deployment Gas | User → Treasury → Network | Network |
+| Service Fee (25% of ENS cost) | User → Treasury | StartupChain |
+| Gas fees (commit + register + company) | User → Treasury → Network | Network |
+
+### How It Works
+
+1. **User sees cost breakdown** in setup wizard
+2. **User sends total amount** (ETH) to StartupChain treasury address
+3. **Payment confirmed** on-chain
+4. **StartupChain server executes** all transactions using treasury funds:
+   - ENS commitment (60s wait)
+   - Safe wallet deployment
+   - ENS registration (to Safe address)
+   - Company recording on StartupChain contract
+
+The treasury address is derived from `STARTUPCHAIN_SIGNER_KEY` - the same key that signs all transactions.
 | Service Fee (25% of ENS cost) | User | StartupChain (feeRecipient) |
 | Gas fees (commit + register + company) | User | Network |
 
