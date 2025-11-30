@@ -707,7 +707,7 @@ export async function verifyPrepaymentAction({
   }
 
   const required = BigInt(requiredAmountWei)
-  
+
   // Get treasury balance
   const treasuryBalance = await startupChainPublicClient.getBalance({
     address: TREASURY_ADDRESS,
