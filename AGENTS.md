@@ -2,6 +2,8 @@
 
 ### Do
 - **READ THIS FIRST**: Refer to `docs/general/modern-react-nextjs-guide.md` for the latest React 19 & Next.js 16 patterns (Async APIs, Server Actions, `use` hook).
+- **UNDERSTAND THE SYSTEM**: Review `docs/general/system-flow.md` for the complete system architecture diagram before making changes. This shows how all components connect.
+- **KEEP DIAGRAMS UPDATED**: When making architectural changes (new routes, providers, server actions, contract integrations), update `docs/general/system-flow.md` to reflect those changes.
 - look in `docs/general/` for the active plan/context before making changes
 - skim `README.md` for product framing when kicking off new work
 - StartupChain = onchain company OS (ENS identity, Safe treasury, EAS attestations, DeFi rails, company token); status: early production
