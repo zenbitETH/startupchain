@@ -204,13 +204,6 @@ function validateThreshold(threshold: number, founderCount: number) {
   }
 }
 
-function resolveSafeAddress(address: string): `0x${string}` {
-  if (!isAddress(address)) {
-    throw new Error("Invalid Safe address")
-  }
-  return address as `0x${string}`
-}
-
 function toCookieFounders(founders: FounderStruct[]) {
   return founders.map((founder) => ({
     wallet: founder.wallet,
@@ -276,9 +269,6 @@ export async function commitEnsRegistrationAction({
   }
 
   const years = Math.max(1, Math.floor(durationYears))
-  const { costWei } = await getEnsRegistrationCostAction(label, years, founderAddresses.length)
-  const registrationCostWei = BigInt(costWei)
-
   const durationInSeconds = years * 365 * 24 * 60 * 60
   const secret = `0x${randomBytes(32).toString("hex")}` as `0x${string}`
 
@@ -638,78 +628,6 @@ export async function clearEnsRegistrationAction(ensName: string) {
   }
   await clearPendingRegistration()
   return { cleared: true }
-}
-
-/**
- * Register company on StartupChain contract only (no ENS registration)
- * Used when user has already registered ENS themselves via client-side transaction
- *
- * Note: In the user-pays flow, the user calls the contract directly with service fee.
- * This action is kept as a fallback for server-side registration if needed.
- */
-export async function registerCompanyOnlyAction({
-  ensName,
-  ownerAddress,
-  founders,
-  threshold,
-}: {
-  ensName: string
-  ownerAddress: string
-  founders: BackendFounderInput[]
-  threshold: number
-}) {
-  const { label } = normalizeEnsInput(ensName)
-  const owner = resolveSafeAddress(ownerAddress)
-  const founderStructs = toFounderStructs(founders)
-  validateThreshold(threshold, founderStructs.length)
-
-  const contractAddress = getStartupChainAddress(STARTUPCHAIN_CHAIN_ID)
-  if (contractAddress === ZERO_ADDRESS) {
-    throw new Error("StartupChain contract address is not configured")
-  }
-
-  // Check if company already exists
-  try {
-    const existing = await startupChainPublicClient.readContract({
-      address: contractAddress,
-      abi: startupChainAbi,
-      functionName: "getCompanyByAddress",
-      args: [owner],
-    })
-    if (existing && existing[0] > 0n) {
-      return {
-        success: true,
-        alreadyExists: true,
-        companyId: existing[0].toString(),
-        ensName: `${label}.eth`,
-      }
-    }
-  } catch {
-    // Company doesn't exist, proceed with registration
-  }
-
-  // Register company (no value sent - user pays service fee directly to contract)
-  const companyTxHash = await startupChainWalletClient.writeContract({
-    address: contractAddress,
-    abi: startupChainAbi,
-    functionName: "registerCompany",
-    args: [label, owner, founderStructs, BigInt(threshold)],
-    chain: startupChainChain,
-    account: startupChainAccount,
-  })
-
-  await startupChainPublicClient.waitForTransactionReceipt({
-    hash: companyTxHash,
-  })
-
-  revalidatePath("/dashboard")
-
-  return {
-    success: true,
-    alreadyExists: false,
-    companyTxHash,
-    ensName: `${label}.eth`,
-  }
 }
 
 /**
