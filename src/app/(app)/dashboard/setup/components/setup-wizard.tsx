@@ -13,6 +13,8 @@ import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { calculateThreshold } from '@/lib/blockchain/safe-factory'
 import { type Shareholder, useDraftStore } from '@/lib/store/draft'
 
+const LOG_PREFIX = '[UI:SetupWizard]'
+
 interface SetupWizardProps {
   initialEnsName: string
 }
@@ -83,12 +85,17 @@ function CostBreakdownCard({
 function RegistrationProgress({
   step,
   countdown,
+  paymentTxHash,
 }: {
   step: string
   countdown: number | null
+  treasuryAddress?: string | null
+  paymentTxHash?: string | null
 }) {
   const stepLabels: Record<string, string> = {
     checking: 'Checking availability...',
+    'awaiting-payment': 'Waiting for payment...',
+    'payment-pending': 'Confirming payment...',
     committing: 'Submitting commitment transaction...',
     waiting: `Waiting for commitment window (${countdown ?? 0}s remaining)`,
     'deploying-safe': 'Creating your Safe wallet...',
@@ -100,10 +107,12 @@ function RegistrationProgress({
 
   const stepProgress: Record<string, number> = {
     idle: 0,
-    checking: 10,
-    committing: 20,
-    waiting: 35,
-    'deploying-safe': 50,
+    checking: 5,
+    'awaiting-payment': 10,
+    'payment-pending': 15,
+    committing: 25,
+    waiting: 40,
+    'deploying-safe': 55,
     'registering-ens': 70,
     'registering-company': 85,
     completed: 100,
@@ -124,6 +133,11 @@ function RegistrationProgress({
           style={{ width: `${stepProgress[step] ?? 0}%` }}
         />
       </div>
+      {step === 'payment-pending' && paymentTxHash && (
+        <p className="text-muted-foreground mt-3 text-xs font-mono">
+          Tx: {paymentTxHash.slice(0, 10)}...{paymentTxHash.slice(-8)}
+        </p>
+      )}
     </div>
   )
 }
@@ -138,10 +152,15 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     costBreakdown,
     canComplete,
     calculateCosts,
-    startRegistration,
+    initializeRegistration,
+    sendPayment,
     completeRegistration,
     reset,
     safeAddress,
+    treasuryAddress,
+    paymentTxHash,
+    isSendingPayment,
+    isConfirmingPayment,
   } = useCompanyRegistration()
 
   const [isLoadingCosts, setIsLoadingCosts] = useState(false)
@@ -181,11 +200,15 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   useEffect(() => {
     if (!draft || !authenticated) return
 
+    console.log(LOG_PREFIX, 'Loading costs for ENS:', initialEnsName)
     setIsLoadingCosts(true)
     const founderCount = Math.max(1, draft.shareholders.length)
     calculateCosts(initialEnsName, 1, founderCount)
+      .then((costs) => {
+        console.log(LOG_PREFIX, 'Costs calculated:', costs)
+      })
       .catch((err) => {
-        console.error('Failed to calculate costs:', err)
+        console.error(LOG_PREFIX, 'Failed to calculate costs:', err)
       })
       .finally(() => {
         setIsLoadingCosts(false)
@@ -195,13 +218,15 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   // Auto-complete registration when commitment window is ready
   useEffect(() => {
     if (canComplete && step === 'waiting') {
+      console.log(LOG_PREFIX, 'canComplete=true, step=waiting -> calling completeRegistration')
       completeRegistration()
-        .then(() => {
+        .then((result) => {
+          console.log(LOG_PREFIX, 'completeRegistration success:', result)
           router.push('/dashboard/ens')
           router.refresh()
         })
         .catch((err) => {
-          console.error('Failed to complete registration:', err)
+          console.error(LOG_PREFIX, 'Failed to complete registration:', err)
         })
     }
   }, [canComplete, step, completeRegistration, router])
@@ -244,7 +269,10 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   }
 
   const handleCreateBusiness = async () => {
+    console.log(LOG_PREFIX, '=== handleCreateBusiness START ===')
+    console.log(LOG_PREFIX, 'authenticated:', authenticated)
     if (!authenticated) {
+      console.log(LOG_PREFIX, 'Not authenticated, calling connect()')
       await connect()
       return
     }
@@ -265,22 +293,34 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
       )
 
       const threshold = calculateThreshold(founders.length)
+      console.log(LOG_PREFIX, 'Prepared founders:', founders)
+      console.log(LOG_PREFIX, 'Threshold:', threshold)
 
-      await startRegistration({
+      console.log(LOG_PREFIX, 'Calling initializeRegistration...')
+      const result = await initializeRegistration({
         ensName: initialEnsName,
         founders,
         threshold,
         durationYears: 1,
       })
+      console.log(LOG_PREFIX, 'initializeRegistration result:', result)
 
-      // Registration started - UI will show progress
-      // Completion happens automatically via useEffect when canComplete is true
+      // Now in 'awaiting-payment' step - UI will show payment button
     } catch (err) {
-      console.error('Failed to start registration:', err)
+      console.error(LOG_PREFIX, 'Failed to initialize registration:', err)
     }
   }
 
+  const handleSendPayment = () => {
+    console.log(LOG_PREFIX, '=== handleSendPayment START ===')
+    console.log(LOG_PREFIX, 'Sending payment to treasury:', treasuryAddress)
+    console.log(LOG_PREFIX, 'Amount:', costBreakdown?.totalEth, 'ETH')
+    sendPayment()
+  }
+
   const isRegistering = step !== 'idle' && step !== 'failed' && step !== 'completed'
+  const isAwaitingPayment = step === 'awaiting-payment'
+  const isPaymentInProgress = step === 'payment-pending' || isSendingPayment || isConfirmingPayment
   const error = registrationError || localError
 
   const disableCreateButton =
@@ -348,11 +388,46 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
 
       {/* Show registration progress when in progress */}
       {isRegistering && (
-        <RegistrationProgress step={step} countdown={countdown} />
+        <RegistrationProgress 
+          step={step} 
+          countdown={countdown}
+          paymentTxHash={paymentTxHash}
+        />
       )}
 
-      {/* Hide form fields during registration */}
-      {!isRegistering && (
+      {/* Payment step - show when awaiting payment */}
+      {isAwaitingPayment && costBreakdown && (
+        <div className="border-primary/20 bg-primary/5 rounded-2xl border p-6 space-y-4">
+          <h3 className="text-lg font-semibold">Confirm Payment</h3>
+          <p className="text-muted-foreground text-sm">
+            Send {costBreakdown.totalEth} ETH to the StartupChain treasury to begin registration.
+            This covers ENS registration, Safe deployment, and service fees.
+          </p>
+          {treasuryAddress && (
+            <p className="text-muted-foreground text-xs font-mono">
+              Treasury: {treasuryAddress}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={handleSendPayment}
+            disabled={isPaymentInProgress}
+            className="bg-primary text-background hover:bg-primary/90 w-full rounded-2xl px-8 py-4 text-lg font-semibold transition-all duration-200 disabled:opacity-50"
+          >
+            {isPaymentInProgress ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                {isSendingPayment ? 'Confirm in wallet...' : 'Confirming payment...'}
+              </span>
+            ) : (
+              `Pay ${costBreakdown.totalEth} ETH`
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Hide form fields during registration or payment */}
+      {!isRegistering && !isAwaitingPayment && (
         <>
           <div className="border-border bg-card rounded-2xl border p-6">
             <h3 className="mb-4 text-lg font-semibold">Company Structure</h3>
@@ -532,7 +607,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
         </div>
       )}
 
-      {!isRegistering && (
+      {!isRegistering && !isAwaitingPayment && (
         <div className="flex justify-end">
           <button
             type="button"
@@ -545,7 +620,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
               : !authenticated
                 ? 'Connect Wallet & Create'
                 : costBreakdown
-                  ? `Pay ${costBreakdown.totalEth} ETH & Register`
+                  ? `Continue to Payment (${costBreakdown.totalEth} ETH)`
                   : 'Create Business'}
           </button>
         </div>
