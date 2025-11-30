@@ -30,6 +30,10 @@ import {
   startupChainChain,
   walletClient as startupChainWalletClient,
 } from "../../../../lib/blockchain/startupchain-client"
+import {
+  predictSafeAddress,
+  estimateSafeDeploymentGas,
+} from "../../../../lib/blockchain/safe-factory"
 
 const chainId = process.env.NEXT_PUBLIC_CHAIN_ID === "1" ? 1 : 11155111
 const baseChain = chainId === 1 ? mainnet : sepolia
@@ -72,7 +76,7 @@ export async function checkEnsAvailabilityAction(name: string) {
   }
 }
 
-export async function getEnsRegistrationCostAction(name: string, durationYears = 1) {
+export async function getEnsRegistrationCostAction(name: string, durationYears = 1, founderCount = 1) {
   if (!isValidEnsName(name)) {
     throw new Error("Invalid ENS name")
   }
@@ -85,13 +89,28 @@ export async function getEnsRegistrationCostAction(name: string, durationYears =
     duration,
   })
 
-  const total = priceData.base + priceData.premium
-  const withBuffer = (total * BigInt(102)) / BigInt(100)
+  const ensTotal = priceData.base + priceData.premium
+  const ensWithBuffer = (ensTotal * BigInt(102)) / BigInt(100)
+
+  // Estimate Safe deployment gas
+  const safeGasEstimate = await estimateSafeDeploymentGas(Math.max(1, founderCount))
+
+  // Service fee is 25% of ENS cost
+  const serviceFeeWei = (ensWithBuffer * BigInt(2500)) / BigInt(10000)
+
+  // Total = ENS + Safe gas + Service fee
+  const totalWei = ensWithBuffer + safeGasEstimate + serviceFeeWei
 
   return {
     name: normalized,
-    costWei: withBuffer.toString(),
-    costEth: formatEther(withBuffer),
+    costWei: ensWithBuffer.toString(),
+    costEth: formatEther(ensWithBuffer),
+    safeGasWei: safeGasEstimate.toString(),
+    safeGasEth: formatEther(safeGasEstimate),
+    serviceFeeWei: serviceFeeWei.toString(),
+    serviceFeeEth: formatEther(serviceFeeWei),
+    totalWei: totalWei.toString(),
+    totalEth: formatEther(totalWei),
   }
 }
 
@@ -208,36 +227,43 @@ export type EnsRegistrationRecord = PendingRegistration
 
 export async function commitEnsRegistrationAction({
   ensName,
-  safeAddress,
   founders,
   threshold,
   durationYears = 1,
   reverseRecord = false,
 }: {
   ensName: string
-  safeAddress: string
   founders: BackendFounderInput[]
   threshold: number
   durationYears?: number
   reverseRecord?: boolean
 }) {
   const { label, fullName } = normalizeEnsInput(ensName)
-  const owner = resolveSafeAddress(safeAddress)
   const founderStructs = toFounderStructs(founders)
   validateThreshold(threshold, founderStructs.length)
+
+  // Get founder wallet addresses for Safe
+  const founderAddresses = founderStructs.map((f) => f.wallet)
+
+  // Predict Safe address before deployment
+  const predictedSafeAddress = await predictSafeAddress({
+    owners: founderAddresses,
+    chainId: STARTUPCHAIN_CHAIN_ID,
+    threshold,
+  })
 
   const existingOwner = await getEnsOwnerAction(label)
   const isAlreadyOwner =
     existingOwner.owner &&
     existingOwner.owner !== ZERO_ADDRESS &&
-    existingOwner.owner.toLowerCase() === owner.toLowerCase()
+    existingOwner.owner.toLowerCase() === predictedSafeAddress.toLowerCase()
 
   if (existingOwner.owner && existingOwner.owner !== ZERO_ADDRESS && !isAlreadyOwner) {
     throw new Error(`ENS name "${label}.eth" is already registered`)
   }
 
   const years = Math.max(1, Math.floor(durationYears))
-  const { costWei } = await getEnsRegistrationCostAction(label, years)
+  const { costWei } = await getEnsRegistrationCostAction(label, years, founderAddresses.length)
   const registrationCostWei = BigInt(costWei)
 
   const durationInSeconds = years * 365 * 24 * 60 * 60
@@ -250,7 +276,7 @@ export async function commitEnsRegistrationAction({
   if (!isAlreadyOwner) {
     const registrationParams = {
       name: fullName,
-      owner,
+      owner: predictedSafeAddress, // ENS will be registered to Safe address
       duration: durationInSeconds,
       secret,
       resolverAddress: getEnsResolverAddress(STARTUPCHAIN_CHAIN_ID),
@@ -288,7 +314,7 @@ export async function commitEnsRegistrationAction({
   const record: PendingRecord = {
     ensLabel: label,
     ensName: `${label}.eth`,
-    owner,
+    owner: predictedSafeAddress, // Safe address will own the ENS
     founders: toCookieFounders(founderStructs),
     threshold,
     durationYears: years,
@@ -298,13 +324,15 @@ export async function commitEnsRegistrationAction({
     createdAt: startedAt,
     updatedAt: startedAt,
     status: "waiting",
+    safeAddress: predictedSafeAddress, // Store predicted Safe address
   }
 
   await setPendingRegistration(record)
 
   return {
     ensName: record.ensName,
-    owner,
+    owner: predictedSafeAddress,
+    safeAddress: predictedSafeAddress,
     commitTxHash,
     readyAt,
     status: record.status,
@@ -356,17 +384,20 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
     return record
   }
 
+  // Check if company already exists
+  const safeAddress = pending.safeAddress ?? pending.owner
   try {
     const existing = await startupChainPublicClient.readContract({
       address: contractAddress,
       abi: startupChainAbi,
       functionName: "getCompanyByAddress",
-      args: [pending.owner],
+      args: [safeAddress],
     })
-    if (existing) {
+    if (existing && existing[0] > 0n) {
       const updatedExisting: PendingRecord = {
         ...pending,
         status: "completed",
+        safeAddress,
         updatedAt: Date.now(),
       }
       return finishAndClear(updatedExisting)
@@ -376,34 +407,67 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
   }
 
   const years = Math.max(1, pending.durationYears)
-  const { costWei } = await getEnsRegistrationCostAction(label, years)
+  const { costWei, serviceFeeWei } = await getEnsRegistrationCostAction(label, years, pending.founders.length)
   const registrationCostWei = BigInt(costWei)
+  const serviceFee = BigInt(serviceFeeWei)
 
-  const registrationParams = {
-    name: fullName,
-    owner: pending.owner,
-    duration: years * 365 * 24 * 60 * 60,
-    secret: pending.secret,
-    resolverAddress: getEnsResolverAddress(STARTUPCHAIN_CHAIN_ID),
-    records: undefined,
-    reverseRecord: false,
-    fuses: {
-      named: [],
-      unnamed: [],
-    },
-  }
-
+  let safeDeploymentTxHash = pending.safeDeploymentTxHash
   let registrationTxHash = pending.registrationTxHash
   let companyTxHash = pending.companyTxHash
+  let deployedSafeAddress = pending.safeAddress ?? pending.owner
 
   try {
+    // STEP 1: Deploy Safe (if not already deployed)
+    // Check if Safe is already deployed by checking code at address
+    const safeCode = await startupChainPublicClient.getCode({ address: deployedSafeAddress })
+    const isSafeDeployed = safeCode && safeCode !== "0x"
+
+    if (!isSafeDeployed && !safeDeploymentTxHash) {
+      await updatePendingRegistration({ status: "deploying-safe", error: undefined })
+
+      // Deploy Safe using Safe SDK
+      const { deploySafe } = await import("../../../../lib/blockchain/safe-factory.js")
+      const founderAddresses = pending.founders.map((f) => f.wallet)
+
+      const safeResult = await deploySafe({
+        owners: founderAddresses,
+        chainId: STARTUPCHAIN_CHAIN_ID,
+        walletClient: startupChainWalletClient,
+        publicClient: startupChainPublicClient,
+        threshold: pending.threshold,
+      })
+
+      deployedSafeAddress = safeResult.safeAddress
+      safeDeploymentTxHash = safeResult.deploymentTxHash as `0x${string}`
+
+      await updatePendingRegistration({
+        safeAddress: deployedSafeAddress,
+        safeDeploymentTxHash,
+      })
+    }
+
+    // STEP 2: Register ENS to Safe address
     const currentOwner = await getEnsOwnerAction(label)
     const isAlreadyOwner =
       currentOwner.owner &&
-      currentOwner.owner.toLowerCase() === pending.owner.toLowerCase()
+      currentOwner.owner.toLowerCase() === deployedSafeAddress.toLowerCase()
 
     if (!isAlreadyOwner) {
       await updatePendingRegistration({ status: "registering", error: undefined })
+
+      const registrationParams = {
+        name: fullName,
+        owner: deployedSafeAddress,
+        duration: years * 365 * 24 * 60 * 60,
+        secret: pending.secret,
+        resolverAddress: getEnsResolverAddress(STARTUPCHAIN_CHAIN_ID),
+        records: undefined,
+        reverseRecord: false,
+        fuses: {
+          named: [],
+          unnamed: [],
+        },
+      }
 
       const registerTxData = registerName.makeFunctionData(
         startupChainWalletClient,
@@ -432,17 +496,21 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
       registrationTxHash = pending.commitTxHash
     }
 
+    // STEP 3: Record company on StartupChain contract using recordCompany()
     await updatePendingRegistration({
       status: "creating",
       registrationTxHash,
+      safeAddress: deployedSafeAddress,
       error: undefined,
     })
 
+    // Use recordCompany instead of registerCompany (no ENS registration in contract)
     companyTxHash = await startupChainWalletClient.writeContract({
       address: contractAddress,
       abi: startupChainAbi,
-      functionName: "registerCompany",
-      args: [label, pending.owner, toContractFounders(pending.founders), BigInt(pending.threshold)],
+      functionName: "recordCompany",
+      args: [label, deployedSafeAddress, toContractFounders(pending.founders), BigInt(pending.threshold)],
+      value: serviceFee, // Service fee goes to contract
       chain: startupChainChain,
       account: startupChainAccount,
     })
@@ -458,7 +526,7 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
 
     const alreadyRegistered =
       message.includes("Company already registered") ||
-      message.includes("ENS name already registered")
+      message.includes("ENS name already taken")
 
     if (alreadyRegistered) {
       const resolvedRegistrationTx =
@@ -467,6 +535,8 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
       const completed: PendingRecord = {
         ...pending,
         status: "completed",
+        safeAddress: deployedSafeAddress,
+        safeDeploymentTxHash,
         registrationTxHash: resolvedRegistrationTx,
         companyTxHash: resolvedCompanyTx,
         updatedAt: Date.now(),
@@ -482,6 +552,8 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
   const completed: PendingRecord = {
     ...pending,
     status: "completed",
+    safeAddress: deployedSafeAddress,
+    safeDeploymentTxHash,
     registrationTxHash:
       registrationTxHash ?? pending.registrationTxHash ?? pending.commitTxHash,
     companyTxHash: companyTxHash ?? pending.companyTxHash,
