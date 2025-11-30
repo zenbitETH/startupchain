@@ -19,26 +19,56 @@ import {
   getCompanyByFounderWallet,
 } from '@/lib/blockchain/get-company'
 import { getCompanyEvents } from '@/lib/blockchain/get-company-events'
-import { STARTUPCHAIN_CHAIN_ID } from '@/lib/blockchain/startupchain-config'
+import {
+  BLOCK_EXPLORERS,
+  STARTUPCHAIN_CHAIN_ID,
+  type SupportedChainId,
+  isSupportedChain,
+} from '@/lib/blockchain/startupchain-config'
 import { shortenAddress } from '@/lib/utils'
 
 import { finalizeEnsRegistrationAction } from '../setup/actions'
 
-const explorerBase =
-  STARTUPCHAIN_CHAIN_ID === 1
-    ? 'https://etherscan.io'
-    : 'https://sepolia.etherscan.io'
-const ensAppBase =
-  STARTUPCHAIN_CHAIN_ID === 1
+/**
+ * Parse and validate chainId from search params.
+ * Falls back to STARTUPCHAIN_CHAIN_ID if invalid or unsupported.
+ */
+function parseChainId(chainParam: string | undefined): SupportedChainId {
+  if (!chainParam) return STARTUPCHAIN_CHAIN_ID
+
+  const parsed = Number(chainParam)
+  if (Number.isNaN(parsed) || !isSupportedChain(parsed)) {
+    return STARTUPCHAIN_CHAIN_ID
+  }
+
+  return parsed as SupportedChainId
+}
+
+function getExplorerBase(chainId: SupportedChainId): string {
+  return BLOCK_EXPLORERS[chainId] ?? BLOCK_EXPLORERS[STARTUPCHAIN_CHAIN_ID]
+}
+
+function getEnsAppBase(chainId: SupportedChainId): string {
+  return chainId === 1
     ? 'https://app.ens.domains/'
     : 'https://sepolia.app.ens.domains/'
+}
 
 function formatDate(value?: Date) {
   if (!value) return 'Pending'
   return value.toLocaleString()
 }
 
-export default async function EnsDashboardPage() {
+type PageProps = {
+  searchParams: Promise<{ chain?: string }>
+}
+
+export default async function EnsDashboardPage({ searchParams }: PageProps) {
+  const params = await searchParams
+  const chainId = parseChainId(params.chain)
+  const explorerBase = getExplorerBase(chainId)
+  const ensAppBase = getEnsAppBase(chainId)
+
   const cookieStore = await cookies()
   const session = await getServerSession({ cookies: cookieStore })
   const walletAddress = session?.walletAddress
@@ -66,31 +96,33 @@ export default async function EnsDashboardPage() {
     }
   }
 
-  // Try multiple methods to find the company:
+  // Try multiple methods to find the company using dynamic chainId:
   // 1. By user's wallet address (if they are the owner)
   // 2. By pending registration's owner address (Safe address)
   // 3. By pending registration's ENS name
   // 4. By founder wallet address (searches all companies)
-  let company = walletAddress ? await getCompanyByAddress(walletAddress) : null
+  let company = walletAddress
+    ? await getCompanyByAddress(walletAddress, chainId)
+    : null
 
   // If not found by direct address, try by pending registration owner
   if (!company && pending?.owner) {
-    company = await getCompanyByAddress(pending.owner)
+    company = await getCompanyByAddress(pending.owner, chainId)
   }
 
   // If still not found, try by ENS name from completed registration
   if (!company && pending?.ensName && pending.status === 'completed') {
-    company = await getCompanyByENS(pending.ensName)
+    company = await getCompanyByENS(pending.ensName, chainId)
   }
 
   // Last resort: search by founder wallet (slower but comprehensive)
   if (!company && walletAddress) {
-    company = await getCompanyByFounderWallet(walletAddress)
+    company = await getCompanyByFounderWallet(walletAddress, chainId)
   }
 
   // Get events by owner address (either user's wallet or pending registration owner)
   const eventsOwner = company?.ownerAddress || pending?.owner || walletAddress
-  const events = eventsOwner ? await getCompanyEvents(eventsOwner) : []
+  const events = eventsOwner ? await getCompanyEvents(eventsOwner, chainId) : []
 
   const latestEvent = events[0]
 
