@@ -15,6 +15,7 @@ export type Founder = {
 export type Company = {
   id: string
   ownerAddress: `0x${string}`
+  safeAddress: `0x${string}`
   ensName: string
   creationDate: Date
   threshold: number
@@ -38,7 +39,8 @@ export async function getCompanyByAddress(
       args: [address as `0x${string}`],
     })
 
-    const [id, ownerAddress, ensName, creationDate, threshold] = data
+    const [id, ownerAddress, ensName, creationDate, safeAddress, threshold] =
+      data
 
     // Get founders with equity
     const foundersData = await publicClient.readContract({
@@ -58,6 +60,7 @@ export async function getCompanyByAddress(
     return {
       id: id.toString(),
       ownerAddress,
+      safeAddress,
       ensName: ensName.endsWith('.eth') ? ensName : `${ensName}.eth`,
       creationDate: new Date(Number(creationDate) * 1000),
       threshold: Number(threshold),
@@ -90,7 +93,7 @@ export async function getCompanyByENS(
       args: [normalizedName],
     })
 
-    const [id, ownerAddress, name, creationDate, threshold] = data
+    const [id, ownerAddress, name, creationDate, safeAddress, threshold] = data
 
     // Get founders with equity
     const foundersData = await publicClient.readContract({
@@ -110,6 +113,7 @@ export async function getCompanyByENS(
     return {
       id: id.toString(),
       ownerAddress,
+      safeAddress,
       ensName: name.endsWith('.eth') ? name : `${name}.eth`,
       creationDate: new Date(Number(creationDate) * 1000),
       threshold: Number(threshold),
@@ -134,7 +138,8 @@ export async function getCompanyById(
       args: [companyId],
     })
 
-    const [id, ownerAddress, ensName, creationDate, threshold] = data
+    const [id, ownerAddress, ensName, creationDate, safeAddress, threshold] =
+      data
 
     // Get founders with equity
     const foundersData = await publicClient.readContract({
@@ -154,6 +159,7 @@ export async function getCompanyById(
     return {
       id: id.toString(),
       ownerAddress,
+      safeAddress,
       ensName: ensName.endsWith('.eth') ? ensName : `${ensName}.eth`,
       creationDate: new Date(Number(creationDate) * 1000),
       threshold: Number(threshold),
