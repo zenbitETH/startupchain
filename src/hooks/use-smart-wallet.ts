@@ -1,11 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Address, formatEther, isAddress, parseEther } from 'viem'
 import { baseSepolia } from 'viem/chains'
 
 import {
   commitEnsRegistrationAction,
-  finalizeEnsRegistrationAction,
-  getEnsRegistrationStatusAction,
 } from '@/app/(app)/dashboard/setup/actions'
 import {
   calculateThreshold,
@@ -33,198 +31,12 @@ export type FounderInput = {
 export function useSmartWallet() {
   const { user, authenticated, ready, login } = usePrivy()
   const { wallets } = useWallets()
-  const pendingStorageKey = user ? `pending-ens-${user.id}` : null
 
-  const [businessAccount, setBusinessAccount] =
-    useState<BusinessAccount | null>(null)
-  const [isCreating, setIsCreating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [transactionHashes, setTransactionHashes] = useState<{
-    commitTx?: string
-    registrationTx?: string
-    companyTx?: string
-  }>({})
-  const [showCongratulations, setShowCongratulations] = useState(false)
-  const [pendingTxHash, setPendingTxHash] = useState<`0x${string}` | null>(null)
-  const [isWaitingForReceipt, setIsWaitingForReceipt] = useState(false)
-  const [commitmentCountdown, setCommitmentCountdown] = useState<number | null>(
+  const [businessAccount, setBusinessAccount] = useState<BusinessAccount | null>(
     null
   )
-  const [readyAt, setReadyAt] = useState<number | null>(null)
-  const finalizeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const persistPending = useCallback(
-    (data: { ensName: string; ownerAddress: Address; readyAt: number }) => {
-      if (!pendingStorageKey) return
-      localStorage.setItem(pendingStorageKey, JSON.stringify(data))
-    },
-    [pendingStorageKey]
-  )
-
-  const clearPending = useCallback(() => {
-    if (!pendingStorageKey) return
-    localStorage.removeItem(pendingStorageKey)
-  }, [pendingStorageKey])
-
-  const finalizeRegistration = useCallback(
-    async (ensName: string) => {
-      setIsWaitingForReceipt(true)
-      try {
-        const result = await finalizeEnsRegistrationAction({ ensName })
-
-        setTransactionHashes((prev) => ({
-          ...prev,
-          registrationTx: result.registrationTxHash,
-          companyTx: result.companyTxHash,
-        }))
-
-        const smartAddress =
-          (user?.wallet?.address as Address | undefined) ?? result.owner
-
-        const account: BusinessAccount = {
-          smartAccountAddress: smartAddress,
-          safeAddress: result.owner,
-          ensName: `${result.ensLabel}.eth`,
-          owners: result.founders.map((f) => f.wallet),
-          ownerEquity: result.founders.reduce(
-            (acc, f) => {
-              acc[f.wallet] = Number(f.equityBps) / 100
-              return acc
-            },
-            {} as Record<string, number>
-          ),
-          threshold: result.threshold,
-          isDeployed: true,
-        }
-
-        setBusinessAccount(account)
-        setShowCongratulations(true)
-        if (user?.id) {
-          localStorage.setItem(`business-${user.id}`, JSON.stringify(account))
-        }
-        clearPending()
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to finalize registration'
-        setError(message)
-        throw err
-      } finally {
-        setIsWaitingForReceipt(false)
-      }
-    },
-    [clearPending, user?.id, user?.wallet?.address]
-  )
-
-  const scheduleFinalize = useCallback(
-    (ensName: string, eta: number) => {
-      if (finalizeTimer.current) {
-        clearTimeout(finalizeTimer.current)
-      }
-      const delay = Math.max(0, eta - Date.now())
-      finalizeTimer.current = setTimeout(() => {
-        finalizeRegistration(ensName).catch((err) =>
-          console.error('Finalize registration failed:', err)
-        )
-      }, delay)
-    },
-    [finalizeRegistration]
-  )
-
-  useEffect(() => {
-    if (!readyAt) {
-      setCommitmentCountdown(null)
-      return
-    }
-
-    const updateCountdown = () => {
-      const remaining = Math.max(0, Math.ceil((readyAt - Date.now()) / 1000))
-      setCommitmentCountdown(remaining)
-    }
-
-    updateCountdown()
-    const id = window.setInterval(updateCountdown, 1000)
-    return () => window.clearInterval(id)
-  }, [readyAt])
-
-  useEffect(() => {
-    return () => {
-      if (finalizeTimer.current) {
-        clearTimeout(finalizeTimer.current)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!user || !ready || !pendingStorageKey) return
-    const stored = localStorage.getItem(pendingStorageKey)
-    if (!stored) return
-
-    try {
-      const parsed = JSON.parse(stored) as {
-        ensName: string
-        ownerAddress: Address
-        readyAt: number
-      }
-      setReadyAt(parsed.readyAt)
-      const now = Date.now()
-
-      getEnsRegistrationStatusAction(parsed.ensName)
-        .then((record) => {
-          if (!record) {
-            clearPending()
-            return
-          }
-          setTransactionHashes({
-            commitTx: record.commitTxHash,
-            registrationTx: record.registrationTxHash,
-            companyTx: record.companyTxHash,
-          })
-
-          if (record.status === 'registered') {
-            const account: BusinessAccount = {
-              smartAccountAddress:
-                (user.wallet?.address as Address | undefined) ?? parsed.ownerAddress,
-              safeAddress: record.owner,
-              ensName: record.ensName,
-              owners: record.founders.map((f) => f.wallet),
-              ownerEquity: record.founders.reduce(
-                (acc, f) => {
-                  acc[f.wallet] = Number(f.equityBps) / 100
-                  return acc
-                },
-                {} as Record<string, number>
-              ),
-              threshold: record.threshold,
-              isDeployed: true,
-            }
-            setBusinessAccount(account)
-            setShowCongratulations(true)
-            clearPending()
-            return
-          }
-
-          if (now >= record.readyAt) {
-            finalizeRegistration(record.ensLabel).catch((err) =>
-              console.error('Finalize on resume failed:', err)
-            )
-          } else {
-            scheduleFinalize(record.ensLabel, record.readyAt)
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to restore ENS registration', err)
-        })
-    } catch {
-      clearPending()
-    }
-  }, [
-    clearPending,
-    finalizeRegistration,
-    pendingStorageKey,
-    ready,
-    scheduleFinalize,
-    user,
-  ])
+  const [isCreating, setIsCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Get smart wallet from user's linked accounts
   const getSmartWallet = useCallback(() => {
@@ -273,11 +85,7 @@ export function useSmartWallet() {
       }
 
       setIsCreating(true)
-      setIsWaitingForReceipt(true)
       setError(null)
-      setTransactionHashes({})
-      setPendingTxHash(null)
-      setShowCongratulations(false)
 
       try {
         // Check if user has a smart wallet or embedded wallet
@@ -377,18 +185,7 @@ export function useSmartWallet() {
           threshold,
         })
 
-        setTransactionHashes({
-          commitTx: commitResult.commitTxHash,
-        })
-
-        setReadyAt(commitResult.readyAt)
-        persistPending({
-          ensName: normalizedEns,
-          ownerAddress,
-          readyAt: commitResult.readyAt,
-        })
-        scheduleFinalize(normalizedEns, commitResult.readyAt)
-        return null
+        return commitResult
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Failed to create business'
@@ -396,7 +193,6 @@ export function useSmartWallet() {
         throw err
       } finally {
         setIsCreating(false)
-        setIsWaitingForReceipt(false)
       }
     },
     [
@@ -405,8 +201,6 @@ export function useSmartWallet() {
       getSmartWallet,
       getEmbeddedWallet,
       login,
-      persistPending,
-      scheduleFinalize,
     ]
   )
 
@@ -512,11 +306,5 @@ export function useSmartWallet() {
     hasSmartWallet: !!smartWallet,
     hasEmbeddedWallet: !!embeddedWallet,
     isWalletReady: !!(smartWallet || embeddedWallet || user?.wallet?.address),
-    transactionHashes,
-    showCongratulations,
-    setShowCongratulations,
-    commitmentCountdown,
-    pendingTxHash,
-    isWaitingForReceipt,
   }
 }
