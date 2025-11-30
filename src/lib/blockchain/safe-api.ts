@@ -24,7 +24,7 @@ function getChainName(chainId: number): string {
 
 function getSafeApiBaseUrl(chainId: number = STARTUPCHAIN_CHAIN_ID): string {
   const chainName = getChainName(chainId)
-  return `https://safe-transaction-${chainName}.safe.global/api`
+  return `https://api.safe.global/tx-service/${chainName}/api`
 }
 
 function getSafeWalletUrl(
