@@ -18,6 +18,7 @@ export type PendingFounder = {
 }
 
 export type PendingRegistration = {
+  ensLabel: string
   ensName: string
   commitTxHash: `0x${string}`
   readyAt: number
@@ -25,6 +26,10 @@ export type PendingRegistration = {
   founders: PendingFounder[]
   threshold: number
   status: PendingStatus
+  secret: `0x${string}`
+  durationYears: number
+  createdAt: number
+  updatedAt: number
   registrationTxHash?: `0x${string}`
   companyTxHash?: `0x${string}`
   error?: string
@@ -35,6 +40,9 @@ function serializeCookieValue(data: PendingRegistration) {
     ...data,
     threshold: Number(data.threshold),
     readyAt: Number(data.readyAt),
+    durationYears: Number(data.durationYears),
+    createdAt: Number(data.createdAt),
+    updatedAt: Number(data.updatedAt),
   })
 }
 
@@ -80,6 +88,9 @@ export async function updatePendingRegistration(
     ...data,
     threshold: Number(data.threshold ?? current.threshold),
     readyAt: Number(data.readyAt ?? current.readyAt),
+    durationYears: Number(data.durationYears ?? current.durationYears),
+    createdAt: Number(data.createdAt ?? current.createdAt),
+    updatedAt: Date.now(),
   }
 
   await setPendingRegistration(next)
