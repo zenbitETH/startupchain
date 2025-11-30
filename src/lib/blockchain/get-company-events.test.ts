@@ -19,7 +19,7 @@ describe('getCompanyEvents', () => {
 
     const logArgs = {
       companyId: 1n,
-      safeAddress: '0x2222222222222222222222222222222222222222',
+      ownerAddress: '0x2222222222222222222222222222222222222222',
       ensName: 'acme',
       creationDate: 10n,
       threshold: 2n,
@@ -51,7 +51,7 @@ describe('getCompanyEvents', () => {
     expect(publicClient.getLogs).toHaveBeenCalledWith(
       expect.objectContaining({
         args: {
-          safeAddress: '0x2222222222222222222222222222222222222222',
+          ownerAddress: '0x2222222222222222222222222222222222222222',
         },
       })
     )
