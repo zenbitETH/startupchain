@@ -9,6 +9,7 @@ import {
   type SupportedChainId,
 } from '@/lib/blockchain/startupchain-config'
 import {
+  finalizeEnsRegistrationAction,
   getEnsRegistrationStatusByOwnerAction,
   type EnsRegistrationRecord,
 } from './setup/actions'
@@ -54,15 +55,33 @@ async function getCompanyData(): Promise<{
     }
   }
 
-  const pending = await getEnsRegistrationStatusByOwnerAction(
+  let pending = await getEnsRegistrationStatusByOwnerAction(
     session.walletAddress
   )
+
+  if (
+    pending &&
+    pending.status !== 'completed' &&
+    pending.status !== 'failed' &&
+    Date.now() >= pending.readyAt
+  ) {
+    try {
+      pending = await finalizeEnsRegistrationAction({ ensName: pending.ensName })
+    } catch (err) {
+      // Re-read in case the action marked failure
+      pending = await getEnsRegistrationStatusByOwnerAction(
+        session.walletAddress
+      )
+      console.error('Auto-finalize ENS registration failed', err)
+    }
+  }
+
   let company = await getCompanyByAddress(
     session.walletAddress,
     STARTUPCHAIN_CHAIN_ID
   )
 
-  if (!company && pending?.status === 'registered') {
+  if (!company && pending?.status === 'completed') {
     company = await getCompanyByAddress(
       pending.owner,
       STARTUPCHAIN_CHAIN_ID
