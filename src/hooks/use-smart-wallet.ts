@@ -1,23 +1,18 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Address, formatEther, isAddress, parseEther } from 'viem'
 import { baseSepolia } from 'viem/chains'
-import { useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 
+import {
+  commitEnsRegistrationAction,
+  finalizeEnsRegistrationAction,
+  getEnsRegistrationStatusAction,
+} from '@/app/(app)/dashboard/setup/actions'
 import {
   calculateThreshold,
   predictSafeAddress,
 } from '@/lib/blockchain/safe-factory'
-import {
-  type FounderStruct,
-  startupChainAbi,
-} from '@/lib/blockchain/startupchain-abi'
-import {
-  STARTUPCHAIN_CHAIN_ID,
-  getStartupChainAddress,
-} from '@/lib/blockchain/startupchain-config'
+import { STARTUPCHAIN_CHAIN_ID } from '@/lib/blockchain/startupchain-config'
 import { usePrivy, useWallets } from '@/lib/privy'
-
-import { useEnsRegistration } from './use-ens-registration'
 
 export interface BusinessAccount {
   smartAccountAddress: Address
@@ -38,6 +33,7 @@ export type FounderInput = {
 export function useSmartWallet() {
   const { user, authenticated, ready, login } = usePrivy()
   const { wallets } = useWallets()
+  const pendingStorageKey = user ? `pending-ens-${user.id}` : null
 
   const [businessAccount, setBusinessAccount] =
     useState<BusinessAccount | null>(null)
@@ -46,24 +42,189 @@ export function useSmartWallet() {
   const [transactionHashes, setTransactionHashes] = useState<{
     commitTx?: string
     registrationTx?: string
+    companyTx?: string
   }>({})
   const [showCongratulations, setShowCongratulations] = useState(false)
   const [pendingTxHash, setPendingTxHash] = useState<`0x${string}` | null>(null)
+  const [isWaitingForReceipt, setIsWaitingForReceipt] = useState(false)
+  const [commitmentCountdown, setCommitmentCountdown] = useState<number | null>(
+    null
+  )
+  const [readyAt, setReadyAt] = useState<number | null>(null)
+  const finalizeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Get ENS registration functionality
-  const ensRegistration = useEnsRegistration()
+  const persistPending = useCallback(
+    (data: { ensName: string; ownerAddress: Address; readyAt: number }) => {
+      if (!pendingStorageKey) return
+      localStorage.setItem(pendingStorageKey, JSON.stringify(data))
+    },
+    [pendingStorageKey]
+  )
 
-  // Contract write hook for registering company
-  const { writeContractAsync } = useWriteContract()
+  const clearPending = useCallback(() => {
+    if (!pendingStorageKey) return
+    localStorage.removeItem(pendingStorageKey)
+  }, [pendingStorageKey])
 
-  const {
-    data: registrationReceipt,
-    isLoading: isWaitingForReceipt,
-    error: receiptError,
-  } = useWaitForTransactionReceipt({
-    hash: pendingTxHash ?? undefined,
-    chainId: STARTUPCHAIN_CHAIN_ID,
-  })
+  const finalizeRegistration = useCallback(
+    async (ensName: string) => {
+      setIsWaitingForReceipt(true)
+      try {
+        const result = await finalizeEnsRegistrationAction({ ensName })
+
+        setTransactionHashes((prev) => ({
+          ...prev,
+          registrationTx: result.registrationTxHash,
+          companyTx: result.companyTxHash,
+        }))
+
+        const smartAddress =
+          (user?.wallet?.address as Address | undefined) ?? result.owner
+
+        const account: BusinessAccount = {
+          smartAccountAddress: smartAddress,
+          safeAddress: result.owner,
+          ensName: `${result.ensLabel}.eth`,
+          owners: result.founders.map((f) => f.wallet),
+          ownerEquity: result.founders.reduce(
+            (acc, f) => {
+              acc[f.wallet] = Number(f.equityBps) / 100
+              return acc
+            },
+            {} as Record<string, number>
+          ),
+          threshold: result.threshold,
+          isDeployed: true,
+        }
+
+        setBusinessAccount(account)
+        setShowCongratulations(true)
+        if (user?.id) {
+          localStorage.setItem(`business-${user.id}`, JSON.stringify(account))
+        }
+        clearPending()
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to finalize registration'
+        setError(message)
+        throw err
+      } finally {
+        setIsWaitingForReceipt(false)
+      }
+    },
+    [clearPending, user?.id, user?.wallet?.address]
+  )
+
+  const scheduleFinalize = useCallback(
+    (ensName: string, eta: number) => {
+      if (finalizeTimer.current) {
+        clearTimeout(finalizeTimer.current)
+      }
+      const delay = Math.max(0, eta - Date.now())
+      finalizeTimer.current = setTimeout(() => {
+        finalizeRegistration(ensName).catch((err) =>
+          console.error('Finalize registration failed:', err)
+        )
+      }, delay)
+    },
+    [finalizeRegistration]
+  )
+
+  useEffect(() => {
+    if (!readyAt) {
+      setCommitmentCountdown(null)
+      return
+    }
+
+    const updateCountdown = () => {
+      const remaining = Math.max(0, Math.ceil((readyAt - Date.now()) / 1000))
+      setCommitmentCountdown(remaining)
+    }
+
+    updateCountdown()
+    const id = window.setInterval(updateCountdown, 1000)
+    return () => window.clearInterval(id)
+  }, [readyAt])
+
+  useEffect(() => {
+    return () => {
+      if (finalizeTimer.current) {
+        clearTimeout(finalizeTimer.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!user || !ready || !pendingStorageKey) return
+    const stored = localStorage.getItem(pendingStorageKey)
+    if (!stored) return
+
+    try {
+      const parsed = JSON.parse(stored) as {
+        ensName: string
+        ownerAddress: Address
+        readyAt: number
+      }
+      setReadyAt(parsed.readyAt)
+      const now = Date.now()
+
+      getEnsRegistrationStatusAction(parsed.ensName)
+        .then((record) => {
+          if (!record) {
+            clearPending()
+            return
+          }
+          setTransactionHashes({
+            commitTx: record.commitTxHash,
+            registrationTx: record.registrationTxHash,
+            companyTx: record.companyTxHash,
+          })
+
+          if (record.status === 'registered') {
+            const account: BusinessAccount = {
+              smartAccountAddress:
+                (user.wallet?.address as Address | undefined) ?? parsed.ownerAddress,
+              safeAddress: record.owner,
+              ensName: record.ensName,
+              owners: record.founders.map((f) => f.wallet),
+              ownerEquity: record.founders.reduce(
+                (acc, f) => {
+                  acc[f.wallet] = Number(f.equityBps) / 100
+                  return acc
+                },
+                {} as Record<string, number>
+              ),
+              threshold: record.threshold,
+              isDeployed: true,
+            }
+            setBusinessAccount(account)
+            setShowCongratulations(true)
+            clearPending()
+            return
+          }
+
+          if (now >= record.readyAt) {
+            finalizeRegistration(record.ensLabel).catch((err) =>
+              console.error('Finalize on resume failed:', err)
+            )
+          } else {
+            scheduleFinalize(record.ensLabel, record.readyAt)
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to restore ENS registration', err)
+        })
+    } catch {
+      clearPending()
+    }
+  }, [
+    clearPending,
+    finalizeRegistration,
+    pendingStorageKey,
+    ready,
+    scheduleFinalize,
+    user,
+  ])
 
   // Get smart wallet from user's linked accounts
   const getSmartWallet = useCallback(() => {
@@ -112,8 +273,11 @@ export function useSmartWallet() {
       }
 
       setIsCreating(true)
+      setIsWaitingForReceipt(true)
       setError(null)
+      setTransactionHashes({})
       setPendingTxHash(null)
+      setShowCongratulations(false)
 
       try {
         // Check if user has a smart wallet or embedded wallet
@@ -143,17 +307,17 @@ export function useSmartWallet() {
           }
         }
 
-        const isAvailable = await ensRegistration.checkAvailability(ensName)
-        if (!isAvailable) {
-          throw new Error(
-            `ENS name "${ensName}" is not available for registration`
-          )
-        }
-
         const normalizedEns =
           ensName.endsWith('.eth') && ensName.length > 4
             ? ensName.slice(0, -4)
             : ensName
+
+        if (
+          registrationAddress &&
+          (!isAddress(registrationAddress) || registrationAddress === '0x')
+        ) {
+          throw new Error('Please provide a valid registration address')
+        }
 
         // Validate founder addresses
         const founderAddresses = founders
@@ -188,75 +352,43 @@ export function useSmartWallet() {
           threshold,
         })
 
-        // Convert equity percentage to basis points (100% = 10000 bps)
-        const foundersWithEquityBps: FounderStruct[] = founders.map((f) => ({
-          wallet: f.address as `0x${string}`,
-          equityBps: BigInt(Math.round(parseFloat(f.equity) * 100)), // percentage to bps
-          role: f.role || '',
-        }))
-
-        // Get contract address for current chain
-        const contractAddress = getStartupChainAddress(STARTUPCHAIN_CHAIN_ID)
-
         // Use Safe address if provided, otherwise use predicted address
         const ownerAddress = registrationAddress
           ? (registrationAddress as `0x${string}`)
           : predictedSafeAddress
 
-        console.log('📝 Registering company on StartupChainSimple:', {
+        const backendFounders = founders.map((founder) => ({
+          wallet: founder.address as `0x${string}`,
+          equityPercent: Number.parseFloat(founder.equity) || 0,
+          role: founder.role,
+        }))
+
+        console.log('📝 Registering company on backend:', {
           ensName: normalizedEns,
           ownerAddress,
-          founders: foundersWithEquityBps,
+          founders: backendFounders,
           threshold,
-          contractAddress,
         })
 
-        // Call the new simplified contract
-        const txHash = await writeContractAsync({
-          address: contractAddress,
-          abi: startupChainAbi,
-          functionName: 'registerCompany',
-          args: [
-            normalizedEns,
-            ownerAddress,
-            foundersWithEquityBps,
-            BigInt(threshold),
-          ],
-          chainId: STARTUPCHAIN_CHAIN_ID,
+        const commitResult = await commitEnsRegistrationAction({
+          ensName: normalizedEns,
+          safeAddress: ownerAddress,
+          founders: backendFounders,
+          threshold,
         })
-
-        console.log('✅ Company registration tx:', txHash)
 
         setTransactionHashes({
-          registrationTx: txHash,
+          commitTx: commitResult.commitTxHash,
         })
-        setPendingTxHash(txHash)
 
-        const account: BusinessAccount = {
-          smartAccountAddress: businessWalletAddress,
-          safeAddress: ownerAddress,
-          ensName: `${normalizedEns}.eth`,
-          owners: founders.map((f) => f.address),
-          ownerEquity: founders.reduce(
-            (acc, f) => {
-              acc[f.address] = parseFloat(f.equity)
-              return acc
-            },
-            {} as Record<string, number>
-          ),
-          threshold,
-          isDeployed: true,
-        }
-
-        setBusinessAccount(account)
-
-        // Persist to localStorage
-        localStorage.setItem(`business-${user.id}`, JSON.stringify(account))
-
-        // Show congratulations after waiting for tx
-        // (Will be triggered by useEffect watching registrationReceipt)
-
-        return account
+        setReadyAt(commitResult.readyAt)
+        persistPending({
+          ensName: normalizedEns,
+          ownerAddress,
+          readyAt: commitResult.readyAt,
+        })
+        scheduleFinalize(normalizedEns, commitResult.readyAt)
+        return null
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Failed to create business'
@@ -264,6 +396,7 @@ export function useSmartWallet() {
         throw err
       } finally {
         setIsCreating(false)
+        setIsWaitingForReceipt(false)
       }
     },
     [
@@ -271,30 +404,11 @@ export function useSmartWallet() {
       user,
       getSmartWallet,
       getEmbeddedWallet,
-      ensRegistration,
       login,
-      writeContractAsync,
+      persistPending,
+      scheduleFinalize,
     ]
   )
-
-  useEffect(() => {
-    if (receiptError instanceof Error) {
-      setError(receiptError.message)
-    }
-  }, [receiptError])
-
-  useEffect(() => {
-    if (registrationReceipt?.status === 'success') {
-      setShowCongratulations(true)
-      setPendingTxHash(null)
-    }
-  }, [registrationReceipt])
-
-  useEffect(() => {
-    if (receiptError) {
-      setPendingTxHash(null)
-    }
-  }, [receiptError])
 
   // Send transaction from business wallet
   const sendFromBusinessWallet = useCallback(
@@ -401,20 +515,8 @@ export function useSmartWallet() {
     transactionHashes,
     showCongratulations,
     setShowCongratulations,
-    commitmentCountdown: null,
+    commitmentCountdown,
     pendingTxHash,
     isWaitingForReceipt,
-    // ENS registration functionality
-    ensRegistration: {
-      checkAvailability: ensRegistration.checkAvailability,
-      getRegistrationCost: ensRegistration.getRegistrationCost,
-      checkWalletBalance: ensRegistration.checkWalletBalance,
-      waitForRegisterWindow: ensRegistration.waitForRegisterWindow,
-      isCommitting: ensRegistration.isCommitting,
-      isRegistering: ensRegistration.isRegistering,
-      commitment: ensRegistration.commitment,
-      canRegister: ensRegistration.canRegister,
-      error: ensRegistration.error,
-    },
   }
 }
