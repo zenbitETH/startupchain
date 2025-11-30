@@ -7,8 +7,8 @@ import {StartupChain} from "../src/StartupChain.sol";
 contract DeployStartupChain is Script {
     function run() public {
         // Sepolia ENS addresses
+        // Note: ensRegistrar removed - ENS registration is handled off-chain via server actions
         address ensRegistry = 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e;
-        address ensRegistrar = 0xFED6a969AaA60E4961FCD3EBF1A2e8913ac65B72;
         address ensResolver = 0x8FADE66B79cC9f707aB26799354482EB93a5B7dD;
 
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
@@ -25,7 +25,6 @@ contract DeployStartupChain is Script {
 
         StartupChain startupChain = new StartupChain(
             ensRegistry,
-            ensRegistrar,
             ensResolver,
             feeRecipient
         );
