@@ -8,7 +8,7 @@ import {
 type CompanyEvent = {
   companyId: string
   ensName: string
-  safeAddress: `0x${string}`
+  ownerAddress: `0x${string}`
   threshold: number
   blockNumber: bigint
   transactionHash: `0x${string}`
@@ -20,15 +20,15 @@ const companyRegisteredEvent = startupChainAbi.find(
 )
 
 export async function getCompanyEvents(
-  safeAddress: string | undefined
+  ownerAddress: string | undefined
 ): Promise<CompanyEvent[]> {
-  if (!safeAddress || !companyRegisteredEvent) return []
+  if (!ownerAddress || !companyRegisteredEvent) return []
 
   try {
     const logs = await publicClient.getLogs({
       address: STARTUPCHAIN_ADDRESS,
       event: companyRegisteredEvent,
-      args: { safeAddress: safeAddress as `0x${string}` },
+      args: { ownerAddress: ownerAddress as `0x${string}` },
       fromBlock: 0n,
     })
 
@@ -42,7 +42,7 @@ export async function getCompanyEvents(
         const block = blocks[index]
         return {
           companyId: parsed.companyId?.toString() ?? '',
-          safeAddress: parsed.safeAddress as `0x${string}`,
+          ownerAddress: parsed.ownerAddress as `0x${string}`,
           ensName: parsed.ensName ?? '',
           threshold: Number(parsed.threshold ?? 1),
           blockNumber: log.blockNumber,
