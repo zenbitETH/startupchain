@@ -28,8 +28,8 @@ const explorerBase =
     : 'https://sepolia.etherscan.io'
 const ensAppBase =
   STARTUPCHAIN_CHAIN_ID === 1
-    ? 'https://app.ens.domains/name'
-    : 'https://sepolia.app.ens.domains/name'
+    ? 'https://app.ens.domains/'
+    : 'https://sepolia.app.ens.domains/'
 
 function formatDate(value?: Date) {
   if (!value) return 'Pending'
