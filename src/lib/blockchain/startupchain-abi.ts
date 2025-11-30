@@ -101,11 +101,11 @@ export const startupChainAbi = [
     inputs: [{ name: '_companyId', type: 'uint256' }],
     outputs: [
       { name: 'id', type: 'uint256' },
-      { name: 'ownerAddress', type: 'address' },
+      { name: 'companyAddress', type: 'address' },
       { name: 'ensName', type: 'string' },
       { name: 'creationDate', type: 'uint256' },
+      { name: 'safeAddress', type: 'address' },
       { name: 'threshold', type: 'uint256' },
-      { name: 'active', type: 'bool' },
     ],
   },
   {
@@ -115,11 +115,11 @@ export const startupChainAbi = [
     inputs: [{ name: '_address', type: 'address' }],
     outputs: [
       { name: 'id', type: 'uint256' },
-      { name: 'ownerAddress', type: 'address' },
+      { name: 'companyAddress', type: 'address' },
       { name: 'ensName', type: 'string' },
       { name: 'creationDate', type: 'uint256' },
+      { name: 'safeAddress', type: 'address' },
       { name: 'threshold', type: 'uint256' },
-      { name: 'active', type: 'bool' },
     ],
   },
   {
@@ -129,11 +129,11 @@ export const startupChainAbi = [
     inputs: [{ name: '_ensName', type: 'string' }],
     outputs: [
       { name: 'id', type: 'uint256' },
-      { name: 'ownerAddress', type: 'address' },
+      { name: 'companyAddress', type: 'address' },
       { name: 'ensName', type: 'string' },
       { name: 'creationDate', type: 'uint256' },
+      { name: 'safeAddress', type: 'address' },
       { name: 'threshold', type: 'uint256' },
-      { name: 'active', type: 'bool' },
     ],
   },
   {
@@ -287,11 +287,12 @@ export const startupChainAbi = [
     inputs: [{ name: '', type: 'uint256' }],
     outputs: [
       { name: 'id', type: 'uint256' },
-      { name: 'ownerAddress', type: 'address' },
+      { name: 'companyAddress', type: 'address' },
       { name: 'ensName', type: 'string' },
       { name: 'creationDate', type: 'uint256' },
+      { name: 'safeAddress', type: 'address' },
+      { name: 'governanceAddress', type: 'address' },
       { name: 'threshold', type: 'uint256' },
-      { name: 'active', type: 'bool' },
     ],
   },
   {
