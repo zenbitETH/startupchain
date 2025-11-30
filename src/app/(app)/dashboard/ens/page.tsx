@@ -20,6 +20,7 @@ import {
 } from '@/lib/blockchain/get-company'
 import { getCompanyEvents } from '@/lib/blockchain/get-company-events'
 import { STARTUPCHAIN_CHAIN_ID } from '@/lib/blockchain/startupchain-config'
+import { shortenAddress } from '@/lib/utils'
 
 import { finalizeEnsRegistrationAction } from '../setup/actions'
 
@@ -146,7 +147,9 @@ export default async function EnsDashboardPage() {
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div className="bg-muted/40 border-border/70 rounded-xl border p-4">
                   <p className="text-muted-foreground text-xs">Owner</p>
-                  <p className="font-mono text-sm">{company.ownerAddress}</p>
+                  <p className="font-mono text-sm">
+                    {shortenAddress(company.ownerAddress)}
+                  </p>
                 </div>
                 <div className="bg-muted/40 border-border/70 rounded-xl border p-4">
                   <p className="text-muted-foreground text-xs">Created</p>
