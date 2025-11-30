@@ -34,11 +34,16 @@ export function BusinessSetupModal({
     isCreating,
     error,
     businessAccount,
-    transactionHashes,
-    showCongratulations,
-    setShowCongratulations,
-    commitmentCountdown,
+    businessWalletAddress,
   } = useSmartWallet()
+  const [showCongratulations, setShowCongratulations] = useState(false)
+  const [transactionHashes, setTransactionHashes] = useState<{
+    commitTx?: string
+    registrationTx?: string
+  }>({})
+  const [commitmentCountdown, setCommitmentCountdown] = useState<number | null>(
+    null
+  )
   const [showCostEstimate, setShowCostEstimate] = useState(false)
 
   const [isMultipleFounders, setIsMultipleFounders] = useState(false)
@@ -159,14 +164,46 @@ export function BusinessSetupModal({
       const registrationAddress = registerToDifferentAddress
         ? customAddress
         : undefined
-      await createBusinessAccount(ensName, founders, registrationAddress)
-      // Success - congratulations modal will be shown automatically
-      // The hook sets showCongratulations to true
+      const registration = await createBusinessAccount(
+        ensName,
+        founders,
+        registrationAddress
+      )
+
+      const secondsRemaining =
+        registration?.readyAt != null
+          ? Math.max(0, Math.ceil((registration.readyAt - Date.now()) / 1000))
+          : null
+
+      if (secondsRemaining !== null) {
+        setCommitmentCountdown(
+          secondsRemaining > 0 ? secondsRemaining : null
+        )
+      }
+
+      setTransactionHashes({
+        commitTx: registration?.commitTxHash,
+      })
+      setShowCongratulations(true)
     } catch (err) {
       console.error('Failed to create business:', err)
       // Error is handled by the hook
     }
   }
+
+  useEffect(() => {
+    if (commitmentCountdown === null || commitmentCountdown <= 0) return
+
+    const intervalId = window.setInterval(() => {
+      setCommitmentCountdown((prev) => {
+        if (prev === null) return null
+        if (prev <= 1) return null
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(intervalId)
+  }, [commitmentCountdown])
 
   if (!isOpen && !showCongratulations) return null
 
@@ -509,12 +546,18 @@ export function BusinessSetupModal({
       )}
 
       {/* Congratulations Modal */}
-      {businessAccount && (
+      {showCongratulations && (
         <CongratulationsModal
           isOpen={showCongratulations}
           onClose={() => setShowCongratulations(false)}
-          ensName={businessAccount.ensName.replace('.eth', '')}
-          smartWalletAddress={businessAccount.smartAccountAddress}
+          ensName={(
+            businessAccount?.ensName.replace('.eth', '') || ensName.replace('.eth', '')
+          )}
+          smartWalletAddress={
+            businessAccount?.smartAccountAddress ||
+            businessWalletAddress ||
+            ''
+          }
           commitTxHash={transactionHashes.commitTx}
           registrationTxHash={transactionHashes.registrationTx}
           onContinue={() => {
