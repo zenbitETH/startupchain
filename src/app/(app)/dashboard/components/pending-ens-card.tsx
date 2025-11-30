@@ -1,10 +1,18 @@
 'use client'
 
-import { CheckCircle, Clock, ExternalLink, Loader2, RotateCw } from 'lucide-react'
+import {
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  ExternalLink,
+  Loader2,
+  RotateCw,
+} from 'lucide-react'
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { finalizeEnsRegistrationAction } from '../setup/actions'
+import { type PendingStatus } from '@/lib/auth/pending-registration'
 
 type PendingRecord = {
   ensName: string
@@ -13,7 +21,17 @@ type PendingRecord = {
   registrationTxHash?: string
   companyTxHash?: string
   readyAt: number
-  status: 'committed' | 'registered'
+  status: PendingStatus
+  error?: string
+}
+
+const statusLabel: Record<PendingStatus, string> = {
+  committing: 'Committing',
+  waiting: 'Waiting',
+  registering: 'Registering',
+  creating: 'Creating',
+  completed: 'Completed',
+  failed: 'Failed',
 }
 
 export function PendingEnsCard({
@@ -37,7 +55,9 @@ export function PendingEnsCard({
   }, [record.readyAt])
 
   const canFinalize =
-    record.status === 'committed' && remaining === 0 && !isPending
+    (record.status === 'waiting' || record.status === 'failed') &&
+    remaining === 0 &&
+    !isPending
 
   const handleFinalize = () => {
     startTransition(async () => {
@@ -50,8 +70,10 @@ export function PendingEnsCard({
     <div className="bg-card border-border rounded-2xl border p-6 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {record.status === 'registered' ? (
+          {record.status === 'completed' ? (
             <CheckCircle className="text-primary h-5 w-5" />
+          ) : record.status === 'failed' ? (
+            <AlertTriangle className="text-destructive h-5 w-5" />
           ) : (
             <Clock className="text-primary h-5 w-5" />
           )}
@@ -60,7 +82,7 @@ export function PendingEnsCard({
           </h3>
         </div>
         <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-          {record.status === 'registered' ? 'Registered' : 'Committed'}
+          {statusLabel[record.status]}
         </span>
       </div>
 
@@ -114,7 +136,7 @@ export function PendingEnsCard({
         )}
       </div>
 
-      {record.status === 'committed' && (
+      {(record.status === 'waiting' || record.status === 'failed') && (
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <div className="bg-muted/60 text-muted-foreground rounded-full px-3 py-1 text-xs font-semibold">
             {remaining > 0
@@ -142,10 +164,30 @@ export function PendingEnsCard({
         </div>
       )}
 
-      {record.status === 'registered' && (
+      {record.status === 'registering' && (
+        <p className="text-muted-foreground mt-4 flex items-center gap-2 text-sm">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Registering ENS… waiting for receipt
+        </p>
+      )}
+
+      {record.status === 'creating' && (
+        <p className="text-muted-foreground mt-4 flex items-center gap-2 text-sm">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Creating company… waiting for receipt
+        </p>
+      )}
+
+      {record.status === 'completed' && (
         <p className="text-primary mt-4 text-sm font-semibold">
           Registration mined—your company will appear below once revalidated.
         </p>
+      )}
+
+      {record.status === 'failed' && record.error && (
+        <div className="text-destructive bg-destructive/10 border-destructive/40 mt-4 rounded-lg border px-3 py-2 text-sm">
+          {record.error}
+        </div>
       )}
     </div>
   )
