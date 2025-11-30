@@ -28,6 +28,7 @@ type PendingRecord = {
 const statusLabel: Record<PendingStatus, string> = {
   committing: 'Committing',
   waiting: 'Waiting',
+  'deploying-safe': 'Deploying Safe',
   registering: 'Registering',
   creating: 'Creating',
   completed: 'Completed',
