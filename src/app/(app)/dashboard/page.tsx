@@ -1,18 +1,19 @@
 import { cookies } from 'next/headers'
 
 import { getServerSession } from '@/lib/auth/server-session'
-import { type Company, getCompanyByAddress } from '@/lib/blockchain/get-company'
+import {
+  type Company,
+  getCompanyByAddress,
+  getCompanyByFounderWallet,
+} from '@/lib/blockchain/get-company'
+import { getSafeDashboardData } from '@/lib/blockchain/safe-api'
 import {
   BLOCK_EXPLORERS,
   CHAIN_NAMES,
   STARTUPCHAIN_CHAIN_ID,
   type SupportedChainId,
 } from '@/lib/blockchain/startupchain-config'
-import {
-  finalizeEnsRegistrationAction,
-  getEnsRegistrationStatusByOwnerAction,
-  type EnsRegistrationRecord,
-} from './setup/actions'
+import { shortenAddress } from '@/lib/utils'
 
 import { ActivityFeed, type ActivityItem } from './components/activity-feed'
 import { CompanyOverview } from './components/company-overview'
@@ -23,12 +24,11 @@ import {
   type Transaction,
   TreasurySummary,
 } from './components/treasury-summary'
-
-// Placeholder data while we wire up real contract reads
-const mockTreasury = {
-  totalBalance: '$0.00',
-  transactions: [] as Transaction[],
-}
+import {
+  type EnsRegistrationRecord,
+  finalizeEnsRegistrationAction,
+  getEnsRegistrationStatusByOwnerAction,
+} from './setup/actions'
 
 const mockToken = {
   name: 'Company Token',
@@ -39,19 +39,34 @@ const mockToken = {
 
 const mockActivity: ActivityItem[] = []
 
+type TreasuryData = {
+  totalBalance: string
+  transactions: Transaction[]
+  safeWalletUrl?: string
+  isLive: boolean
+}
+
 async function getCompanyData(): Promise<{
   company: Company | null
   chainId: SupportedChainId
   pending: EnsRegistrationRecord | null
+  treasury: TreasuryData
 }> {
   const cookieStore = await cookies()
   const session = await getServerSession({ cookies: cookieStore })
+
+  const defaultTreasury: TreasuryData = {
+    totalBalance: '$0.00',
+    transactions: [],
+    isLive: false,
+  }
 
   if (!session?.walletAddress) {
     return {
       company: null,
       chainId: STARTUPCHAIN_CHAIN_ID as SupportedChainId,
       pending: null,
+      treasury: defaultTreasury,
     }
   }
 
@@ -66,7 +81,9 @@ async function getCompanyData(): Promise<{
     Date.now() >= pending.readyAt
   ) {
     try {
-      pending = await finalizeEnsRegistrationAction({ ensName: pending.ensName })
+      pending = await finalizeEnsRegistrationAction({
+        ensName: pending.ensName,
+      })
     } catch (err) {
       // Re-read in case the action marked failure
       pending = await getEnsRegistrationStatusByOwnerAction(
@@ -76,27 +93,93 @@ async function getCompanyData(): Promise<{
     }
   }
 
+  // Try to find company by wallet address first
   let company = await getCompanyByAddress(
     session.walletAddress,
     STARTUPCHAIN_CHAIN_ID
   )
 
+  // If not found, try by pending registration owner (Safe address)
   if (!company && pending?.status === 'completed') {
-    company = await getCompanyByAddress(
-      pending.owner,
+    company = await getCompanyByAddress(pending.owner, STARTUPCHAIN_CHAIN_ID)
+  }
+
+  // Last resort: search by founder wallet
+  if (!company) {
+    company = await getCompanyByFounderWallet(
+      session.walletAddress,
       STARTUPCHAIN_CHAIN_ID
     )
+  }
+
+  // Fetch treasury data from Safe API if we have a Safe address
+  let treasury: TreasuryData = defaultTreasury
+
+  if (company?.safeAddress) {
+    try {
+      const safeData = await getSafeDashboardData(
+        company.safeAddress,
+        STARTUPCHAIN_CHAIN_ID
+      )
+
+      if (safeData.info) {
+        // Format ETH balance
+        const ethBalance = Number(safeData.ethBalanceWei) / 1e18
+        const formattedBalance =
+          ethBalance > 0 ? `${ethBalance.toFixed(4)} ETH` : '0 ETH'
+
+        // Convert transaction history to our format
+        const transactions: Transaction[] = safeData.transactionHistory
+          .slice(0, 3)
+          .map((tx, idx) => {
+            const isIncoming = tx.txType === 'ETHEREUM_TRANSACTION'
+            const ethAmount = (Number(tx.value) / 1e18).toFixed(4)
+            const date = tx.executionDate ?? tx.submissionDate
+            const formattedDate = date
+              ? new Date(date).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })
+              : 'Pending'
+
+            return {
+              id: tx.safeTxHash ?? tx.txHash ?? `tx-${idx}`,
+              title: isIncoming
+                ? 'Received'
+                : `To ${shortenAddress(tx.to as `0x${string}`)}`,
+              subtitle:
+                tx.txType === 'ETHEREUM_TRANSACTION'
+                  ? 'Incoming transfer'
+                  : 'Outgoing',
+              amount: ethAmount,
+              token: 'ETH',
+              direction: isIncoming ? 'in' : 'out',
+              timestamp: formattedDate,
+            }
+          })
+
+        treasury = {
+          totalBalance: formattedBalance,
+          transactions,
+          safeWalletUrl: safeData.safeWalletUrl,
+          isLive: true,
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch Safe data:', err)
+    }
   }
 
   return {
     company,
     chainId: STARTUPCHAIN_CHAIN_ID as SupportedChainId,
     pending,
+    treasury,
   }
 }
 
 export default async function DashboardPage() {
-  const { company, chainId, pending } = await getCompanyData()
+  const { company, chainId, pending, treasury } = await getCompanyData()
   const chainName = CHAIN_NAMES[chainId] ?? 'Unknown'
   const explorerBase = BLOCK_EXPLORERS[chainId]
 
@@ -192,7 +275,7 @@ export default async function DashboardPage() {
           </div>
 
           <div className="lg:col-span-2">
-            <TreasurySummary data={mockTreasury} />
+            <TreasurySummary data={treasury} />
           </div>
 
           <CompanyToken data={mockToken} />
