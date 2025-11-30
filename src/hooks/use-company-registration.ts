@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { formatEther, isAddress } from 'viem'
+import { isAddress } from 'viem'
 
 import {
   commitEnsRegistrationAction,
@@ -9,13 +9,13 @@ import {
   getEnsRegistrationCostAction,
   type EnsRegistrationRecord,
 } from '@/app/(app)/dashboard/setup/actions'
-import { useWalletAuth } from '@/hooks/use-wallet-auth'
 
 type RegistrationStep =
   | 'idle'
   | 'checking'
   | 'committing'
   | 'waiting'
+  | 'deploying-safe'
   | 'registering-ens'
   | 'registering-company'
   | 'completed'
@@ -29,14 +29,10 @@ type FounderInput = {
 
 export type CostBreakdown = {
   ensRegistrationCostEth: string
+  safeDeploymentCostEth: string
   serviceFeeEth: string
-  estimatedGasEth: string
   totalEth: string
 }
-
-const ESTIMATED_GAS_WEI = 5_000_000_000_000_000n // ~0.005 ETH
-const SERVICE_FEE_BPS = 2500n
-const BPS_DENOMINATOR = 10_000n
 
 function formatEth(wei: bigint) {
   const asNumber = Number(formatEther(wei))
@@ -52,7 +48,6 @@ function toFounderPayload(founders: FounderInput[]) {
 }
 
 export function useCompanyRegistration() {
-  const { primaryAddress } = useWalletAuth()
   const [step, setStep] = useState<RegistrationStep>('idle')
   const [countdown, setCountdown] = useState<number | null>(null)
   const [costBreakdown, setCostBreakdown] = useState<CostBreakdown | null>(null)
@@ -61,11 +56,7 @@ export function useCompanyRegistration() {
 
   const ensNameRef = useRef<string | null>(null)
   const readyAtRef = useRef<number | null>(null)
-  const ownerAddressRef = useRef<string | undefined>(primaryAddress ?? undefined)
-
-  useEffect(() => {
-    ownerAddressRef.current = primaryAddress ?? ownerAddressRef.current
-  }, [primaryAddress])
+  const safeAddressRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (step !== 'waiting' || !readyAtRef.current) {
@@ -88,20 +79,18 @@ export function useCompanyRegistration() {
   }, [step])
 
   const calculateCosts = useCallback(
-    async (ensName: string, durationYears = 1) => {
+    async (ensName: string, durationYears = 1, founderCount = 1) => {
       if (!ensName) return null
 
       const years = Math.max(1, durationYears)
-      const result = await getEnsRegistrationCostAction(ensName, years)
-      const ensCostWei = BigInt(result.costWei)
-      const serviceFeeWei = (ensCostWei * SERVICE_FEE_BPS) / BPS_DENOMINATOR
-      const totalWei = ensCostWei + serviceFeeWei + ESTIMATED_GAS_WEI
+      const founders = Math.max(1, founderCount)
+      const result = await getEnsRegistrationCostAction(ensName, years, founders)
 
       const breakdown: CostBreakdown = {
-        ensRegistrationCostEth: formatEth(ensCostWei),
-        serviceFeeEth: formatEth(serviceFeeWei),
-        estimatedGasEth: formatEth(ESTIMATED_GAS_WEI),
-        totalEth: formatEth(totalWei),
+        ensRegistrationCostEth: result.costEth,
+        safeDeploymentCostEth: result.safeGasEth,
+        serviceFeeEth: result.serviceFeeEth,
+        totalEth: result.totalEth,
       }
 
       setCostBreakdown(breakdown)
@@ -115,25 +104,15 @@ export function useCompanyRegistration() {
       ensName,
       founders,
       threshold,
-      ownerAddress,
       durationYears = 1,
     }: {
       ensName: string
       founders: FounderInput[]
       threshold: number
-      ownerAddress?: `0x${string}` | string
       durationYears?: number
     }) => {
       setError(null)
       setStep('checking')
-
-      const owner = (ownerAddress ?? primaryAddress)?.trim()
-      if (!owner || !isAddress(owner)) {
-        const message = 'Please connect a wallet with a valid Ethereum address'
-        setError(message)
-        setStep('failed')
-        throw new Error(message)
-      }
 
       const invalidFounder = founders.find(
         (founder) => !isAddress(founder.address)
@@ -163,15 +142,17 @@ export function useCompanyRegistration() {
 
       try {
         ensNameRef.current = ensName
-        ownerAddressRef.current = owner as `0x${string}`
 
+        // Server predicts Safe address from founders - no need to pass safeAddress
         const result = await commitEnsRegistrationAction({
           ensName,
-          safeAddress: owner as `0x${string}`,
           founders: toFounderPayload(founders),
           threshold,
           durationYears,
         })
+
+        // Store the predicted Safe address as owner
+        safeAddressRef.current = result.safeAddress
 
         readyAtRef.current = result.readyAt
         setCountdown(Math.max(0, Math.ceil((result.readyAt - Date.now()) / 1000)))
@@ -187,7 +168,7 @@ export function useCompanyRegistration() {
         throw err
       }
     },
-    [primaryAddress]
+    []
   )
 
   const completeRegistration = useCallback(async () => {
@@ -199,21 +180,28 @@ export function useCompanyRegistration() {
     }
 
     setError(null)
-    setStep('registering-ens')
+    setStep('deploying-safe')
 
     try {
       const result: EnsRegistrationRecord = await finalizeEnsRegistrationAction({
         ensName: ensNameRef.current,
       })
 
-      if (result.status === 'creating') {
+      // Update step based on status
+      if (result.status === 'deploying-safe') {
+        setStep('deploying-safe')
+      } else if (result.status === 'registering') {
+        setStep('registering-ens')
+      } else if (result.status === 'creating') {
         setStep('registering-company')
-      }
-
-      if (result.status === 'completed') {
+      } else if (result.status === 'completed') {
         setStep('completed')
         setCanComplete(false)
         setCountdown(null)
+        // Update owner address with actual Safe address
+        if (result.safeAddress) {
+          safeAddressRef.current = result.safeAddress
+        }
       }
 
       return result
@@ -229,6 +217,7 @@ export function useCompanyRegistration() {
   const reset = useCallback(() => {
     ensNameRef.current = null
     readyAtRef.current = null
+    safeAddressRef.current = undefined
     setStep('idle')
     setCountdown(null)
     setCanComplete(false)
@@ -236,10 +225,7 @@ export function useCompanyRegistration() {
     setError(null)
   }, [])
 
-  const walletAddress = useMemo(
-    () => ownerAddressRef.current ?? primaryAddress,
-    [primaryAddress]
-  )
+  const safeAddress = useMemo(() => safeAddressRef.current, [step])
 
   return {
     step,
@@ -247,7 +233,7 @@ export function useCompanyRegistration() {
     costBreakdown,
     canComplete,
     error,
-    walletAddress,
+    safeAddress,
     calculateCosts,
     startRegistration,
     completeRegistration,
