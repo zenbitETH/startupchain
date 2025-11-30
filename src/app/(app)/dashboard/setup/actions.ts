@@ -10,6 +10,13 @@ import { normalize } from "viem/ens"
 import { mainnet, sepolia } from "viem/chains"
 import { revalidatePath } from "next/cache"
 
+import {
+  clearPendingRegistration,
+  getPendingRegistration,
+  setPendingRegistration,
+  updatePendingRegistration,
+  type PendingRegistration,
+} from "../../../../lib/auth/pending-registration"
 import { isValidEnsName } from "../../../../lib/ens.js"
 import { startupChainAbi, type FounderStruct } from "../../../../lib/blockchain/startupchain-abi"
 import {
@@ -23,7 +30,6 @@ import {
   startupChainChain,
   walletClient as startupChainWalletClient,
 } from "../../../../lib/blockchain/startupchain-client"
-import { redisDel, redisGet, redisSet } from "../../../../lib/redis/upstash"
 
 const chainId = process.env.NEXT_PUBLIC_CHAIN_ID === "1" ? 1 : 11155111
 const baseChain = chainId === 1 ? mainnet : sepolia
@@ -181,29 +187,24 @@ function resolveSafeAddress(address: string): `0x${string}` {
   return address as `0x${string}`
 }
 
-export type EnsRegistrationRecord = {
-  ensLabel: string
-  ensName: string
-  owner: `0x${string}`
-  founders: FounderStruct[]
-  threshold: number
-  durationYears: number
-  secret: `0x${string}`
-  commitTxHash: `0x${string}`
-  registrationTxHash?: `0x${string}`
-  companyTxHash?: `0x${string}`
-  readyAt: number
-  createdAt: number
-  updatedAt: number
-  status: "committed" | "registered"
+function toCookieFounders(founders: FounderStruct[]) {
+  return founders.map((founder) => ({
+    wallet: founder.wallet,
+    equityBps: Number(founder.equityBps),
+    role: founder.role,
+  }))
 }
 
-function getRedisKey(label: string) {
-  return `ens-reg:${label}`
+function toContractFounders(founders: PendingRecord["founders"]): FounderStruct[] {
+  return founders.map((founder) => ({
+    wallet: founder.wallet,
+    equityBps: BigInt(founder.equityBps ?? 0),
+    role: founder.role ?? "",
+  }))
 }
-function getOwnerRedisKey(owner: string) {
-  return `ens-reg-owner:${owner.toLowerCase()}`
-}
+
+type PendingRecord = PendingRegistration
+export type EnsRegistrationRecord = PendingRegistration
 
 export async function commitEnsRegistrationAction({
   ensName,
@@ -243,7 +244,8 @@ export async function commitEnsRegistrationAction({
   const secret = `0x${randomBytes(32).toString("hex")}` as `0x${string}`
 
   let commitTxHash: `0x${string}` = "0x0000000000000000000000000000000000000000000000000000000000000000"
-  let readyAt = Date.now()
+  const startedAt = Date.now()
+  let readyAt = startedAt
 
   if (!isAlreadyOwner) {
     const registrationParams = {
@@ -282,37 +284,23 @@ export async function commitEnsRegistrationAction({
 
     readyAt = Date.now() + 61_000
   }
-  const record: EnsRegistrationRecord = {
+
+  const record: PendingRecord = {
     ensLabel: label,
     ensName: `${label}.eth`,
     owner,
-    founders: founderStructs,
+    founders: toCookieFounders(founderStructs),
     threshold,
     durationYears: years,
     secret,
     commitTxHash,
     readyAt,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    status: "committed",
+    createdAt: startedAt,
+    updatedAt: startedAt,
+    status: "waiting",
   }
 
-  await Promise.all([
-    redisSet(getRedisKey(label), {
-      ...record,
-      founders: record.founders.map((f) => ({
-        ...f,
-        equityBps: Number(f.equityBps),
-      })),
-    }),
-    redisSet(getOwnerRedisKey(owner), {
-      ...record,
-      founders: record.founders.map((f) => ({
-        ...f,
-        equityBps: Number(f.equityBps),
-      })),
-    }),
-  ])
+  await setPendingRegistration(record)
 
   return {
     ensName: record.ensName,
@@ -325,34 +313,77 @@ export async function commitEnsRegistrationAction({
 
 export async function finalizeEnsRegistrationAction({ ensName }: { ensName: string }) {
   const { label, fullName } = normalizeEnsInput(ensName)
-  let record = await redisGet<EnsRegistrationRecord>(getRedisKey(label))
-  if (!record && isAddress(ensName)) {
-    record = await redisGet<EnsRegistrationRecord>(
-      getOwnerRedisKey(ensName as `0x${string}`)
-    )
-  }
-
-  if (!record) {
+  const pending = await getPendingRegistration()
+  if (!pending || pending.ensLabel !== label) {
     throw new Error("No pending ENS registration found")
   }
 
-  if (record.status === "registered" && record.companyTxHash) {
-    return record
+  if (pending.status === "completed") {
+    await clearPendingRegistration()
+    return pending
   }
 
-  if (Date.now() < record.readyAt) {
+  if (Date.now() < pending.readyAt) {
     throw new Error("Commitment window not ready yet")
   }
 
-  const years = Math.max(1, record.durationYears)
+  if (!pending.secret) {
+    throw new Error("Missing ENS commitment secret")
+  }
+
+  const contractAddress = getStartupChainAddress(STARTUPCHAIN_CHAIN_ID)
+  if (contractAddress === ZERO_ADDRESS) {
+    throw new Error("StartupChain contract address is not configured")
+  }
+
+  const markFailed = async (message: string) => {
+    await updatePendingRegistration({
+      status: "failed",
+      error: message,
+    })
+  }
+
+  const finishAndClear = async (record: PendingRecord) => {
+    try {
+      await clearPendingRegistration()
+    } finally {
+      try {
+        revalidatePath("/dashboard")
+      } catch {
+        // Ignore when revalidatePath is unavailable (e.g., unit tests)
+      }
+    }
+    return record
+  }
+
+  try {
+    const existing = await startupChainPublicClient.readContract({
+      address: contractAddress,
+      abi: startupChainAbi,
+      functionName: "getCompanyByAddress",
+      args: [pending.owner],
+    })
+    if (existing) {
+      const updatedExisting: PendingRecord = {
+        ...pending,
+        status: "completed",
+        updatedAt: Date.now(),
+      }
+      return finishAndClear(updatedExisting)
+    }
+  } catch {
+    // Continue with registration flow
+  }
+
+  const years = Math.max(1, pending.durationYears)
   const { costWei } = await getEnsRegistrationCostAction(label, years)
   const registrationCostWei = BigInt(costWei)
 
   const registrationParams = {
     name: fullName,
-    owner: record.owner,
+    owner: pending.owner,
     duration: years * 365 * 24 * 60 * 60,
-    secret: record.secret,
+    secret: pending.secret,
     resolverAddress: getEnsResolverAddress(STARTUPCHAIN_CHAIN_ID),
     records: undefined,
     reverseRecord: false,
@@ -362,196 +393,218 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
     },
   }
 
-  const contractAddress = getStartupChainAddress(STARTUPCHAIN_CHAIN_ID)
-  if (contractAddress === ZERO_ADDRESS) {
-    throw new Error("StartupChain contract address is not configured")
-  }
+  let registrationTxHash = pending.registrationTxHash
+  let companyTxHash = pending.companyTxHash
 
-  // If the owner or ENS is already registered, treat as success and persist status
   try {
-    const existing = await startupChainPublicClient.readContract({
-      address: contractAddress,
-      abi: startupChainAbi,
-      functionName: "getCompanyByAddress",
-      args: [record.owner],
-    })
-    if (existing) {
-      const updatedExisting: EnsRegistrationRecord = {
-        ...record,
-        status: "registered",
-        updatedAt: Date.now(),
-      }
-      await Promise.all([
-        redisSet(getRedisKey(label), {
-          ...updatedExisting,
-          founders: updatedExisting.founders.map((f) => ({
-            ...f,
-            equityBps: Number(f.equityBps),
-          })),
-        }),
-        redisSet(getOwnerRedisKey(record.owner), {
-          ...updatedExisting,
-          founders: updatedExisting.founders.map((f) => ({
-            ...f,
-            equityBps: Number(f.equityBps),
-          })),
-        }),
-      ])
-      try {
-        revalidatePath("/dashboard")
-      } catch {
-        // ignore revalidation error
-      }
-      return updatedExisting
-    }
-  } catch {
-    // ignore and proceed to register
-  }
+    const currentOwner = await getEnsOwnerAction(label)
+    const isAlreadyOwner =
+      currentOwner.owner &&
+      currentOwner.owner.toLowerCase() === pending.owner.toLowerCase()
 
-  let registrationTxHash: `0x${string}` | undefined
+    if (!isAlreadyOwner) {
+      await updatePendingRegistration({ status: "registering", error: undefined })
 
-  // Check if already registered to the correct owner
-  const currentOwner = await getEnsOwnerAction(label)
-  const isAlreadyOwner =
-    currentOwner.owner &&
-    currentOwner.owner.toLowerCase() === record.owner.toLowerCase()
+      const registerTxData = registerName.makeFunctionData(
+        startupChainWalletClient,
+        {
+          ...registrationParams,
+          value: registrationCostWei,
+        }
+      )
 
-  if (!isAlreadyOwner) {
-    const registerTxData = registerName.makeFunctionData(
-      startupChainWalletClient,
-      {
-        ...registrationParams,
+      registrationTxHash = await startupChainWalletClient.sendTransaction({
+        to: registerTxData.to as Address,
+        data: registerTxData.data as `0x${string}`,
         value: registrationCostWei,
-      }
-    )
+        account: startupChainAccount,
+        chain: startupChainChain,
+      })
 
-    registrationTxHash = await startupChainWalletClient.sendTransaction({
-      to: registerTxData.to as Address,
-      data: registerTxData.data as `0x${string}`,
-      value: registrationCostWei,
-      account: startupChainAccount,
-      chain: startupChainChain,
+      await updatePendingRegistration({
+        registrationTxHash,
+      })
+
+      await startupChainPublicClient.waitForTransactionReceipt({
+        hash: registrationTxHash,
+      })
+    } else if (!registrationTxHash) {
+      registrationTxHash = pending.commitTxHash
+    }
+
+    await updatePendingRegistration({
+      status: "creating",
+      registrationTxHash,
+      error: undefined,
     })
-
-    await startupChainPublicClient.waitForTransactionReceipt({
-      hash: registrationTxHash,
-    })
-  } else {
-    registrationTxHash = record.commitTxHash // Reuse commit hash as placeholder
-  }
-
-  let companyTxHash: `0x${string}`
-  try {
-    // Ensure equityBps is BigInt for the contract call
-    const foundersArg = record.founders.map((f) => ({
-      wallet: f.wallet,
-      equityBps: BigInt(f.equityBps),
-      role: f.role,
-    }))
 
     companyTxHash = await startupChainWalletClient.writeContract({
       address: contractAddress,
       abi: startupChainAbi,
       functionName: "registerCompany",
-      args: [label, record.owner, foundersArg, BigInt(record.threshold)],
+      args: [label, pending.owner, toContractFounders(pending.founders), BigInt(pending.threshold)],
       chain: startupChainChain,
       account: startupChainAccount,
     })
+
+    await updatePendingRegistration({ companyTxHash })
 
     await startupChainPublicClient.waitForTransactionReceipt({
       hash: companyTxHash,
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : ""
-    const already =
+    const message =
+      err instanceof Error ? err.message : "Failed to finalize ENS registration"
+
+    const alreadyRegistered =
       message.includes("Company already registered") ||
       message.includes("ENS name already registered")
 
-    if (already) {
-      // Treat as success if on-chain state already exists
-      const updatedExisting: EnsRegistrationRecord = {
-        ...record,
-        status: "registered",
+    if (alreadyRegistered) {
+      const resolvedRegistrationTx =
+        registrationTxHash ?? pending.registrationTxHash ?? pending.commitTxHash
+      const resolvedCompanyTx = companyTxHash ?? pending.companyTxHash
+      const completed: PendingRecord = {
+        ...pending,
+        status: "completed",
+        registrationTxHash: resolvedRegistrationTx,
+        companyTxHash: resolvedCompanyTx,
         updatedAt: Date.now(),
       }
-      await Promise.all([
-        redisSet(getRedisKey(label), {
-          ...updatedExisting,
-          founders: updatedExisting.founders.map((f) => ({
-            ...f,
-            equityBps: Number(f.equityBps),
-          })),
-        }),
-        redisSet(getOwnerRedisKey(record.owner), {
-          ...updatedExisting,
-          founders: updatedExisting.founders.map((f) => ({
-            ...f,
-            equityBps: Number(f.equityBps),
-          })),
-        }),
-      ])
-      try {
-        revalidatePath("/dashboard")
-      } catch {
-        // ignore revalidation error
-      }
-      return updatedExisting
+      await setPendingRegistration(completed)
+      return finishAndClear(completed)
     }
 
+    await markFailed(message)
     throw err
   }
 
-  const updated: EnsRegistrationRecord = {
-    ...record,
-    registrationTxHash,
-    companyTxHash,
-    status: "registered",
+  const completed: PendingRecord = {
+    ...pending,
+    status: "completed",
+    registrationTxHash:
+      registrationTxHash ?? pending.registrationTxHash ?? pending.commitTxHash,
+    companyTxHash: companyTxHash ?? pending.companyTxHash,
     updatedAt: Date.now(),
   }
 
-  await Promise.all([
-    redisSet(getRedisKey(label), {
-      ...updated,
-      founders: updated.founders.map((f) => ({
-        ...f,
-        equityBps: Number(f.equityBps),
-      })),
-    }),
-    redisSet(getOwnerRedisKey(record.owner), {
-      ...updated,
-      founders: updated.founders.map((f) => ({
-        ...f,
-        equityBps: Number(f.equityBps),
-      })),
-    }),
-  ])
-  try {
-    revalidatePath("/dashboard")
-  } catch {
-    // ignore when revalidatePath is unavailable (e.g., during unit tests)
-  }
-
-  return updated
+  await setPendingRegistration(completed)
+  return finishAndClear(completed)
 }
 
 export async function getEnsRegistrationStatusAction(ensName: string) {
   const { label } = normalizeEnsInput(ensName)
-  return redisGet<EnsRegistrationRecord>(getRedisKey(label))
+  const pending = await getPendingRegistration()
+  if (!pending) return null
+  return pending.ensLabel === label ? pending : null
 }
 
 export async function getEnsRegistrationStatusByOwnerAction(owner: string) {
   if (!isAddress(owner)) return null
-  return redisGet<EnsRegistrationRecord>(
-    getOwnerRedisKey(owner as `0x${string}`)
-  )
+  const pending = await getPendingRegistration()
+  if (!pending) return null
+  return pending.owner.toLowerCase() === owner.toLowerCase() ? pending : null
 }
 
 export async function clearEnsRegistrationAction(ensName: string) {
   const { label } = normalizeEnsInput(ensName)
-  const record = await redisGet<EnsRegistrationRecord>(getRedisKey(label))
-  await Promise.all([
-    redisDel(getRedisKey(label)),
-    record?.owner ? redisDel(getOwnerRedisKey(record.owner)) : Promise.resolve(),
-  ])
+  const pending = await getPendingRegistration()
+  if (!pending || pending.ensLabel !== label) {
+    return { cleared: false }
+  }
+  await clearPendingRegistration()
   return { cleared: true }
 }
+
+/**
+ * Register company on StartupChain contract only (no ENS registration)
+ * Used when user has already registered ENS themselves via client-side transaction
+ *
+ * Note: In the user-pays flow, the user calls the contract directly with service fee.
+ * This action is kept as a fallback for server-side registration if needed.
+ */
+export async function registerCompanyOnlyAction({
+  ensName,
+  ownerAddress,
+  founders,
+  threshold,
+}: {
+  ensName: string
+  ownerAddress: string
+  founders: BackendFounderInput[]
+  threshold: number
+}) {
+  const { label } = normalizeEnsInput(ensName)
+  const owner = resolveSafeAddress(ownerAddress)
+  const founderStructs = toFounderStructs(founders)
+  validateThreshold(threshold, founderStructs.length)
+
+  const contractAddress = getStartupChainAddress(STARTUPCHAIN_CHAIN_ID)
+  if (contractAddress === ZERO_ADDRESS) {
+    throw new Error("StartupChain contract address is not configured")
+  }
+
+  // Check if company already exists
+  try {
+    const existing = await startupChainPublicClient.readContract({
+      address: contractAddress,
+      abi: startupChainAbi,
+      functionName: "getCompanyByAddress",
+      args: [owner],
+    })
+    if (existing && existing[0] > 0n) {
+      return {
+        success: true,
+        alreadyExists: true,
+        companyId: existing[0].toString(),
+        ensName: `${label}.eth`,
+      }
+    }
+  } catch {
+    // Company doesn't exist, proceed with registration
+  }
+
+  // Register company (no value sent - user pays service fee directly to contract)
+  const companyTxHash = await startupChainWalletClient.writeContract({
+    address: contractAddress,
+    abi: startupChainAbi,
+    functionName: "registerCompany",
+    args: [label, owner, founderStructs, BigInt(threshold)],
+    chain: startupChainChain,
+    account: startupChainAccount,
+  })
+
+  await startupChainPublicClient.waitForTransactionReceipt({
+    hash: companyTxHash,
+  })
+
+  revalidatePath("/dashboard")
+
+  return {
+    success: true,
+    alreadyExists: false,
+    companyTxHash,
+    ensName: `${label}.eth`,
+  }
+}
+
+/**
+ * Validate that ENS is registered to the expected owner
+ * Used to verify ENS registration before company registration
+ */
+export async function validateEnsOwnershipAction(ensName: string, expectedOwner: string) {
+  const { label, fullName } = normalizeEnsInput(ensName)
+
+  const result = await getOwner(ensPublicClient, { name: fullName })
+  const owner = result?.owner
+
+  const isOwner = owner && owner.toLowerCase() === expectedOwner.toLowerCase()
+
+  return {
+    ensName: fullName,
+    owner: owner ?? null,
+    expectedOwner,
+    isValid: isOwner,
+  }
+}
+
