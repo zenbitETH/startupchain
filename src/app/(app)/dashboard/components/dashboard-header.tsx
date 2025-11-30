@@ -1,13 +1,21 @@
 'use client'
 
-import { Copy, Menu, WalletMinimal } from 'lucide-react'
+import { Copy, LogOut, Menu, WalletMinimal } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-import { appNavItems } from '@/app/(app)/dashboard/config/navigation'
+import { appNavItems, footerItems } from '@/app/(app)/dashboard/config/navigation'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { NetworkSwitcher } from '@/components/ui/network-switcher'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { shortenAddress } from '@/lib/utils'
@@ -17,9 +25,9 @@ type DashboardHeaderProps = {
 }
 
 export function DashboardHeader({ title }: DashboardHeaderProps) {
-  const { primaryAddress, chainId, user } = useWalletAuth()
+  const { primaryAddress, disconnect, user } = useWalletAuth()
   const router = useRouter()
-  const [showMobileNav, setShowMobileNav] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const formattedAddress = primaryAddress
     ? shortenAddress(primaryAddress)
@@ -38,12 +46,6 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
     user?.email?.address?.[0]?.toUpperCase() ??
     user?.id?.[0]?.toUpperCase() ??
     'U'
-
-  const handleNavChange = (value: string) => {
-    if (!value) return
-    router.push(value)
-    setShowMobileNav(false)
-  }
 
   return (
     <div className="border-border bg-background/90 sticky top-0 z-10 border-b px-4 py-3 backdrop-blur md:px-6">
@@ -66,15 +68,56 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
             </div>
           </Link>
           <NetworkSwitcher />
-          <Button
-            variant="outline"
-            size="icon-sm"
-            className="rounded-full"
-            aria-label="Open navigation"
-            onClick={() => setShowMobileNav((prev) => !prev)}
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                className="rounded-full"
+                aria-label="Open navigation"
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Navigation</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {appNavItems.map((item) => (
+                <DropdownMenuItem key={item.url} asChild>
+                  <Link href={item.url} className="cursor-pointer">
+                    <item.icon className="mr-2 h-4 w-4" />
+                    <span>{item.title}</span>
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              {footerItems.map((item) => (
+                <DropdownMenuItem key={item.url} asChild>
+                  <Link href={item.url} className="cursor-pointer">
+                    <item.icon className="mr-2 h-4 w-4" />
+                    <span>{item.title}</span>
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                disabled={isLoggingOut}
+                onClick={async () => {
+                  setIsLoggingOut(true)
+                  try {
+                    await disconnect()
+                    router.replace('/')
+                  } finally {
+                    setIsLoggingOut(false)
+                  }
+                }}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>{isLoggingOut ? 'Logging out...' : 'Log out'}</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="flex items-center justify-end gap-2 md:hidden">
@@ -113,19 +156,6 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
           </div>
         </div>
 
-        {showMobileNav && (
-          <div className="bg-card border-border absolute top-[72px] right-4 flex w-48 flex-col rounded-xl border p-2 shadow-md md:hidden">
-            {appNavItems.map((item) => (
-              <button
-                key={item.url}
-                className="text-foreground hover:bg-muted rounded-lg px-3 py-2 text-left text-sm font-medium"
-                onClick={() => handleNavChange(item.url)}
-              >
-                {item.title}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   )
