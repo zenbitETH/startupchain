@@ -23,9 +23,12 @@ This captures the company representation we just aligned on: a Safe-centric comp
 - **Upgrades**: allow owner set changes via Safe; emit `OwnersUpdated(threshold, owners[])`.
 
 ## 4) Event & Dashboard Surface
+
+> **See also:** `docs/general/ens-registration-plan.md` for detailed implementation of the registration flow with real-time progress.
+
 - Emit: `CompanyRegistered`, `OwnersUpdated`, `ThresholdUpdated`, `SafeLinked`, `TokenAllocated` (if token), `MetadataUpdated`.
 - Dashboard (server): read `getCompanyByAddress`, `CompanyRegistered` logs; show ENS, Safe address, founders, threshold, latest tx hashes + explorer links.
-- Wizard: after tx success, deep-link to `/dashboard/ens?tx=...` and refresh on-chain reads.
+- Wizard: after commit tx success, redirect to `/dashboard/ens` with pending cookie. Dashboard shows real-time progress (countdown → register → company creation). No polling — uses client-side timer + server recovery on page load.
 
 ## Open Items
 - Cap table storage location: extend `StartupChain` vs. new lightweight registry contract.
