@@ -12,6 +12,7 @@ import {
   CHAIN_NAMES,
   STARTUPCHAIN_CHAIN_ID,
   type SupportedChainId,
+  isSupportedChain,
 } from '@/lib/blockchain/startupchain-config'
 import { shortenAddress } from '@/lib/utils'
 
@@ -46,7 +47,22 @@ type TreasuryData = {
   isLive: boolean
 }
 
-async function getCompanyData(): Promise<{
+/**
+ * Parse and validate chainId from search params.
+ * Falls back to STARTUPCHAIN_CHAIN_ID if invalid or unsupported.
+ */
+function parseChainId(chainParam: string | undefined): SupportedChainId {
+  if (!chainParam) return STARTUPCHAIN_CHAIN_ID
+
+  const parsed = Number(chainParam)
+  if (Number.isNaN(parsed) || !isSupportedChain(parsed)) {
+    return STARTUPCHAIN_CHAIN_ID
+  }
+
+  return parsed as SupportedChainId
+}
+
+async function getCompanyData(chainId: SupportedChainId): Promise<{
   company: Company | null
   chainId: SupportedChainId
   pending: EnsRegistrationRecord | null
@@ -64,7 +80,7 @@ async function getCompanyData(): Promise<{
   if (!session?.walletAddress) {
     return {
       company: null,
-      chainId: STARTUPCHAIN_CHAIN_ID as SupportedChainId,
+      chainId,
       pending: null,
       treasury: defaultTreasury,
     }
@@ -93,23 +109,17 @@ async function getCompanyData(): Promise<{
     }
   }
 
-  // Try to find company by wallet address first
-  let company = await getCompanyByAddress(
-    session.walletAddress,
-    STARTUPCHAIN_CHAIN_ID
-  )
+  // Try to find company by wallet address first - use the dynamic chainId
+  let company = await getCompanyByAddress(session.walletAddress, chainId)
 
   // If not found, try by pending registration owner (Safe address)
   if (!company && pending?.status === 'completed') {
-    company = await getCompanyByAddress(pending.owner, STARTUPCHAIN_CHAIN_ID)
+    company = await getCompanyByAddress(pending.owner, chainId)
   }
 
   // Last resort: search by founder wallet
   if (!company) {
-    company = await getCompanyByFounderWallet(
-      session.walletAddress,
-      STARTUPCHAIN_CHAIN_ID
-    )
+    company = await getCompanyByFounderWallet(session.walletAddress, chainId)
   }
 
   // Fetch treasury data from Safe API if we have a Safe address
@@ -117,10 +127,7 @@ async function getCompanyData(): Promise<{
 
   if (company?.safeAddress) {
     try {
-      const safeData = await getSafeDashboardData(
-        company.safeAddress,
-        STARTUPCHAIN_CHAIN_ID
-      )
+      const safeData = await getSafeDashboardData(company.safeAddress, chainId)
 
       if (safeData.info) {
         // Format ETH balance
@@ -172,16 +179,27 @@ async function getCompanyData(): Promise<{
 
   return {
     company,
-    chainId: STARTUPCHAIN_CHAIN_ID as SupportedChainId,
+    chainId,
     pending,
     treasury,
   }
 }
 
-export default async function DashboardPage() {
-  const { company, chainId, pending, treasury } = await getCompanyData()
-  const chainName = CHAIN_NAMES[chainId] ?? 'Unknown'
-  const explorerBase = BLOCK_EXPLORERS[chainId]
+type PageProps = {
+  searchParams: Promise<{ chain?: string }>
+}
+
+export default async function DashboardPage({ searchParams }: PageProps) {
+  const params = await searchParams
+  const chainId = parseChainId(params.chain)
+  const {
+    company,
+    chainId: resolvedChainId,
+    pending,
+    treasury,
+  } = await getCompanyData(chainId)
+  const chainName = CHAIN_NAMES[resolvedChainId] ?? 'Unknown'
+  const explorerBase = BLOCK_EXPLORERS[resolvedChainId]
 
   // If no company found, show empty state
   if (!company) {
