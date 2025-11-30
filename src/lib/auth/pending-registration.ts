@@ -6,6 +6,7 @@ const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 // 24 hours
 export type PendingStatus =
   | 'committing'
   | 'waiting'
+  | 'deploying-safe'
   | 'registering'
   | 'creating'
   | 'completed'
@@ -32,6 +33,8 @@ export type PendingRegistration = {
   updatedAt: number
   registrationTxHash?: `0x${string}`
   companyTxHash?: `0x${string}`
+  safeAddress?: `0x${string}`
+  safeDeploymentTxHash?: `0x${string}`
   error?: string
 }
 
