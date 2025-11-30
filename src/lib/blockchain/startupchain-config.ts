@@ -6,11 +6,12 @@ export type SupportedChainId = (typeof SUPPORTED_CHAINS)[number]
 
 // Multi-chain contract addresses
 const STARTUPCHAIN_ADDRESSES: Record<SupportedChainId, `0x${string}`> = {
-  [sepolia.id]: (process.env.NEXT_PUBLIC_STARTUPCHAIN_ADDRESS_SEPOLIA ??
-    process.env.NEXT_PUBLIC_STARTUPCHAIN_ADDRESS ??
-    '0x0000000000000000000000000000000000000000') as `0x${string}`,
-  [mainnet.id]: (process.env.NEXT_PUBLIC_STARTUPCHAIN_ADDRESS_MAINNET ??
-    process.env.NEXT_PUBLIC_STARTUPCHAIN_ADDRESS ??
+  [sepolia.id]: (process.env.NEXT_PUBLIC_STARTUPCHAIN_ADDRESS_SEPOLIA ||
+    process.env.NEXT_PUBLIC_STARTUPCHAIN_ADDRESS ||
+    // default to deployed simple contract on Sepolia so dashboard works even if env is missing
+    '0xE610acB5a74e65a1E0f234320954C12D67ec0b66') as `0x${string}`,
+  [mainnet.id]: (process.env.NEXT_PUBLIC_STARTUPCHAIN_ADDRESS_MAINNET ||
+    process.env.NEXT_PUBLIC_STARTUPCHAIN_ADDRESS ||
     '0x0000000000000000000000000000000000000000') as `0x${string}`,
 }
 
