@@ -11,11 +11,10 @@ StartupChain is an onchain company OS that allows founders to:
 - Search & claim an ENS name as their company identity
 - Authenticate via Privy (wallet or create new)
 - Configure company structure (solo/multi-founder with equity splits)
-- Register through a two-phase ENS commit-reveal process
-- Deploy company data to the StartupChain smart contract
+- **One-click registration:** Deploy Safe → Register ENS to Safe → Record company data
 - Manage from a unified dashboard
 
-**Core Flow:** `ENS Check → Auth → Setup Wizard → Commit → Wait 60s → Register ENS → Create Company → Dashboard`
+**Core Flow:** `ENS Check → Auth → Setup Wizard → Commit → Wait 60s → Deploy Safe → Register ENS (to Safe) → Record Company → Dashboard`
 
 ---
 
