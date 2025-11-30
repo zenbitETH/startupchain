@@ -1,6 +1,6 @@
 # StartupChain System Flow
 
-> **Last Updated:** November 29, 2025
+> **Last Updated:** November 30, 2025
 > **Status:** Early Production
 > **Important:** Keep this diagram updated when making architectural changes.
 
@@ -14,7 +14,7 @@ StartupChain is an onchain company OS that allows founders to:
 - **One-click registration:** Deploy Safe → Register ENS to Safe → Record company data
 - Manage from a unified dashboard
 
-**Core Flow:** `ENS Check → Auth → Setup Wizard → Commit → Wait 60s → Deploy Safe → Register ENS (to Safe) → Record Company → Dashboard`
+**Core Flow:** `ENS Check → Auth → Setup Wizard → Prepay to Treasury → (Auto) Commit → Wait 60s → Deploy Safe → Register ENS (to Safe) → Record Company → Dashboard`
 
 ---
 
@@ -122,22 +122,13 @@ StartupChain is an onchain company OS that allows founders to:
 │                                                                                              │
 └─────────────────────────────────────────────────────────────────────────────────────────────┘
                │
-               │ User clicks "Create Business"
+               │ User clicks "Continue to Payment"
                ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│  4. ENS REGISTRATION FLOW (Two-Phase Commit)                                                 │
+│  4. PREPAYMENT & REGISTRATION FLOW                                                           │
 │  ═══════════════════════════════════════════════════════════════════════════════════════════│
 │                                                                                              │
-│    PHASE 1: COMMITMENT                                                                       │
-│    ──────────────────────────────────────────────────────────────────────────────────────   │
-│                                                                                              │
-│    ┌────────────────────────────────────┐                                                   │
-│    │  commitEnsRegistrationAction()     │                                                   │
-│    │                                    │                                                   │
-│    │  1. Normalize ENS name             │                                                   │
-│    │  2. Validate founders & threshold  │                                                   │
-│    │  3. Check ENS availability         │                                                   │
-│    PHASE 1: COMMITMENT (User Pays)                                                           │
+│    STEP 1: COST CALCULATION & PREPAYMENT                                                     │
 │    ──────────────────────────────────────────────────────────────────────────────────────   │
 │                                                                                              │
 │    ┌────────────────────────────────────┐                                                   │
@@ -145,46 +136,60 @@ StartupChain is an onchain company OS that allows founders to:
 │    │                                    │                                                   │
 │    │  1. calculateCosts() - show to user│                                                   │
 │    │     • ENS registration cost        │                                                   │
+│    │     • Safe deployment gas          │                                                   │
 │    │     • Service fee (25%)            │                                                   │
-│    │     • Estimated gas                │                                                   │
-│    │  2. User approves total cost       │                                                   │
-│    │  3. startRegistration()            │                                                   │
-│    │     • Check ENS availability       │                                                   │
-│    │     • Generate random secret       │                                                   │
-│    │     • Call ENS commitName()   ─────│──────▶  ETH Mainnet/Sepolia (USER PAYS GAS)       │
-│    │     • Store state in hook          │                                                   │
-│    │     • status: "waiting"            │                                                   │
+│    │  2. initializeRegistration()       │                                                   │
+│    │     • Validate founders & threshold│                                                   │
+│    │     • status: "awaiting-payment"   │                                                   │
+│    │  3. sendPayment()                  │                                                   │
+│    │     • User sends ETH to treasury   │──────▶  Treasury Address (STARTUPCHAIN_SIGNER)    │
+│    │     • status: "payment-pending"    │                                                   │
+│    │     • Wait for tx confirmation     │                                                   │
+│    │     • status: "payment-confirmed"  │                                                   │
 │    └────────────────────────────────────┘                                                   │
 │                      │                                                                       │
 │                      ▼                                                                       │
-│    SetupWizard shows RegistrationProgress component with countdown timer.                   │
-│                      │                                                                       │
-│                      ▼ (after 60s)                                                           │
 │                                                                                              │
-│    PHASE 2: REGISTRATION + COMPANY CREATION (User Pays All)                                  │
+│    STEP 2: AUTOMATED REGISTRATION (Server Wallet Pays)                                       │
 │    ──────────────────────────────────────────────────────────────────────────────────────   │
 │                                                                                              │
 │    ┌────────────────────────────────────┐                                                   │
-│    │ completeRegistration()             │  (Client-Side)                                    │
+│    │  commitEnsRegistrationAction()     │  (Server Action)                                  │
+│    │  ─────────────────────────────     │                                                   │
+│    │  • Predict Safe address            │                                                   │
+│    │  • Generate secret                 │                                                   │
+│    │  • Call ENS commitName()      ─────│──────▶  ETH Mainnet/Sepolia                       │
+│    │  • SERVER WALLET PAYS GAS          │         (ENS Controller)                          │
+│    │  • status: "committing" → "waiting"│                                                   │
+│    └────────────────────────────────────┘                                                   │
+│                      │                                                                       │
+│                      ▼ (60 second wait - automated)                                          │
+│                                                                                              │
+│    ┌────────────────────────────────────┐                                                   │
+│    │  finalizeEnsRegistrationAction()   │  (Server Action)                                  │
 │    │                                    │                                                   │
-│    │  Step A: ENS Registration          │                                                   │
+│    │  Step A: Safe Deployment           │                                                   │
+│    │  ─────────────────────────────     │                                                   │
+│    │  • status: "deploying-safe"        │                                                   │
+│    │  • Deploy Safe multisig       ─────│──────▶  Safe Factory Contract                     │
+│    │  • SERVER WALLET PAYS GAS          │                                                   │
+│    │                                    │                                                   │
+│    │  Step B: ENS Registration          │                                                   │
 │    │  ─────────────────────────────     │                                                   │
 │    │  • status: "registering-ens"       │                                                   │
 │    │  • Call ENS registerName()    ─────│──────▶  ETH Mainnet/Sepolia                       │
-│    │  • USER PAYS: ENS cost + gas       │         (ENS Controller)                          │
-│    │  • Wait for tx receipt             │                                                   │
+│    │  • SERVER WALLET PAYS ENS + GAS    │         (ENS Controller)                          │
 │    │                                    │                                                   │
-│    │  Step B: Company Creation          │                                                   │
+│    │  Step C: Company Recording         │                                                   │
 │    │  ─────────────────────────────     │                                                   │
 │    │  • status: "registering-company"   │                                                   │
-│    │  • Call registerCompany() ─────────│──────▶  StartupChain Contract                     │
-│    │    args: [label, owner,            │         (Sepolia/Mainnet)                         │
+│    │  • Call recordCompany()       ─────│──────▶  StartupChain Contract                     │
+│    │    args: [label, safeAddress,      │         (Sepolia/Mainnet)                         │
 │    │           founders[], threshold]   │                                                   │
-│    │  • USER PAYS: Service fee (25%)    │         → Fee goes to feeRecipient                │
-│    │  • Wait for tx receipt             │                                                   │
+│    │  • SERVICE FEE sent to contract    │         → Fee goes to feeRecipient                │
 │    │                                    │                                                   │
-│    │  3. status: "completed" or "failed"│                                                   │
-│    │  4. Redirect to /dashboard/ens     │                                                   │
+│    │  • status: "completed" or "failed" │                                                   │
+│    │  • Redirect to /dashboard/ens      │                                                   │
 │    └────────────────────────────────────┘                                                   │
 │                      │                                                                       │
 │                      ▼                                                                       │
@@ -192,7 +197,7 @@ StartupChain is an onchain company OS that allows founders to:
 │                                                                                              │
 └─────────────────────────────────────────────────────────────────────────────────────────────┘
                │
-               │ User clicks "Continue to Dashboard"
+               │ Registration complete - redirect to Dashboard
                ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
 │  5. DASHBOARD (Protected Routes)                                                             │
@@ -299,14 +304,16 @@ StartupChain is an onchain company OS that allows founders to:
 ### State Management
 
 
-| Layer  | Mechanism                              | Purpose                            |
-| -------- | ---------------------------------------- | ------------------------------------ |
-| Server | Cookies (`pending-ens`, `privy-token`) | Session & registration state       |
-| Server | `getServerSession()`                   | Auth verification                  |
-| Client | `useDraftStore`                        | Setup wizard form state            |
-| Client | `useWalletAuth` context                | Auth state & methods               |
-| Client | `useCompanyRegistration`               | Full registration flow (user pays) |
-| Client | React Query                            | Async data fetching                |
+| Layer  | Mechanism                              | Purpose                                  |
+| -------- | ---------------------------------------- | ------------------------------------------ |
+| Server | Cookies (`pending-ens`, `privy-token`) | Session & registration state             |
+| Server | `getServerSession()`                   | Auth verification                        |
+| Server | `TREASURY_ADDRESS`                     | Address for receiving user prepayments   |
+| Client | `useDraftStore`                        | Setup wizard form state                  |
+| Client | `useWalletAuth` context                | Auth state & methods                     |
+| Client | `useCompanyRegistration`               | Full registration flow (prepayment mode) |
+| Client | `useSendTransaction`                   | User payment to treasury                 |
+| Client | React Query                            | Async data fetching                      |
 
 ---
 
@@ -325,31 +332,40 @@ StartupChain is an onchain company OS that allows founders to:
 ## Key Files Reference
 
 
-| File                                                        | Purpose                                                   |
-| ------------------------------------------------------------- | ----------------------------------------------------------- |
-| `src/app/(public)/page.tsx`                                 | Landing page with ENS checker                             |
-| `src/components/ens-name-checker/EnsNameChecker.tsx`        | ENS availability checking UI                              |
-| `src/app/(app)/dashboard/setup/page.tsx`                    | Company setup wizard page                                 |
-| `src/app/(app)/dashboard/setup/components/setup-wizard.tsx` | Setup wizard with cost breakdown                          |
-| `src/hooks/use-company-registration.ts`                     | Client-side registration hook (user pays)                 |
-| `src/app/(app)/dashboard/setup/actions.ts`                  | Server actions for ENS/company validation                 |
-| `src/lib/auth/pending-registration.ts`                      | Cookie-based registration state                           |
-| `src/lib/auth/server-session.ts`                            | Server-side auth verification                             |
-| `src/components/providers/providers-shell.tsx`              | Client providers wrapper                                  |
-| `src/lib/blockchain/startupchain-config.ts`                 | Chain & contract configuration                            |
+| File                                                        | Purpose                                               |
+| ------------------------------------------------------------- | ------------------------------------------------------- |
+| `src/app/(public)/page.tsx`                                 | Landing page with ENS checker                         |
+| `src/components/ens-name-checker/EnsNameChecker.tsx`        | ENS availability checking UI                          |
+| `src/app/(app)/dashboard/setup/page.tsx`                    | Company setup wizard page                             |
+| `src/app/(app)/dashboard/setup/components/setup-wizard.tsx` | Setup wizard with payment step                        |
+| `src/hooks/use-company-registration.ts`                     | Client-side registration hook (prepayment flow)       |
+| `src/app/(app)/dashboard/setup/actions.ts`                  | Server actions for ENS/company + payment verification |
+| `src/lib/blockchain/startupchain-client.ts`                 | Server wallet & TREASURY_ADDRESS export               |
+| `src/lib/auth/pending-registration.ts`                      | Cookie-based registration state                       |
+| `src/lib/auth/server-session.ts`                            | Server-side auth verification                         |
+| `src/components/providers/providers-shell.tsx`              | Client providers wrapper                              |
+| `src/lib/blockchain/startupchain-config.ts`                 | Chain & contract configuration                        |
 | `src/lib/blockchain/get-company.ts`                         | Contract read functions (incl. getCompanyByFounderWallet) |
 
 ---
 
 ## Payment Model
 
-**User pays for everything with a 25% service fee:**
+**Prepayment model: User sends ETH to StartupChain treasury upfront, then server executes all transactions.**
 
 
-| Cost Component                         | Paid By | Recipient                     |
-| ---------------------------------------- | --------- | ------------------------------- |
-| ENS Registration (1 year)              | User    | ENS Protocol                  |
-| Service Fee (25% of ENS cost)          | User    | StartupChain (`feeRecipient`) |
-| Gas fees (commit + register + company) | User    | Network                       |
+| Cost Component                | Paid By      | Recipient                     |
+| ------------------------------- | -------------- | ------------------------------- |
+| ENS Registration (1 year)     | Server (from treasury) | ENS Protocol          |
+| Safe Deployment Gas           | Server (from treasury) | Network               |
+| Service Fee (25% of ENS cost) | Server (from treasury) | StartupChain (`feeRecipient`) |
+| Gas fees (commit + register)  | Server (from treasury) | Network               |
+| **User Prepayment**           | User         | StartupChain Treasury         |
 
-The `useCompanyRegistration` hook calculates and displays costs before user confirms. Service fee is collected by the StartupChain contract when `registerCompany()` is called with `msg.value`.
+**Flow:**
+1. `useCompanyRegistration` calculates total costs (ENS + Safe gas + service fee + buffer)
+2. User sends prepayment to `TREASURY_ADDRESS` via wagmi `useSendTransaction`
+3. Payment confirmed → server actions execute all blockchain transactions
+4. Server wallet (`STARTUPCHAIN_SIGNER_KEY`) pays for everything from treasury funds
+
+The `TREASURY_ADDRESS` is the same as the server signer address for simplicity.
