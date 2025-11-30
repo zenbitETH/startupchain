@@ -60,7 +60,10 @@ const ensPublicClient = createPublicClient({
   transport: http(resolveRpcUrl()),
 })
 
+const LOG_PREFIX = '[SERVER:actions]'
+
 export async function checkEnsAvailabilityAction(name: string) {
+  console.log(LOG_PREFIX, 'checkEnsAvailabilityAction called', { name })
   if (!isValidEnsName(name)) {
     return { name, available: false, address: null as string | null }
   }
@@ -78,6 +81,7 @@ export async function checkEnsAvailabilityAction(name: string) {
 }
 
 export async function getEnsRegistrationCostAction(name: string, durationYears = 1, founderCount = 1) {
+  console.log(LOG_PREFIX, 'getEnsRegistrationCostAction called', { name, durationYears, founderCount })
   if (!isValidEnsName(name)) {
     throw new Error("Invalid ENS name")
   }
@@ -232,14 +236,19 @@ export async function commitEnsRegistrationAction({
   threshold,
   durationYears = 1,
   reverseRecord = false,
+  paymentTxHash,
 }: {
   ensName: string
   founders: BackendFounderInput[]
   threshold: number
   durationYears?: number
   reverseRecord?: boolean
+  paymentTxHash?: string
 }) {
+  console.log(LOG_PREFIX, '=== commitEnsRegistrationAction START ===')
+  console.log(LOG_PREFIX, 'Input:', { ensName, founders, threshold, durationYears, paymentTxHash })
   const { label, fullName } = normalizeEnsInput(ensName)
+  console.log(LOG_PREFIX, 'Normalized:', { label, fullName })
   const founderStructs = toFounderStructs(founders)
   validateThreshold(threshold, founderStructs.length)
 
@@ -247,13 +256,16 @@ export async function commitEnsRegistrationAction({
   const founderAddresses = founderStructs.map((f) => f.wallet)
 
   // Predict Safe address before deployment
+  console.log(LOG_PREFIX, 'Predicting Safe address for founders:', founderAddresses)
   const predictedSafeAddress = await predictSafeAddress({
     owners: founderAddresses,
     chainId: STARTUPCHAIN_CHAIN_ID,
     threshold,
   })
+  console.log(LOG_PREFIX, 'Predicted Safe address:', predictedSafeAddress)
 
   const existingOwner = await getEnsOwnerAction(label)
+  console.log(LOG_PREFIX, 'Existing ENS owner:', existingOwner)
   const isAlreadyOwner =
     existingOwner.owner &&
     existingOwner.owner !== ZERO_ADDRESS &&
@@ -275,6 +287,7 @@ export async function commitEnsRegistrationAction({
   let readyAt = startedAt
 
   if (!isAlreadyOwner) {
+    console.log(LOG_PREFIX, 'ENS not owned by Safe, proceeding with commitment')
     const registrationParams = {
       name: fullName,
       owner: predictedSafeAddress, // ENS will be registered to Safe address
@@ -297,6 +310,7 @@ export async function commitEnsRegistrationAction({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const txValue = (commitTxData as any).value
 
+    console.log(LOG_PREFIX, 'Sending commit transaction...')
     commitTxHash = await startupChainWalletClient.sendTransaction({
       to: commitTxData.to as Address,
       data: commitTxData.data as `0x${string}`,
@@ -304,12 +318,17 @@ export async function commitEnsRegistrationAction({
       account: startupChainAccount,
       chain: startupChainChain,
     })
+    console.log(LOG_PREFIX, 'Commit tx hash:', commitTxHash)
 
+    console.log(LOG_PREFIX, 'Waiting for commit tx receipt...')
     await startupChainPublicClient.waitForTransactionReceipt({
       hash: commitTxHash,
     })
+    console.log(LOG_PREFIX, 'Commit tx confirmed!')
 
     readyAt = Date.now() + 61_000
+  } else {
+    console.log(LOG_PREFIX, 'ENS already owned by Safe, skipping commitment')
   }
 
   const record: PendingRecord = {
@@ -329,8 +348,9 @@ export async function commitEnsRegistrationAction({
   }
 
   await setPendingRegistration(record)
+  console.log(LOG_PREFIX, 'Pending registration saved')
 
-  return {
+  const result = {
     ensName: record.ensName,
     owner: predictedSafeAddress,
     safeAddress: predictedSafeAddress,
@@ -338,12 +358,19 @@ export async function commitEnsRegistrationAction({
     readyAt,
     status: record.status,
   }
+  console.log(LOG_PREFIX, '=== commitEnsRegistrationAction COMPLETE ===', result)
+  return result
 }
 
 export async function finalizeEnsRegistrationAction({ ensName }: { ensName: string }) {
+  console.log(LOG_PREFIX, '=== finalizeEnsRegistrationAction START ===')
+  console.log(LOG_PREFIX, 'Input ensName:', ensName)
   const { label, fullName } = normalizeEnsInput(ensName)
+  console.log(LOG_PREFIX, 'Normalized:', { label, fullName })
   const pending = await getPendingRegistration()
+  console.log(LOG_PREFIX, 'Pending registration:', pending)
   if (!pending || pending.ensLabel !== label) {
+    console.log(LOG_PREFIX, 'ERROR: No pending registration found')
     throw new Error("No pending ENS registration found")
   }
 
@@ -419,11 +446,14 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
 
   try {
     // STEP 1: Deploy Safe (if not already deployed)
+    console.log(LOG_PREFIX, 'STEP 1: Checking Safe deployment at:', deployedSafeAddress)
     // Check if Safe is already deployed by checking code at address
     const safeCode = await startupChainPublicClient.getCode({ address: deployedSafeAddress })
     const isSafeDeployed = safeCode && safeCode !== "0x"
+    console.log(LOG_PREFIX, 'Safe deployed?', isSafeDeployed)
 
     if (!isSafeDeployed && !safeDeploymentTxHash) {
+      console.log(LOG_PREFIX, 'Deploying Safe...')
       await updatePendingRegistration({ status: "deploying-safe", error: undefined })
 
       // Deploy Safe using Safe SDK
@@ -437,6 +467,7 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
         publicClient: startupChainPublicClient,
         threshold: pending.threshold,
       })
+      console.log(LOG_PREFIX, 'Safe deployed!', safeResult)
 
       deployedSafeAddress = safeResult.safeAddress
       safeDeploymentTxHash = safeResult.deploymentTxHash as `0x${string}`
@@ -448,12 +479,16 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
     }
 
     // STEP 2: Register ENS to Safe address
+    console.log(LOG_PREFIX, 'STEP 2: Registering ENS to Safe')
     const currentOwner = await getEnsOwnerAction(label)
+    console.log(LOG_PREFIX, 'Current ENS owner:', currentOwner)
     const isAlreadyOwner =
       currentOwner.owner &&
       currentOwner.owner.toLowerCase() === deployedSafeAddress.toLowerCase()
+    console.log(LOG_PREFIX, 'Already owner?', isAlreadyOwner)
 
     if (!isAlreadyOwner) {
+      console.log(LOG_PREFIX, 'Registering ENS name...')
       await updatePendingRegistration({ status: "registering", error: undefined })
 
       const registrationParams = {
@@ -478,6 +513,7 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
         }
       )
 
+      console.log(LOG_PREFIX, 'Sending ENS registration tx with value:', registrationCostWei.toString())
       registrationTxHash = await startupChainWalletClient.sendTransaction({
         to: registerTxData.to as Address,
         data: registerTxData.data as `0x${string}`,
@@ -485,19 +521,23 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
         account: startupChainAccount,
         chain: startupChainChain,
       })
+      console.log(LOG_PREFIX, 'ENS registration tx hash:', registrationTxHash)
 
       await updatePendingRegistration({
         registrationTxHash,
       })
 
+      console.log(LOG_PREFIX, 'Waiting for ENS registration receipt...')
       await startupChainPublicClient.waitForTransactionReceipt({
         hash: registrationTxHash,
       })
+      console.log(LOG_PREFIX, 'ENS registration confirmed!')
     } else if (!registrationTxHash) {
       registrationTxHash = pending.commitTxHash
     }
 
     // STEP 3: Record company on StartupChain contract using recordCompany()
+    console.log(LOG_PREFIX, 'STEP 3: Recording company on StartupChain contract')
     await updatePendingRegistration({
       status: "creating",
       registrationTxHash,
@@ -505,6 +545,13 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
       error: undefined,
     })
 
+    console.log(LOG_PREFIX, 'Calling recordCompany with:', {
+      label,
+      safeAddress: deployedSafeAddress,
+      foundersCount: pending.founders.length,
+      threshold: pending.threshold,
+      serviceFee: serviceFee.toString(),
+    })
     // Use recordCompany instead of registerCompany (no ENS registration in contract)
     companyTxHash = await startupChainWalletClient.writeContract({
       address: contractAddress,
@@ -516,12 +563,16 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
       account: startupChainAccount,
     })
 
+    console.log(LOG_PREFIX, 'Company tx hash:', companyTxHash)
     await updatePendingRegistration({ companyTxHash })
 
+    console.log(LOG_PREFIX, 'Waiting for company tx receipt...')
     await startupChainPublicClient.waitForTransactionReceipt({
       hash: companyTxHash,
     })
+    console.log(LOG_PREFIX, 'Company registration confirmed!')
   } catch (err) {
+    console.log(LOG_PREFIX, 'ERROR in finalizeEnsRegistrationAction:', err)
     const message =
       err instanceof Error ? err.message : "Failed to finalize ENS registration"
 
