@@ -388,8 +388,8 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
 
       {/* Show registration progress when in progress */}
       {isRegistering && (
-        <RegistrationProgress 
-          step={step} 
+        <RegistrationProgress
+          step={step}
           countdown={countdown}
           paymentTxHash={paymentTxHash}
         />
