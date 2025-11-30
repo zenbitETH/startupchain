@@ -182,3 +182,41 @@ export async function getTotalCompanies(
     return 0
   }
 }
+
+/**
+ * Find a company where the given wallet is listed as a founder.
+ * This iterates through companies starting from the most recent.
+ * Returns the first company found where the wallet is a founder.
+ */
+export async function getCompanyByFounderWallet(
+  founderWallet: string,
+  chainId: number = STARTUPCHAIN_CHAIN_ID
+): Promise<Company | null> {
+  if (!founderWallet) return null
+
+  try {
+    const totalCompanies = await getTotalCompanies(chainId)
+    if (totalCompanies === 0) return null
+
+    const normalizedWallet = founderWallet.toLowerCase()
+
+    // Iterate from most recent company backwards (more likely to find recent registrations first)
+    for (let i = totalCompanies; i >= 1; i--) {
+      const company = await getCompanyById(BigInt(i), chainId)
+      if (!company) continue
+
+      // Check if the wallet is a founder in this company
+      const isFounder = company.founders.some(
+        (founder) => founder.wallet.toLowerCase() === normalizedWallet
+      )
+
+      if (isFounder) {
+        return company
+      }
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
