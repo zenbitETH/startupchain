@@ -11,6 +11,7 @@ import {
 } from '@/hooks/use-company-registration'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { calculateThreshold } from '@/lib/blockchain/safe-factory'
+import { STARTUPCHAIN_CHAIN_ID } from '@/lib/blockchain/startupchain-config'
 import { type Shareholder, useDraftStore } from '@/lib/store/draft'
 
 const LOG_PREFIX = '[UI:SetupWizard]'
@@ -49,7 +50,9 @@ function CostBreakdownCard({
       </h3>
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">ENS Registration (1 year)</span>
+          <span className="text-muted-foreground">
+            ENS Registration (1 year)
+          </span>
           <span className="font-mono">{costs.ensRegistrationCostEth} ETH</span>
         </div>
         <div className="flex items-center justify-between">
@@ -134,7 +137,7 @@ function RegistrationProgress({
         />
       </div>
       {step === 'payment-pending' && paymentTxHash && (
-        <p className="text-muted-foreground mt-3 text-xs font-mono">
+        <p className="text-muted-foreground mt-3 font-mono text-xs">
           Tx: {paymentTxHash.slice(0, 10)}...{paymentTxHash.slice(-8)}
         </p>
       )}
@@ -144,7 +147,12 @@ function RegistrationProgress({
 
 export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   const router = useRouter()
-  const { connect, authenticated, user } = useWalletAuth()
+  const {
+    connect,
+    authenticated,
+    user,
+    chainId: walletChainId,
+  } = useWalletAuth()
   const {
     step,
     countdown,
@@ -166,8 +174,14 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   const [isLoadingCosts, setIsLoadingCosts] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
 
+  // Use wallet chain or fall back to default
+  const chainId = walletChainId ?? STARTUPCHAIN_CHAIN_ID
+
   const draft = useDraftStore((state) => state.draft)
   const initializeDraft = useDraftStore((state) => state.initializeDraft)
+  const clearDraftIfChainMismatch = useDraftStore(
+    (state) => state.clearDraftIfChainMismatch
+  )
   const addShareholder = useDraftStore((state) => state.addShareholder)
   const removeShareholder = useDraftStore((state) => state.removeShareholder)
   const updateShareholder = useDraftStore((state) => state.updateShareholder)
@@ -177,12 +191,17 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     (state) => state.setRegisterToDifferentAddress
   )
 
+  // Clear draft if chain changed
+  useEffect(() => {
+    clearDraftIfChainMismatch(chainId)
+  }, [chainId, clearDraftIfChainMismatch])
+
   // Initialize draft
   useEffect(() => {
     if (!draft) {
-      initializeDraft(initialEnsName)
+      initializeDraft(initialEnsName, chainId)
     }
-  }, [draft, initialEnsName, initializeDraft])
+  }, [draft, initialEnsName, initializeDraft, chainId])
 
   // Auto-populate founder with user's wallet
   useEffect(() => {
@@ -213,12 +232,21 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
       .finally(() => {
         setIsLoadingCosts(false)
       })
-  }, [draft, authenticated, initialEnsName, calculateCosts, draft?.shareholders.length])
+  }, [
+    draft,
+    authenticated,
+    initialEnsName,
+    calculateCosts,
+    draft?.shareholders.length,
+  ])
 
   // Auto-complete registration when commitment window is ready
   useEffect(() => {
     if (canComplete && step === 'waiting') {
-      console.log(LOG_PREFIX, 'canComplete=true, step=waiting -> calling completeRegistration')
+      console.log(
+        LOG_PREFIX,
+        'canComplete=true, step=waiting -> calling completeRegistration'
+      )
       completeRegistration()
         .then((result) => {
           console.log(LOG_PREFIX, 'completeRegistration success:', result)
@@ -318,9 +346,11 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     sendPayment()
   }
 
-  const isRegistering = step !== 'idle' && step !== 'failed' && step !== 'completed'
+  const isRegistering =
+    step !== 'idle' && step !== 'failed' && step !== 'completed'
   const isAwaitingPayment = step === 'awaiting-payment'
-  const isPaymentInProgress = step === 'payment-pending' || isSendingPayment || isConfirmingPayment
+  const isPaymentInProgress =
+    step === 'payment-pending' || isSendingPayment || isConfirmingPayment
   const error = registrationError || localError
 
   const disableCreateButton =
@@ -397,14 +427,15 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
 
       {/* Payment step - show when awaiting payment */}
       {isAwaitingPayment && costBreakdown && (
-        <div className="border-primary/20 bg-primary/5 rounded-2xl border p-6 space-y-4">
+        <div className="border-primary/20 bg-primary/5 space-y-4 rounded-2xl border p-6">
           <h3 className="text-lg font-semibold">Confirm Payment</h3>
           <p className="text-muted-foreground text-sm">
-            Send {costBreakdown.totalEth} ETH to the StartupChain treasury to begin registration.
-            This covers ENS registration, Safe deployment, and service fees.
+            Send {costBreakdown.totalEth} ETH to the StartupChain treasury to
+            begin registration. This covers ENS registration, Safe deployment,
+            and service fees.
           </p>
           {treasuryAddress && (
-            <p className="text-muted-foreground text-xs font-mono">
+            <p className="text-muted-foreground font-mono text-xs">
               Treasury: {treasuryAddress}
             </p>
           )}
@@ -417,7 +448,9 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
             {isPaymentInProgress ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                {isSendingPayment ? 'Confirm in wallet...' : 'Confirming payment...'}
+                {isSendingPayment
+                  ? 'Confirm in wallet...'
+                  : 'Confirming payment...'}
               </span>
             ) : (
               `Pay ${costBreakdown.totalEth} ETH`
@@ -497,7 +530,9 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
           <div className="border-border bg-card rounded-2xl border p-6">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-xl font-semibold">
-                {draft.isMultipleFounders ? 'Founders & Equity' : 'Your Details'}
+                {draft.isMultipleFounders
+                  ? 'Founders & Equity'
+                  : 'Your Details'}
               </h3>
               {draft.isMultipleFounders && (
                 <div
@@ -560,15 +595,16 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
                       </div>
                     )}
 
-                    {draft.isMultipleFounders && draft.shareholders.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFounder(founder.id)}
-                        className="text-muted-foreground hover:text-destructive rounded-2xl p-2 transition-colors"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
-                    )}
+                    {draft.isMultipleFounders &&
+                      draft.shareholders.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFounder(founder.id)}
+                          className="text-muted-foreground hover:text-destructive rounded-2xl p-2 transition-colors"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      )}
                   </div>
                 </div>
               ))}
@@ -596,7 +632,10 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
 
           {/* Cost breakdown - only show when authenticated */}
           {authenticated && (
-            <CostBreakdownCard costs={costBreakdown} isLoading={isLoadingCosts} />
+            <CostBreakdownCard
+              costs={costBreakdown}
+              isLoading={isLoadingCosts}
+            />
           )}
         </>
       )}
