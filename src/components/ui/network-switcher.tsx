@@ -2,7 +2,8 @@
 
 import { useWallets } from '@privy-io/react-auth'
 import { ChevronDown, Globe2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -25,10 +26,23 @@ export function NetworkSwitcher() {
   const { chainId } = useWalletAuth()
   const { wallets } = useWallets()
   const [mounted, setMounted] = useState(false)
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Create URL with updated chain param
+  const createChainUrl = useCallback(
+    (newChainId: number) => {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('chain', String(newChainId))
+      return `${pathname}?${params.toString()}`
+    },
+    [pathname, searchParams]
+  )
 
   if (!mounted) {
     return (
@@ -47,7 +61,11 @@ export function NetworkSwitcher() {
     if (!wallet) return
 
     try {
+      // Switch wallet chain
       await wallet.switchChain(targetChainId)
+
+      // Update URL with new chain ID to trigger server-side data refresh
+      router.push(createChainUrl(targetChainId))
     } catch (error) {
       console.error('Failed to switch network:', error)
     }
