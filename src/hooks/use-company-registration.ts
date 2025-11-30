@@ -1,18 +1,25 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { isAddress } from 'viem'
+import { formatEther, isAddress, parseEther } from 'viem'
+import { useSendTransaction, useWaitForTransactionReceipt } from 'wagmi'
 
 import {
+  checkPaymentStatusAction,
   commitEnsRegistrationAction,
   finalizeEnsRegistrationAction,
   getEnsRegistrationCostAction,
+  getTreasuryAddressAction,
   type EnsRegistrationRecord,
 } from '@/app/(app)/dashboard/setup/actions'
+
+const LOG_PREFIX = '[CLIENT:useCompanyRegistration]'
 
 type RegistrationStep =
   | 'idle'
   | 'checking'
+  | 'awaiting-payment'
+  | 'payment-pending'
   | 'committing'
   | 'waiting'
   | 'deploying-safe'
@@ -32,11 +39,7 @@ export type CostBreakdown = {
   safeDeploymentCostEth: string
   serviceFeeEth: string
   totalEth: string
-}
-
-function formatEth(wei: bigint) {
-  const asNumber = Number(formatEther(wei))
-  return asNumber.toFixed(asNumber >= 1 ? 4 : 6)
+  totalWei: string
 }
 
 function toFounderPayload(founders: FounderInput[]) {
@@ -53,11 +56,54 @@ export function useCompanyRegistration() {
   const [costBreakdown, setCostBreakdown] = useState<CostBreakdown | null>(null)
   const [canComplete, setCanComplete] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [treasuryAddress, setTreasuryAddress] = useState<string | null>(null)
+  const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null)
 
   const ensNameRef = useRef<string | null>(null)
   const readyAtRef = useRef<number | null>(null)
   const safeAddressRef = useRef<string | undefined>(undefined)
+  const foundersRef = useRef<FounderInput[]>([])
+  const thresholdRef = useRef<number>(1)
+  const durationYearsRef = useRef<number>(1)
 
+  // Wagmi hooks for payment
+  const { sendTransaction, data: txHash, isPending: isSending, error: sendError } = useSendTransaction()
+  const { isLoading: isConfirming, isSuccess: isConfirmed, error: confirmError } = useWaitForTransactionReceipt({
+    hash: txHash,
+  })
+
+  // Handle payment tx hash from wagmi
+  useEffect(() => {
+    if (txHash && step === 'awaiting-payment') {
+      console.log(LOG_PREFIX, 'Payment tx hash received:', txHash)
+      setPaymentTxHash(txHash)
+      setStep('payment-pending')
+    }
+  }, [txHash, step])
+
+  // Handle payment confirmation - auto-proceed to commit
+  useEffect(() => {
+    if (isConfirmed && step === 'payment-pending' && ensNameRef.current) {
+      console.log(LOG_PREFIX, 'Payment confirmed! Proceeding to commit...')
+      proceedAfterPayment()
+    }
+  }, [isConfirmed, step])
+
+  // Handle payment errors
+  useEffect(() => {
+    if (sendError && step === 'awaiting-payment') {
+      console.log(LOG_PREFIX, 'Payment send error:', sendError)
+      setError(sendError.message || 'Failed to send payment')
+      setStep('failed')
+    }
+    if (confirmError && step === 'payment-pending') {
+      console.log(LOG_PREFIX, 'Payment confirm error:', confirmError)
+      setError(confirmError.message || 'Payment transaction failed')
+      setStep('failed')
+    }
+  }, [sendError, confirmError, step])
+
+  // Countdown timer for waiting step
   useEffect(() => {
     if (step !== 'waiting' || !readyAtRef.current) {
       return undefined
@@ -80,17 +126,20 @@ export function useCompanyRegistration() {
 
   const calculateCosts = useCallback(
     async (ensName: string, durationYears = 1, founderCount = 1) => {
+      console.log(LOG_PREFIX, 'calculateCosts called', { ensName, durationYears, founderCount })
       if (!ensName) return null
 
       const years = Math.max(1, durationYears)
       const founders = Math.max(1, founderCount)
       const result = await getEnsRegistrationCostAction(ensName, years, founders)
+      console.log(LOG_PREFIX, 'Cost result:', result)
 
       const breakdown: CostBreakdown = {
         ensRegistrationCostEth: result.costEth,
         safeDeploymentCostEth: result.safeGasEth,
         serviceFeeEth: result.serviceFeeEth,
         totalEth: result.totalEth,
+        totalWei: result.totalWei,
       }
 
       setCostBreakdown(breakdown)
@@ -99,7 +148,8 @@ export function useCompanyRegistration() {
     []
   )
 
-  const startRegistration = useCallback(
+  // Step 1: Initialize and validate - sets up for payment
+  const initializeRegistration = useCallback(
     async ({
       ensName,
       founders,
@@ -111,6 +161,8 @@ export function useCompanyRegistration() {
       threshold: number
       durationYears?: number
     }) => {
+      console.log(LOG_PREFIX, '=== initializeRegistration START ===')
+      console.log(LOG_PREFIX, 'Input:', { ensName, founders, threshold, durationYears })
       setError(null)
       setStep('checking')
 
@@ -138,40 +190,51 @@ export function useCompanyRegistration() {
         throw new Error(message)
       }
 
-      setStep('committing')
+      // Store registration details for after payment
+      ensNameRef.current = ensName
+      foundersRef.current = founders
+      thresholdRef.current = threshold
+      durationYearsRef.current = durationYears
 
-      try {
-        ensNameRef.current = ensName
+      // Get treasury address
+      const treasury = await getTreasuryAddressAction()
+      console.log(LOG_PREFIX, 'Treasury address:', treasury.address)
+      setTreasuryAddress(treasury.address)
 
-        // Server predicts Safe address from founders - no need to pass safeAddress
-        const result = await commitEnsRegistrationAction({
-          ensName,
-          founders: toFounderPayload(founders),
-          threshold,
-          durationYears,
-        })
-
-        // Store the predicted Safe address as owner
-        safeAddressRef.current = result.safeAddress
-
-        readyAtRef.current = result.readyAt
-        setCountdown(Math.max(0, Math.ceil((result.readyAt - Date.now()) / 1000)))
-        setCanComplete(false)
-        setStep(result.status === 'waiting' ? 'waiting' : 'committing')
-
-        return result
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to start registration'
-        setError(message)
-        setStep('failed')
-        throw err
+      // Calculate costs if not already done
+      if (!costBreakdown) {
+        await calculateCosts(ensName, durationYears, founders.length)
       }
+
+      setStep('awaiting-payment')
+      console.log(LOG_PREFIX, '=== initializeRegistration COMPLETE - awaiting payment ===')
+
+      return { treasuryAddress: treasury.address }
     },
-    []
+    [costBreakdown, calculateCosts]
   )
 
-  const completeRegistration = useCallback(async () => {
+  // Step 2: Send payment to treasury
+  const sendPayment = useCallback(() => {
+    console.log(LOG_PREFIX, '=== sendPayment START ===')
+    if (!treasuryAddress || !costBreakdown) {
+      const message = 'Must initialize registration first'
+      setError(message)
+      throw new Error(message)
+    }
+
+    console.log(LOG_PREFIX, 'Sending', costBreakdown.totalEth, 'ETH to', treasuryAddress)
+
+    sendTransaction({
+      to: treasuryAddress as `0x${string}`,
+      value: BigInt(costBreakdown.totalWei),
+    })
+  }, [treasuryAddress, costBreakdown, sendTransaction])
+
+  // Step 3: After payment confirmed, proceed with registration
+  const proceedAfterPayment = useCallback(async () => {
+    console.log(LOG_PREFIX, '=== proceedAfterPayment START ===')
+    
     if (!ensNameRef.current) {
       const message = 'No pending registration found'
       setError(message)
@@ -179,33 +242,82 @@ export function useCompanyRegistration() {
       throw new Error(message)
     }
 
+    setStep('committing')
+    console.log(LOG_PREFIX, 'Calling commitEnsRegistrationAction...')
+
+    try {
+      const result = await commitEnsRegistrationAction({
+        ensName: ensNameRef.current,
+        founders: toFounderPayload(foundersRef.current),
+        threshold: thresholdRef.current,
+        durationYears: durationYearsRef.current,
+        paymentTxHash: paymentTxHash || undefined,
+      })
+      console.log(LOG_PREFIX, 'commitEnsRegistrationAction result:', result)
+
+      safeAddressRef.current = result.safeAddress
+      readyAtRef.current = result.readyAt
+      setCountdown(Math.max(0, Math.ceil((result.readyAt - Date.now()) / 1000)))
+      setCanComplete(false)
+      setStep(result.status === 'waiting' ? 'waiting' : 'committing')
+      console.log(LOG_PREFIX, '=== proceedAfterPayment COMPLETE ===')
+
+      return result
+    } catch (err) {
+      console.log(LOG_PREFIX, 'ERROR in proceedAfterPayment:', err)
+      const message =
+        err instanceof Error ? err.message : 'Failed to start registration'
+      setError(message)
+      setStep('failed')
+      throw err
+    }
+  }, [paymentTxHash])
+
+  const completeRegistration = useCallback(async () => {
+    console.log(LOG_PREFIX, '=== completeRegistration START ===')
+    console.log(LOG_PREFIX, 'ensNameRef.current:', ensNameRef.current)
+    if (!ensNameRef.current) {
+      const message = 'No pending registration found'
+      console.log(LOG_PREFIX, 'ERROR:', message)
+      setError(message)
+      setStep('failed')
+      throw new Error(message)
+    }
+
     setError(null)
     setStep('deploying-safe')
+    console.log(LOG_PREFIX, 'Calling finalizeEnsRegistrationAction...')
 
     try {
       const result: EnsRegistrationRecord = await finalizeEnsRegistrationAction({
         ensName: ensNameRef.current,
       })
+      console.log(LOG_PREFIX, 'finalizeEnsRegistrationAction result:', result)
 
       // Update step based on status
       if (result.status === 'deploying-safe') {
+        console.log(LOG_PREFIX, 'Status: deploying-safe')
         setStep('deploying-safe')
       } else if (result.status === 'registering') {
+        console.log(LOG_PREFIX, 'Status: registering-ens')
         setStep('registering-ens')
       } else if (result.status === 'creating') {
+        console.log(LOG_PREFIX, 'Status: registering-company')
         setStep('registering-company')
       } else if (result.status === 'completed') {
+        console.log(LOG_PREFIX, 'Status: completed!')
         setStep('completed')
         setCanComplete(false)
         setCountdown(null)
-        // Update owner address with actual Safe address
         if (result.safeAddress) {
           safeAddressRef.current = result.safeAddress
         }
       }
+      console.log(LOG_PREFIX, '=== completeRegistration COMPLETE ===')
 
       return result
     } catch (err) {
+      console.log(LOG_PREFIX, 'ERROR in completeRegistration:', err)
       const message =
         err instanceof Error ? err.message : 'Failed to finalize registration'
       setError(message)
@@ -215,27 +327,42 @@ export function useCompanyRegistration() {
   }, [])
 
   const reset = useCallback(() => {
+    console.log(LOG_PREFIX, 'reset called')
     ensNameRef.current = null
     readyAtRef.current = null
     safeAddressRef.current = undefined
+    foundersRef.current = []
+    thresholdRef.current = 1
+    durationYearsRef.current = 1
     setStep('idle')
     setCountdown(null)
     setCanComplete(false)
     setCostBreakdown(null)
     setError(null)
+    setTreasuryAddress(null)
+    setPaymentTxHash(null)
   }, [])
 
   const safeAddress = useMemo(() => safeAddressRef.current, [step])
 
   return {
+    // State
     step,
     countdown,
     costBreakdown,
     canComplete,
     error,
     safeAddress,
+    treasuryAddress,
+    paymentTxHash,
+    // Payment state from wagmi
+    isSendingPayment: isSending,
+    isConfirmingPayment: isConfirming,
+    isPaymentConfirmed: isConfirmed,
+    // Actions
     calculateCosts,
-    startRegistration,
+    initializeRegistration,
+    sendPayment,
     completeRegistration,
     reset,
   }
