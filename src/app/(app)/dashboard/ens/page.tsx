@@ -11,6 +11,7 @@ import Link from 'next/link'
 
 import { DashboardHeader } from '@/app/(app)/dashboard/components/dashboard-header'
 import { RegistrationProgress } from '@/app/(app)/dashboard/components/registration-progress'
+import { getPendingRegistration } from '@/lib/auth/pending-registration'
 import { getServerSession } from '@/lib/auth/server-session'
 import {
   getCompanyByAddress,
@@ -19,7 +20,7 @@ import {
 } from '@/lib/blockchain/get-company'
 import { getCompanyEvents } from '@/lib/blockchain/get-company-events'
 import { STARTUPCHAIN_CHAIN_ID } from '@/lib/blockchain/startupchain-config'
-import { getPendingRegistration } from '@/lib/auth/pending-registration'
+
 import { finalizeEnsRegistrationAction } from '../setup/actions'
 
 const explorerBase =
@@ -55,7 +56,9 @@ export default async function EnsDashboardPage() {
     Date.now() >= pending.readyAt
   ) {
     try {
-      pending = await finalizeEnsRegistrationAction({ ensName: pending.ensName })
+      pending = await finalizeEnsRegistrationAction({
+        ensName: pending.ensName,
+      })
     } catch (err) {
       console.error('Auto-finalize ENS registration failed', err)
       // If it failed, keep pending state as-is for retry
@@ -67,9 +70,7 @@ export default async function EnsDashboardPage() {
   // 2. By pending registration's owner address (Safe address)
   // 3. By pending registration's ENS name
   // 4. By founder wallet address (searches all companies)
-  let company = walletAddress
-    ? await getCompanyByAddress(walletAddress)
-    : null
+  let company = walletAddress ? await getCompanyByAddress(walletAddress) : null
 
   // If not found by direct address, try by pending registration owner
   if (!company && pending?.owner) {
@@ -99,9 +100,6 @@ export default async function EnsDashboardPage() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 pt-6 pb-12 md:px-6">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-foreground text-3xl leading-tight font-bold">
-              ENS Company Names
-            </h1>
             <p className="text-muted-foreground mt-1 text-sm">
               View your registered company name, on-chain logs, and quick links
               to the explorer and ENS app.
@@ -225,6 +223,21 @@ export default async function EnsDashboardPage() {
                   <span>{formatDate(latestEvent.createdAt)}</span>
                 </div>
               </div>
+            ) : pending?.status === 'completed' ? (
+              <div className="mt-4 space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">ENS</span>
+                  <span className="font-semibold">{pending.ensName}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Status</span>
+                  <span className="text-primary font-semibold">Completed</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Registered</span>
+                  <span>{formatDate(new Date(pending.updatedAt))}</span>
+                </div>
+              </div>
             ) : (
               <p className="text-muted-foreground mt-4 text-sm">
                 No registration logs yet. Complete a registration to see history
@@ -242,11 +255,12 @@ export default async function EnsDashboardPage() {
             </h3>
           </div>
 
-          {events.length === 0 ? (
+          {events.length === 0 &&
+          (!pending || pending.status !== 'completed') ? (
             <p className="text-muted-foreground mt-4 text-sm">
               No on-chain registration events found for this wallet.
             </p>
-          ) : (
+          ) : events.length > 0 ? (
             <div className="mt-4 space-y-3">
               {events.map((event) => (
                 <div
@@ -289,7 +303,63 @@ export default async function EnsDashboardPage() {
                 </div>
               ))}
             </div>
-          )}
+          ) : pending?.status === 'completed' ? (
+            <div className="mt-4 space-y-3">
+              {/* Show tx history from cookie when blockchain events aren't found */}
+              <div className="border-border bg-muted/40 rounded-xl border p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <BadgeCheck className="text-primary h-4 w-4" />
+                    <div>
+                      <p className="text-sm font-semibold">{pending.ensName}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {pending.founders.length} founder(s) • Threshold{' '}
+                        {pending.threshold}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-muted-foreground text-xs">
+                    {formatDate(new Date(pending.updatedAt))}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 font-mono text-xs">
+                  {pending.safeDeploymentTxHash && (
+                    <a
+                      href={`${explorerBase}/tx/${pending.safeDeploymentTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:bg-primary/10 inline-flex items-center gap-1 rounded-full px-3 py-1 transition"
+                    >
+                      Safe Deploy {pending.safeDeploymentTxHash.slice(0, 10)}…
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                  {pending.registrationTxHash && (
+                    <a
+                      href={`${explorerBase}/tx/${pending.registrationTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:bg-primary/10 inline-flex items-center gap-1 rounded-full px-3 py-1 transition"
+                    >
+                      ENS Register {pending.registrationTxHash.slice(0, 10)}…
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                  {pending.companyTxHash && (
+                    <a
+                      href={`${explorerBase}/tx/${pending.companyTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:bg-primary/10 inline-flex items-center gap-1 rounded-full px-3 py-1 transition"
+                    >
+                      Company Record {pending.companyTxHash.slice(0, 10)}…
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </div>
