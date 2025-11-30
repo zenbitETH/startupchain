@@ -52,11 +52,19 @@ Ask first:
 
 ### Project structure
 - `/src/app/` - Next.js app router with (app)/ protected routes, (public)/ public routes, api/ endpoints
-- `/src/components/` - React components organized by feature (auth/, ens/, ui/, etc.)
-- `/src/lib/` - Utilities, web3 integrations, state stores, SWR configs
-- `/src/hooks/` - Custom React hooks
-- `/src/contracts/` - Solidity smart contracts
+- `/src/app/(app)/dashboard/` - Protected dashboard routes (main, ens, safe, tokens, setup)
+- `/src/components/` - React components organized by feature (auth/, ens/, ui/, modals/)
+- `/src/lib/` - Utilities, web3 integrations, state stores
+- `/src/lib/blockchain/` - Contract ABIs, Safe API, chain config, company data fetchers
+- `/src/hooks/` - Custom React hooks (wallet, registration, costs)
+- `/src/contracts/` - Solidity smart contracts (StartupChain.sol, CompanyToken.sol)
 - `/src/style.css` - Global styles
+
+### Key integrations
+- **StartupChain.sol** (Sepolia: `0x4511d1d2B9C1BBA33D1B25c3E547835b5BA1F3aC`) - Company registry with ENS + Safe
+- **Safe Transaction Service API** - Server-side via `SAFE_API_KEY` for treasury data
+- **ENS** - Off-chain registration via @ensdomains/ensjs (commit-reveal scheme)
+- **Privy** - Wallet auth with embedded wallet creation
 
 ### PR checklist
 - format and type check: green
