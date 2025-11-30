@@ -81,6 +81,9 @@ export const walletClient = createWalletClient({
 export const startupChainAccount = account
 export const startupChainChain = target.chain
 
+// Treasury address where users send prepayments - uses the signer's address
+export const TREASURY_ADDRESS = account.address
+
 export const startupChainClient = async () => ({
   publicClient,
   walletClient,
