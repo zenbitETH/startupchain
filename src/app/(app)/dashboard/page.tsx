@@ -3,15 +3,21 @@ import { cookies } from 'next/headers'
 import { getServerSession } from '@/lib/auth/server-session'
 import { type Company, getCompanyByAddress } from '@/lib/blockchain/get-company'
 import {
+  BLOCK_EXPLORERS,
   CHAIN_NAMES,
   STARTUPCHAIN_CHAIN_ID,
   type SupportedChainId,
 } from '@/lib/blockchain/startupchain-config'
+import {
+  getEnsRegistrationStatusByOwnerAction,
+  type EnsRegistrationRecord,
+} from './setup/actions'
 
 import { ActivityFeed, type ActivityItem } from './components/activity-feed'
 import { CompanyOverview } from './components/company-overview'
 import { CompanyToken } from './components/company-token'
 import { DashboardHeader } from './components/dashboard-header'
+import { PendingEnsCard } from './components/pending-ens-card'
 import {
   type Transaction,
   TreasurySummary,
@@ -35,28 +41,45 @@ const mockActivity: ActivityItem[] = []
 async function getCompanyData(): Promise<{
   company: Company | null
   chainId: SupportedChainId
+  pending: EnsRegistrationRecord | null
 }> {
   const cookieStore = await cookies()
   const session = await getServerSession({ cookies: cookieStore })
 
   if (!session?.walletAddress) {
-    return { company: null, chainId: STARTUPCHAIN_CHAIN_ID as SupportedChainId }
+    return {
+      company: null,
+      chainId: STARTUPCHAIN_CHAIN_ID as SupportedChainId,
+      pending: null,
+    }
   }
 
-  const company = await getCompanyByAddress(
+  const pending = await getEnsRegistrationStatusByOwnerAction(
+    session.walletAddress
+  )
+  let company = await getCompanyByAddress(
     session.walletAddress,
     STARTUPCHAIN_CHAIN_ID
   )
 
+  if (!company && pending?.status === 'registered') {
+    company = await getCompanyByAddress(
+      pending.owner,
+      STARTUPCHAIN_CHAIN_ID
+    )
+  }
+
   return {
     company,
     chainId: STARTUPCHAIN_CHAIN_ID as SupportedChainId,
+    pending,
   }
 }
 
 export default async function DashboardPage() {
-  const { company, chainId } = await getCompanyData()
+  const { company, chainId, pending } = await getCompanyData()
   const chainName = CHAIN_NAMES[chainId] ?? 'Unknown'
+  const explorerBase = BLOCK_EXPLORERS[chainId]
 
   // If no company found, show empty state
   if (!company) {
@@ -89,6 +112,21 @@ export default async function DashboardPage() {
               Check ENS Availability
             </a>
           </div>
+
+          {pending && (
+            <PendingEnsCard
+              record={{
+                ensName: pending.ensName,
+                owner: pending.owner,
+                commitTxHash: pending.commitTxHash,
+                registrationTxHash: pending.registrationTxHash,
+                companyTxHash: pending.companyTxHash,
+                readyAt: pending.readyAt,
+                status: pending.status,
+              }}
+              explorerBase={explorerBase}
+            />
+          )}
         </div>
       </div>
     )
@@ -102,7 +140,7 @@ export default async function DashboardPage() {
   const companyData = {
     name: companyName,
     ensName: company.ensName,
-    safeAddress: company.safeAddress,
+    ownerAddress: company.ownerAddress,
     threshold: company.threshold,
     founderCount: company.founders.length,
     chainName,
