@@ -53,7 +53,7 @@ StartupChain lets you launch and run your company identity from one place—ENS 
 | **Blockchain** | Viem, Wagmi, @ensdomains/ensjs |
 | **Treasury** | Safe{Wallet} + Safe Transaction Service API |
 | **Contracts** | Solidity (StartupChain.sol, CompanyToken.sol) |
-| **Chain** | Ethereum Sepolia (testnet) |
+| **Chain** | Ethereum Sepolia (testnet), Mainnet-ready (multi-chain aware) |
 
 ---
 
