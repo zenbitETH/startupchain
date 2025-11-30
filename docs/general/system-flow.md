@@ -210,33 +210,35 @@ StartupChain is an onchain company OS that allows founders to:
 │    │  │            │  │                                                                 │ │ │
 │    │  │ • Dashboard│  │  Data Loading (Server Component):                               │ │ │
 │    │  │ • ENS      │  │  ┌──────────────────────────────────────────────────────────┐  │ │ │
-│    │  │ • Settings │  │  │  getCompanyData()                                        │  │ │ │
-│    │  │            │  │  │  1. Get server session (wallet address)                  │  │ │ │
-│    │  │            │  │  │  2. Check pending registration (cookie)                  │  │ │ │
+│    │  │ • Safe     │  │  │  getCompanyData()                                        │  │ │ │
+│    │  │ • Tokens   │  │  │  1. Get server session (wallet address)                  │  │ │ │
+│    │  │ • Settings │  │  │  2. Check pending registration (cookie)                  │  │ │ │
 │    │  │            │  │  │  3. Query StartupChain contract:                         │  │ │ │
-│    │  │            │  │  │     getCompanyByAddress(walletAddress)                   │  │ │ │
-│    │  │            │  │  │  4. Return: company data or empty state                  │  │ │ │
+│    │  │            │  │  │     getCompanyByFounderWallet(walletAddress)             │  │ │ │
+│    │  │            │  │  │  4. Fetch Safe data via Safe Transaction Service API     │  │ │ │
+│    │  │            │  │  │  5. Return: company data + Safe balances or empty state  │  │ │ │
 │    │  │            │  │  └──────────────────────────────────────────────────────────┘  │ │ │
 │    │  │            │  │                                                                 │ │ │
 │    │  │            │  │  ┌─────────────────────────────────────────────────────┐       │ │ │
 │    │  │            │  │  │              CompanyOverview                        │       │ │ │
 │    │  │            │  │  │  • Company Name (from ENS)                          │       │ │ │
 │    │  │            │  │  │  • ENS Name: acmecorp.eth                           │       │ │ │
-│    │  │            │  │  │  • Owner Address: 0x...                             │       │ │ │
+│    │  │            │  │  │  • Safe Address: 0x... (links to Safe{Wallet})      │       │ │ │
 │    │  │            │  │  │  • Founder Count, Threshold                         │       │ │ │
 │    │  │            │  │  │  • Chain: Sepolia/Ethereum                          │       │ │ │
 │    │  │            │  │  └─────────────────────────────────────────────────────┘       │ │ │
 │    │  │            │  │                                                                 │ │ │
 │    │  │            │  │  ┌──────────────────────┐  ┌──────────────────────┐            │ │ │
 │    │  │            │  │  │   TreasurySummary    │  │    CompanyToken      │            │ │ │
-│    │  │            │  │  │   (placeholder)      │  │   (placeholder)      │            │ │ │
-│    │  │            │  │  │   • Total Balance    │  │   • Token Name       │            │ │ │
-│    │  │            │  │  │   • Transactions     │  │   • Symbol, Supply   │            │ │ │
+│    │  │            │  │  │   (live data)        │  │   (coming soon)      │            │ │ │
+│    │  │            │  │  │   • Safe ETH Balance │  │   • Deploy Token CTA │            │ │ │
+│    │  │            │  │  │   • Recent Safe txs  │  │   • Cap Table Preview│            │ │ │
+│    │  │            │  │  │   • Link to /safe    │  │   • Founder Equity % │            │ │ │
 │    │  │            │  │  └──────────────────────┘  └──────────────────────┘            │ │ │
 │    │  │            │  │                                                                 │ │ │
 │    │  │            │  │  ┌─────────────────────────────────────────────────────┐       │ │ │
 │    │  │            │  │  │              ActivityFeed                           │       │ │ │
-│    │  │            │  │  │  • Recent company activity (placeholder)            │       │ │ │
+│    │  │            │  │  │  • Recent company activity from Safe + contract     │       │ │ │
 │    │  │            │  │  └─────────────────────────────────────────────────────┘       │ │ │
 │    │  │            │  │                                                                 │ │ │
 │    │  │            │  │  ┌─────────────────────────────────────────────────────┐       │ │ │
@@ -248,6 +250,41 @@ StartupChain is an onchain company OS that allows founders to:
 │    │  └────────────┘  └─────────────────────────────────────────────────────────────────┘ │ │
 │    └──────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                              │
+│    Sub-Pages:                                                                                │
+│    ┌────────────────────────────────────────────────────────────────────────────────────┐   │
+│    │  /dashboard/safe - Safe Management Page                                            │   │
+│    │  ┌──────────────────────────────────────────────────────────────────────────────┐  │   │
+│    │  │  • Safe owners list with addresses                                           │  │   │
+│    │  │  • Signature threshold (e.g., 2 of 3)                                        │  │   │
+│    │  │  • ETH balance + token balances                                              │  │   │
+│    │  │  • Pending transactions requiring signatures                                 │  │   │
+│    │  │  • Transaction history (recent 10)                                           │  │   │
+│    │  │  • Link to Safe{Wallet} app for full management                              │  │   │
+│    │  │  Data: Safe Transaction Service API (server-side, SAFE_API_KEY)              │  │   │
+│    │  └──────────────────────────────────────────────────────────────────────────────┘  │   │
+│    └────────────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                              │
+│    ┌────────────────────────────────────────────────────────────────────────────────────┐   │
+│    │  /dashboard/tokens - Company Token Page                                            │   │
+│    │  ┌──────────────────────────────────────────────────────────────────────────────┐  │   │
+│    │  │  • Cap table visualization (pie chart)                                       │  │   │
+│    │  │  • Founder equity breakdown                                                  │  │   │
+│    │  │  • "Deploy Token" CTA (coming soon - user-initiated)                         │  │   │
+│    │  │  • Token features: vesting, transfer restrictions, role-based access         │  │   │
+│    │  │  Contract: CompanyToken.sol (ERC-20 with vesting)                            │  │   │
+│    │  └──────────────────────────────────────────────────────────────────────────────┘  │   │
+│    └────────────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                              │
+│    ┌────────────────────────────────────────────────────────────────────────────────────┐   │
+│    │  /dashboard/ens - ENS Management Page                                              │   │
+│    │  ┌──────────────────────────────────────────────────────────────────────────────┐  │   │
+│    │  │  • ENS name display with expiry                                              │  │   │
+│    │  │  • Registration history (from cookie fallback or blockchain events)          │  │   │
+│    │  │  • Safe deployment tx, ENS registration tx, Company recording tx             │  │   │
+│    │  │  • Links to block explorer for each transaction                              │  │   │
+│    │  └──────────────────────────────────────────────────────────────────────────────┘  │   │
+│    └────────────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                              │
 └─────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -258,10 +295,12 @@ StartupChain is an onchain company OS that allows founders to:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
 │                     StartupChain Contract (Sepolia/Mainnet)                                  │
+│                     Address: 0x4511d1d2B9C1BBA33D1B25c3E547835b5BA1F3aC (Sepolia)            │
 │                                                                                              │
 │   Functions:                                                                                 │
 │   ├── recordCompany(label, safeAddress, founders[], threshold)                              │
-│   ├── getCompanyByAddress(address) → (id, owner, ensName, createdAt, threshold)             │
+│   ├── getCompanyByAddress(address) → (id, owner, ensName, safeAddress, createdAt, threshold)│
+│   ├── getCompanyByFounderWallet(address) → company data (preferred for dashboard)           │
 │   ├── getCompanyByENS(ensLabel) → company data                                              │
 │   ├── getCompanyFounders(companyId) → Founder[]                                             │
 │   ├── createSubdomain(companyId, subdomain, owner) → create ENS subdomain                   │
@@ -277,6 +316,20 @@ StartupChain is an onchain company OS that allows founders to:
 └─────────────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                     CompanyToken Contract (Not Yet Deployed)                                 │
+│                                                                                              │
+│   ERC-20 token with:                                                                         │
+│   ├── Vesting schedules for founders                                                        │
+│   ├── Transfer restrictions (only unlocked tokens)                                          │
+│   ├── Role-based access control (Safe as admin)                                             │
+│   └── Cliff + linear vesting support                                                        │
+│                                                                                              │
+│   Deployment: User-initiated from /dashboard/tokens (coming soon)                           │
+│   Admin: Company Safe multisig                                                              │
+│                                                                                              │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
 │                     ENS Registry (Ethereum) - Via Server Actions                             │
 │                                                                                              │
 │   Via @ensdomains/ensjs (off-chain, server-side):                                           │
@@ -287,6 +340,21 @@ StartupChain is an onchain company OS that allows founders to:
 │                                                                                              │
 │   Why off-chain? The ENS commit-reveal scheme requires holding a secret for 60s.            │
 │   This cannot be done on-chain without exposing the secret (defeating frontrun protection). │
+│                                                                                              │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                     Safe Transaction Service API (Off-Chain)                                 │
+│                                                                                              │
+│   Server-side integration via SAFE_API_KEY:                                                  │
+│   ├── getSafeInfo(address) → owners, threshold, nonce                                       │
+│   ├── getSafeBalances(address) → ETH + token balances                                       │
+│   ├── getPendingTransactions(address) → queued txs needing signatures                       │
+│   └── getTransactionHistory(address) → executed transactions                                │
+│                                                                                              │
+│   Rate limits: 5 requests/second (free tier)                                                │
+│   Networks: Mainnet + Sepolia supported                                                      │
+│   File: src/lib/blockchain/safe-api.ts                                                      │
 │                                                                                              │
 └─────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -312,48 +380,56 @@ StartupChain is an onchain company OS that allows founders to:
 ### State Management
 
 
-| Layer  | Mechanism                              | Purpose                                  |
-| -------- | ---------------------------------------- | ------------------------------------------ |
-| Server | Cookies (`pending-ens`, `privy-token`) | Session & registration state             |
-| Server | `getServerSession()`                   | Auth verification                        |
-| Server | `TREASURY_ADDRESS`                     | Address for receiving user prepayments   |
-| Client | `useDraftStore`                        | Setup wizard form state                  |
-| Client | `useWalletAuth` context                | Auth state & methods                     |
-| Client | `useCompanyRegistration`               | Full registration flow (prepayment mode) |
-| Client | `useSendTransaction`                   | User payment to treasury                 |
-| Client | React Query                            | Async data fetching                      |
+| Layer  | Mechanism                              | Purpose                                   |
+| -------- | ---------------------------------------- | ------------------------------------------- |
+| Server | Cookies (`pending-ens`, `privy-token`) | Session & registration state              |
+| Server | `getServerSession()`                   | Auth verification                         |
+| Server | `TREASURY_ADDRESS`                     | Address for receiving user prepayments    |
+| Server | `SAFE_API_KEY`                         | Safe Transaction Service authentication   |
+| Client | `useDraftStore`                        | Setup wizard form state                   |
+| Client | `useWalletAuth` context                | Auth state & methods                      |
+| Client | `useCompanyRegistration`               | Full registration flow (prepayment mode)  |
+| Client | `useSendTransaction`                   | User payment to treasury                  |
+| Client | React Query                            | Async data fetching                       |
 
 ---
 
 ## ****Key Technologies
 
 
-| Category       | Technologies                                                                     |
-| ---------------- | ---------------------------------------------------------------------------------- |
-| **Frontend**   | Next.js 16 (App Router), React 19 (Server Components), TailwindCSS v4, shadcn/ui |
-| **Auth**       | Privy (wallet auth), JWT tokens, HTTP-only cookies                               |
-| **Blockchain** | Viem (client), Wagmi (hooks), @ensdomains/ensjs, Custom Solidity contracts       |
-| **Chains**     | Ethereum Mainnet, Sepolia (testnet)                                              |
+| Category       | Technologies                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| **Frontend**   | Next.js 16 (App Router), React 19 (Server Components), TailwindCSS v4, shadcn/ui  |
+| **Auth**       | Privy (wallet auth), JWT tokens, HTTP-only cookies                                |
+| **Blockchain** | Viem (client), Wagmi (hooks), @ensdomains/ensjs, Custom Solidity contracts        |
+| **Treasury**   | Safe{Wallet} multisig, Safe Transaction Service API                               |
+| **Chains**     | Ethereum Mainnet, Sepolia (testnet)                                               |
 
 ---
 
 ## Key Files Reference
 
 
-| File                                                        | Purpose                                               |
-| ------------------------------------------------------------- | ------------------------------------------------------- |
-| `src/app/(public)/page.tsx`                                 | Landing page with ENS checker                         |
-| `src/components/ens-name-checker/EnsNameChecker.tsx`        | ENS availability checking UI                          |
-| `src/app/(app)/dashboard/setup/page.tsx`                    | Company setup wizard page                             |
-| `src/app/(app)/dashboard/setup/components/setup-wizard.tsx` | Setup wizard with payment step                        |
-| `src/hooks/use-company-registration.ts`                     | Client-side registration hook (prepayment flow)       |
-| `src/app/(app)/dashboard/setup/actions.ts`                  | Server actions for ENS/company + payment verification |
-| `src/lib/blockchain/startupchain-client.ts`                 | Server wallet & TREASURY_ADDRESS export               |
-| `src/lib/auth/pending-registration.ts`                      | Cookie-based registration state                       |
-| `src/lib/auth/server-session.ts`                            | Server-side auth verification                         |
-| `src/components/providers/providers-shell.tsx`              | Client providers wrapper                              |
-| `src/lib/blockchain/startupchain-config.ts`                 | Chain & contract configuration                        |
+| File                                                        | Purpose                                                   |
+| ------------------------------------------------------------- | ----------------------------------------------------------- |
+| `src/app/(public)/page.tsx`                                 | Landing page with ENS checker                             |
+| `src/components/ens-name-checker/EnsNameChecker.tsx`        | ENS availability checking UI                              |
+| `src/app/(app)/dashboard/setup/page.tsx`                    | Company setup wizard page                                 |
+| `src/app/(app)/dashboard/setup/components/setup-wizard.tsx` | Setup wizard with payment step                            |
+| `src/hooks/use-company-registration.ts`                     | Client-side registration hook (prepayment flow)           |
+| `src/app/(app)/dashboard/setup/actions.ts`                  | Server actions for ENS/company + payment verification     |
+| `src/lib/blockchain/startupchain-client.ts`                 | Server wallet & TREASURY_ADDRESS export                   |
+| `src/lib/auth/pending-registration.ts`                      | Cookie-based registration state                           |
+| `src/lib/auth/server-session.ts`                            | Server-side auth verification                             |
+| `src/components/providers/providers-shell.tsx`              | Client providers wrapper                                  |
+| `src/lib/blockchain/startupchain-config.ts`                 | Chain & contract configuration                            |
 | `src/lib/blockchain/get-company.ts`                         | Contract read functions (incl. getCompanyByFounderWallet) |
+| `src/lib/blockchain/safe-api.ts`                            | Safe Transaction Service API wrapper (server-side)        |
+| `src/app/(app)/dashboard/page.tsx`                          | Main dashboard with Safe data integration                 |
+| `src/app/(app)/dashboard/safe/page.tsx`                     | Safe management page (owners, balances, txs)              |
+| `src/app/(app)/dashboard/tokens/page.tsx`                   | Company token page with cap table preview                 |
+| `src/app/(app)/dashboard/ens/page.tsx`                      | ENS management with registration history                  |
+| `src/app/(app)/dashboard/components/treasury-summary.tsx`   | Treasury widget showing Safe balance                      |
 
 ---
 
