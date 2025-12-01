@@ -51,17 +51,17 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
     <div className="border-border bg-background/90 sticky top-0 z-10 border-b px-4 py-3 backdrop-blur md:px-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2 md:hidden">
-          <Link href="/" className="flex flex-1 items-center gap-3">
+          <Link href="/" className="group flex flex-1 items-center gap-3">
             <Image
               src="/logo.svg"
               alt="StartUpChain logo"
               width={40}
               height={40}
-              className="h-10 w-10 rounded-2xl"
+              className="h-10 w-10 rounded-2xl transition-transform duration-200 group-hover:scale-105"
               priority
             />
             <div className="leading-tight">
-              <p className="text-foreground text-lg font-semibold">
+              <p className="text-foreground text-lg font-semibold transition-colors duration-200 group-hover:text-primary">
                 StartUpChain
               </p>
               <p className="text-muted-foreground text-xs">Onchain OS</p>
@@ -83,8 +83,12 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
               <DropdownMenuLabel>Navigation</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {appNavItems.map((item) => (
-                <DropdownMenuItem key={item.url} asChild>
-                  <Link href={item.url} className="cursor-pointer">
+                <DropdownMenuItem
+                  key={item.url}
+                  asChild
+                  className="focus:bg-primary/10 focus:text-primary focus:translate-x-1 cursor-pointer transition-all duration-200"
+                >
+                  <Link href={item.url}>
                     <item.icon className="mr-2 h-4 w-4" />
                     <span>{item.title}</span>
                   </Link>
@@ -92,8 +96,12 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
               ))}
               <DropdownMenuSeparator />
               {footerItems.map((item) => (
-                <DropdownMenuItem key={item.url} asChild>
-                  <Link href={item.url} className="cursor-pointer">
+                <DropdownMenuItem
+                  key={item.url}
+                  asChild
+                  className="focus:bg-primary/10 focus:text-primary focus:translate-x-1 cursor-pointer transition-all duration-200"
+                >
+                  <Link href={item.url}>
                     <item.icon className="mr-2 h-4 w-4" />
                     <span>{item.title}</span>
                   </Link>
