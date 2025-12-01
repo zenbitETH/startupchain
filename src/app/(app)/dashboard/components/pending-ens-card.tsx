@@ -72,11 +72,11 @@ export function PendingEnsCard({
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {record.status === 'completed' ? (
-            <CheckCircle className="text-primary h-5 w-5" />
+            <CheckCircle className="text-primary h-5 w-5" aria-label="Completed" />
           ) : record.status === 'failed' ? (
-            <AlertTriangle className="text-destructive h-5 w-5" />
+            <AlertTriangle className="text-destructive h-5 w-5" aria-label="Failed" />
           ) : (
-            <Clock className="text-primary h-5 w-5" />
+            <Clock className="text-primary h-5 w-5" aria-label="In progress" />
           )}
           <h3 className="text-foreground text-lg font-semibold">
             ENS registration in progress
