@@ -5,13 +5,15 @@ import { formatEther, isAddress, parseEther } from 'viem'
 import { useSendTransaction, useWaitForTransactionReceipt } from 'wagmi'
 
 import {
-  checkPaymentStatusAction,
   commitEnsRegistrationAction,
   finalizeEnsRegistrationAction,
   getEnsRegistrationCostAction,
-  getTreasuryAddressAction,
   type EnsRegistrationRecord,
 } from '@/app/(app)/dashboard/setup/actions'
+import {
+  checkPaymentStatusAction,
+  getTreasuryAddressAction,
+} from '@/app/(app)/dashboard/setup/payment-actions'
 
 const LOG_PREFIX = '[CLIENT:useCompanyRegistration]'
 
