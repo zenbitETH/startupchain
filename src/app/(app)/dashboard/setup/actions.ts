@@ -192,8 +192,12 @@ export async function commitEnsRegistrationAction({
   const founderAddresses = founderStructs.map((f) => f.wallet)
 
   // Generate unique saltNonce for this company - ensures different Safe address per company
-  // Using ENS label + timestamp for uniqueness
-  const saltNonce = `${label}-${Date.now()}`
+  // Safe SDK expects saltNonce to be a numeric string (BigInt compatible)
+  // We use timestamp + hash of ENS label for uniqueness
+  const labelHash = label
+    .split('')
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  const saltNonce = `${Date.now()}${labelHash}`
   console.log(LOG_PREFIX, 'Generated saltNonce for unique Safe:', saltNonce)
 
   // Predict Safe address before deployment
