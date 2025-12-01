@@ -46,12 +46,12 @@ export function RegistrationProgressCard({
       : stepLabels[step] || step
 
   return (
-    <div className="border-primary/20 bg-primary/5 rounded-2xl border p-6">
+    <div className="border-primary/20 bg-primary/5 rounded-xl border p-4">
       <div className="mb-3 flex items-center gap-3">
         {step !== 'completed' && step !== 'failed' && (
-          <Loader2 className="text-primary h-5 w-5 animate-spin" />
+          <Loader2 className="text-primary h-4 w-4 animate-spin" />
         )}
-        <span className="font-medium">{label}</span>
+        <span className="text-sm font-medium">{label}</span>
       </div>
       <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
         <div
@@ -60,7 +60,7 @@ export function RegistrationProgressCard({
         />
       </div>
       {step === 'payment-pending' && paymentTxHash && (
-        <p className="text-muted-foreground mt-3 font-mono text-xs">
+        <p className="text-muted-foreground mt-2 font-mono text-xs">
           Tx: {paymentTxHash.slice(0, 10)}...{paymentTxHash.slice(-8)}
         </p>
       )}
