@@ -8,10 +8,10 @@ contract DeployAttestationModule is Script {
     // EAS contract addresses
     // Mainnet: 0xA1207F3BBa224E2c9c3c6D5aF63D0eb1582Ce587
     // Sepolia: 0xC2679fBD37d54388Ce493F1DB75320D236e1815e
-    
+
     function run() public {
         uint256 chainId = block.chainid;
-        
+
         address easAddress;
         if (chainId == 1) {
             // Mainnet
