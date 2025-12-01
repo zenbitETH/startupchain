@@ -23,11 +23,17 @@ export interface CompanyDraft {
   updatedAt: string
   /** Chain ID the draft was created on */
   chainId: number
+  /** Wallet address of the user who created this draft */
+  ownerWallet?: string
 }
 
 interface DraftStore {
   draft: CompanyDraft | null
-  initializeDraft: (ensName: string, chainId: number) => void
+  initializeDraft: (
+    ensName: string,
+    chainId: number,
+    ownerWallet?: string
+  ) => void
   updateDraft: (draft: Partial<CompanyDraft>) => void
 
   // Shareholder management
@@ -50,13 +56,17 @@ interface DraftStore {
   /** Clear draft if chainId doesn't match the draft's chainId */
   clearDraftIfChainMismatch: (chainId: number) => void
 
+  /** Clear draft if connected wallet doesn't match the draft's owner */
+  clearDraftIfOwnerMismatch: (walletAddress: string | undefined) => void
+
   // Cleanup
   resetDraft: () => void
 }
 
 const createInitialDraft = (
   ensName: string,
-  chainId: number
+  chainId: number,
+  ownerWallet?: string
 ): CompanyDraft => ({
   id: crypto.randomUUID(),
   ensName,
@@ -72,6 +82,7 @@ const createInitialDraft = (
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   chainId,
+  ownerWallet,
 })
 
 export const useDraftStore = create<DraftStore>()(
@@ -79,8 +90,12 @@ export const useDraftStore = create<DraftStore>()(
     (set, get) => ({
       draft: null,
 
-      initializeDraft: (ensName: string, chainId: number) => {
-        const draft = createInitialDraft(ensName, chainId)
+      initializeDraft: (
+        ensName: string,
+        chainId: number,
+        ownerWallet?: string
+      ) => {
+        const draft = createInitialDraft(ensName, chainId, ownerWallet)
         set({ draft })
       },
 
@@ -227,6 +242,24 @@ export const useDraftStore = create<DraftStore>()(
 
         // Clear draft if it was created on a different chain
         if (currentDraft.chainId !== chainId) {
+          set({ draft: null })
+        }
+      },
+
+      clearDraftIfOwnerMismatch: (walletAddress: string | undefined) => {
+        const currentDraft = get().draft
+        if (!currentDraft) return
+        if (!walletAddress) return
+
+        // Clear draft if it was created by a different wallet
+        if (
+          currentDraft.ownerWallet &&
+          currentDraft.ownerWallet.toLowerCase() !== walletAddress.toLowerCase()
+        ) {
+          console.log('[DraftStore] Clearing draft - owner mismatch:', {
+            draftOwner: currentDraft.ownerWallet,
+            currentWallet: walletAddress,
+          })
           set({ draft: null })
         }
       },
