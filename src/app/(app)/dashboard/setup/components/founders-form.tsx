@@ -41,13 +41,13 @@ export function FoundersForm({
   return (
     <>
       {/* Company Structure Toggle */}
-      <div className="border-border bg-card rounded-2xl border p-6">
-        <h3 className="mb-4 text-lg font-semibold">Company Structure</h3>
-        <div className="bg-background flex rounded-2xl p-1">
+      <div className="border-border bg-card rounded-xl border p-4">
+        <h3 className="mb-3 text-base font-semibold">Company Structure</h3>
+        <div className="bg-background flex rounded-xl p-1">
           <button
             type="button"
             onClick={() => onFounderModeChange(false)}
-            className={`flex-1 cursor-pointer rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
+            className={`flex-1 cursor-pointer rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
               !isMultipleFounders
                 ? 'bg-primary text-white shadow-sm'
                 : 'text-muted-foreground hover:text-white'
@@ -58,7 +58,7 @@ export function FoundersForm({
           <button
             type="button"
             onClick={() => onFounderModeChange(true)}
-            className={`flex-1 cursor-pointer rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
+            className={`flex-1 cursor-pointer rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
               isMultipleFounders
                 ? 'bg-primary text-white shadow-sm'
                 : 'text-muted-foreground hover:text-white'
@@ -71,7 +71,7 @@ export function FoundersForm({
 
       {/* Different Address Option (Solo founder only) */}
       {!isMultipleFounders && (
-        <div className="border-border bg-card rounded-2xl border p-6">
+        <div className="border-border bg-card rounded-xl border p-4">
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
@@ -96,9 +96,9 @@ export function FoundersForm({
                 placeholder="Enter ETH address (0x...)"
                 value={customAddress}
                 onChange={(event) => onCustomAddressChange(event.target.value)}
-                className="border-border bg-background placeholder:text-muted-foreground focus:border-primary focus:ring-primary w-full rounded-2xl border px-4 py-3 text-lg transition-all duration-200 focus:ring-2"
+                className="border-border bg-background placeholder:text-muted-foreground focus:border-primary focus:ring-primary w-full rounded-xl border px-3 py-2 text-sm transition-all duration-200 focus:ring-2"
               />
-              <p className="text-muted-foreground mt-2 text-sm">
+              <p className="text-muted-foreground mt-1 text-xs">
                 The ENS name will be registered to this address instead of
                 your wallet.
               </p>
@@ -108,14 +108,14 @@ export function FoundersForm({
       )}
 
       {/* Founders List */}
-      <div className="border-border bg-card rounded-2xl border p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-xl font-semibold">
+      <div className="border-border bg-card rounded-xl border p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-base font-semibold">
             {isMultipleFounders ? 'Founders & Equity' : 'Your Details'}
           </h3>
           {isMultipleFounders && (
             <div
-              className={`text-lg font-medium ${
+              className={`text-sm font-medium ${
                 Math.abs(totalEquity - 100) < 0.01
                   ? 'text-primary'
                   : 'text-destructive'
@@ -126,18 +126,19 @@ export function FoundersForm({
           )}
         </div>
 
-        <div className="space-y-3">
-          {shareholders.map((founder) => (
+        <div className="space-y-2">
+          {shareholders.map((founder, index) => (
             <div
               key={founder.id}
-              className="border-border rounded-xl border p-4"
+              className="border-border rounded-lg border p-3"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <input
                     type="text"
                     placeholder="Email or ETH address"
                     value={founder.walletAddress}
+                    disabled={!isMultipleFounders && index === 0}
                     onChange={(event) =>
                       onUpdateFounder(
                         founder.id,
@@ -145,12 +146,12 @@ export function FoundersForm({
                         event.target.value
                       )
                     }
-                    className="border-border bg-background placeholder:text-muted-foreground focus:border-primary focus:ring-primary w-full rounded-2xl border px-4 py-3 text-lg transition-all duration-200 focus:ring-2"
+                    className="border-border bg-background placeholder:text-muted-foreground focus:border-primary focus:ring-primary disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed w-full rounded-lg border px-3 py-2 text-sm transition-all duration-200 focus:ring-2"
                   />
                 </div>
 
                 {isMultipleFounders && (
-                  <div className="w-24">
+                  <div className="w-20">
                     <div className="relative">
                       <input
                         type="number"
@@ -165,9 +166,9 @@ export function FoundersForm({
                             event.target.value
                           )
                         }
-                        className="border-border bg-background focus:border-primary focus:ring-primary w-full rounded-2xl border px-3 py-3 pr-8 text-center text-lg transition-all duration-200 focus:ring-2"
+                        className="border-border bg-background focus:border-primary focus:ring-primary w-full rounded-lg border px-2 py-2 pr-6 text-center text-sm transition-all duration-200 focus:ring-2"
                       />
-                      <div className="text-muted-foreground absolute top-1/2 right-2 -translate-y-1/2 text-sm">
+                      <div className="text-muted-foreground absolute top-1/2 right-2 -translate-y-1/2 text-xs">
                         %
                       </div>
                     </div>
@@ -178,9 +179,9 @@ export function FoundersForm({
                   <button
                     type="button"
                     onClick={() => onRemoveFounder(founder.id)}
-                    className="text-muted-foreground hover:text-destructive rounded-2xl p-2 transition-colors"
+                    className="text-muted-foreground hover:text-destructive rounded-lg p-2 transition-colors"
                   >
-                    <Trash2 className="h-5 w-5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -191,17 +192,17 @@ export function FoundersForm({
             <button
               type="button"
               onClick={onAddFounder}
-              className="hover:bg-primary hover:text-background mx-auto flex items-center justify-center gap-2 rounded-xl border border-dashed px-6 py-4 text-lg font-medium transition-colors"
+              className="hover:bg-primary hover:text-background mx-auto flex items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-3 text-sm font-medium transition-colors"
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="h-4 w-4" />
               Add Founder
             </button>
           )}
         </div>
 
         {isMultipleFounders && Math.abs(totalEquity - 100) > 0.01 && (
-          <div className="border-destructive/20 bg-destructive/10 mt-4 rounded-2xl border p-3">
-            <p className="text-destructive text-sm font-medium">
+          <div className="border-destructive/20 bg-destructive/10 mt-3 rounded-xl border p-2">
+            <p className="text-destructive text-xs font-medium">
               Equity must total 100%. Currently: {totalEquity.toFixed(1)}%
             </p>
           </div>
