@@ -62,7 +62,7 @@ export function AIChatWidget({
 
   const placeholder = useMemo(() => {
     if (isBusy) return 'StartupChain Assistant is responding...'
-    return 'Ask StartupChain anything about ENS, revenue splits, or onboarding.'
+    return 'Ask about company setup, Safe treasury, ENS registration, or your dashboard.'
   }, [isBusy])
 
   return (
@@ -75,7 +75,7 @@ export function AIChatWidget({
         <div className="space-y-0.5">
           <p className="text-sm font-semibold">StartupChain Assistant</p>
           <p className="text-muted-foreground text-xs">
-            Ask anything about onboarding or ENS
+            Your guide to company setup & management
           </p>
         </div>
       </header>
@@ -86,7 +86,7 @@ export function AIChatWidget({
             <p className="text-foreground font-medium">
               Welcome to StartupChain!
             </p>
-            <p>Ask about ENS registrations, revenue splits, or onboarding.</p>
+            <p>Ask about company registration, Safe treasury, ENS names, founder setup, or your dashboard.</p>
           </div>
         )}
 
