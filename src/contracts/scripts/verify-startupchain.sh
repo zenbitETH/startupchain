@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Verifies the deployed StartupChain contract on Etherscan using foundry.
+# Required env: ETHERSCAN_API_KEY, SEPOLIA_RPC_URL (or RPC_URL), contract address.
+# Optional env: CONTRACT_ADDRESS, STARTUPCHAIN_ADDRESS, NEXT_PUBLIC_STARTUPCHAIN_ADDRESS_SEPOLIA,
+# NEXT_PUBLIC_STARTUPCHAIN_ADDRESS, FEE_RECIPIENT, DEPLOYER_KEY (used to derive fee recipient),
+# ENS_REGISTRY, ENS_REGISTRAR, ENS_RESOLVER, CHAIN_ID (default 11155111).
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+CONTRACTS_DIR="${SCRIPT_DIR%/scripts}"
+
+CHAIN_ID="${CHAIN_ID:-11155111}"
+RPC_URL="${RPC_URL:-${SEPOLIA_RPC_URL:-}}"
+CONTRACT_ADDRESS="${CONTRACT_ADDRESS:-${STARTUPCHAIN_ADDRESS:-${NEXT_PUBLIC_STARTUPCHAIN_ADDRESS_SEPOLIA:-${NEXT_PUBLIC_STARTUPCHAIN_ADDRESS:-}}}}"
+ETHERSCAN_API_KEY="${ETHERSCAN_API_KEY:-}"
+FEE_RECIPIENT="${FEE_RECIPIENT:-}"
+
+if [[ -z "$ETHERSCAN_API_KEY" ]]; then
+  echo "ETHERSCAN_API_KEY is required" >&2
+  exit 1
+fi
+
+if [[ -z "$RPC_URL" ]]; then
+  echo "RPC_URL or SEPOLIA_RPC_URL is required" >&2
+  exit 1
+fi
+
+if [[ -z "$CONTRACT_ADDRESS" ]]; then
+  echo "Contract address missing. Set CONTRACT_ADDRESS or NEXT_PUBLIC_STARTUPCHAIN_ADDRESS_SEPOLIA." >&2
+  exit 1
+fi
+
+if [[ -z "$FEE_RECIPIENT" && -n "${DEPLOYER_KEY:-}" ]]; then
+  FEE_RECIPIENT="$(cast wallet address "$DEPLOYER_KEY")"
+fi
+
+if [[ -z "$FEE_RECIPIENT" ]]; then
+  echo "Fee recipient missing. Set FEE_RECIPIENT or DEPLOYER_KEY to derive it." >&2
+  exit 1
+fi
+
+case "$CHAIN_ID" in
+  1)
+    DEFAULT_ENS_REGISTRY="0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e"
+    DEFAULT_ENS_REGISTRAR="0x253553366Da8546fC250F225fe3d25d0C782303b"
+    DEFAULT_ENS_RESOLVER="0x231b0Ee14048e9dCcD1d247744d114a4EB5E8E63"
+    ;;
+  11155111)
+    DEFAULT_ENS_REGISTRY="0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e"
+    DEFAULT_ENS_REGISTRAR="0xFED6a969AaA60E4961FCD3EBF1A2e8913ac65B72"
+    DEFAULT_ENS_RESOLVER="0x8FADE66B79cC9f707aB26799354482EB93a5B7dD"
+    ;;
+  *)
+    echo "Unsupported CHAIN_ID '$CHAIN_ID'. Set ENS_REGISTRY, ENS_REGISTRAR, ENS_RESOLVER manually." >&2
+    exit 1
+    ;;
+esac
+
+ENS_REGISTRY="${ENS_REGISTRY:-$DEFAULT_ENS_REGISTRY}"
+ENS_REGISTRAR="${ENS_REGISTRAR:-$DEFAULT_ENS_REGISTRAR}"
+ENS_RESOLVER="${ENS_RESOLVER:-$DEFAULT_ENS_RESOLVER}"
+
+CONSTRUCTOR_ARGS=$(cast abi-encode "constructor(address,address,address,address)" \
+  "$ENS_REGISTRY" "$ENS_REGISTRAR" "$ENS_RESOLVER" "$FEE_RECIPIENT")
+
+cd "$CONTRACTS_DIR"
+
+forge verify-contract "$CONTRACT_ADDRESS" src/StartupChain.sol:StartupChain \
+  --constructor-args "$CONSTRUCTOR_ARGS" \
+  --chain-id "$CHAIN_ID" \
+  --rpc-url "$RPC_URL" \
+  --watch \
+  --etherscan-api-key "$ETHERSCAN_API_KEY"

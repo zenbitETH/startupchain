@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { getServerSession } from '@/lib/auth/server-session'
 
-export default async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   if (!request.nextUrl.pathname.startsWith('/dashboard')) {
     return NextResponse.next()
   }

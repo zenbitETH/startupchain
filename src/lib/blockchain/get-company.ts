@@ -1,49 +1,232 @@
-import { publicClient } from '@/lib/blockchain/startupchain-client'
+import { startupChainAbi } from './startupchain-abi'
+import { getPublicClient } from './startupchain-client'
+import {
+  STARTUPCHAIN_CHAIN_ID,
+  getStartupChainAddress,
+} from './startupchain-config'
 
-const STARTUPCHAIN_ADDRESS = process.env
-  .NEXT_PUBLIC_STARTUPCHAIN_ADDRESS as `0x${string}`
+export type Founder = {
+  wallet: `0x${string}`
+  equityBps: bigint
+  equityPercent: number
+  role: string
+}
 
-if (!STARTUPCHAIN_ADDRESS)
-  throw new Error('Missing NEXT_PUBLIC_STARTUPCHAIN_ADDRESS')
+export type Company = {
+  id: string
+  ownerAddress: `0x${string}`
+  safeAddress: `0x${string}`
+  ensName: string
+  creationDate: Date
+  threshold: number
+  founders: Founder[]
+}
 
-export async function getCompanyByAddress(address: string) {
+export async function getCompanyByAddress(
+  address: string,
+  chainId: number = STARTUPCHAIN_CHAIN_ID
+): Promise<Company | null> {
   if (!address) return null
 
   try {
-    const data = await publicClient.readContract({
-      address: STARTUPCHAIN_ADDRESS,
-      abi: [
-        {
-          inputs: [{ name: '_address', type: 'address' }],
-          name: 'getCompanyByAddress',
-          outputs: [
-            { name: 'id', type: 'uint256' },
-            { name: 'companyAddress', type: 'address' },
-            { name: 'ensName', type: 'string' },
-            { name: 'creationDate', type: 'uint256' },
-            { name: 'founders', type: 'address[]' },
-          ],
-          stateMutability: 'view',
-          type: 'function',
-        },
-      ],
+    const contractAddress = getStartupChainAddress(chainId)
+    const client = getPublicClient(chainId)
+
+    // Get basic company info
+    const data = await client.readContract({
+      address: contractAddress,
+      abi: startupChainAbi,
       functionName: 'getCompanyByAddress',
       args: [address as `0x${string}`],
     })
 
-    // Format the result into a nice object
-    // The return type of readContract with this ABI will be an array/tuple
-    const [id, companyAddress, ensName, creationDate, founders] = data
+    const [id, ownerAddress, ensName, creationDate, safeAddress, threshold] =
+      data
+
+    // Get founders with equity
+    const foundersData = await client.readContract({
+      address: contractAddress,
+      abi: startupChainAbi,
+      functionName: 'getCompanyFounders',
+      args: [id],
+    })
+
+    const founders: Founder[] = foundersData.map((f) => ({
+      wallet: f.wallet,
+      equityBps: f.equityBps,
+      equityPercent: Number(f.equityBps) / 100, // Convert bps to percentage
+      role: f.role,
+    }))
 
     return {
       id: id.toString(),
-      companyAddress,
-      ensName,
+      ownerAddress,
+      safeAddress,
+      ensName: ensName.endsWith('.eth') ? ensName : `${ensName}.eth`,
       creationDate: new Date(Number(creationDate) * 1000),
+      threshold: Number(threshold),
       founders,
     }
   } catch {
     // If the contract reverts (e.g., "No company found"), we return null
+    return null
+  }
+}
+
+export async function getCompanyByENS(
+  ensName: string,
+  chainId: number = STARTUPCHAIN_CHAIN_ID
+): Promise<Company | null> {
+  if (!ensName) return null
+
+  try {
+    const contractAddress = getStartupChainAddress(chainId)
+    const client = getPublicClient(chainId)
+
+    // Normalize ENS name (remove .eth if present)
+    const normalizedName = ensName.endsWith('.eth')
+      ? ensName.slice(0, -4)
+      : ensName
+
+    const data = await client.readContract({
+      address: contractAddress,
+      abi: startupChainAbi,
+      functionName: 'getCompanyByENS',
+      args: [normalizedName],
+    })
+
+    const [id, ownerAddress, name, creationDate, safeAddress, threshold] = data
+
+    // Get founders with equity
+    const foundersData = await client.readContract({
+      address: contractAddress,
+      abi: startupChainAbi,
+      functionName: 'getCompanyFounders',
+      args: [id],
+    })
+
+    const founders: Founder[] = foundersData.map((f) => ({
+      wallet: f.wallet,
+      equityBps: f.equityBps,
+      equityPercent: Number(f.equityBps) / 100,
+      role: f.role,
+    }))
+
+    return {
+      id: id.toString(),
+      ownerAddress,
+      safeAddress,
+      ensName: name.endsWith('.eth') ? name : `${name}.eth`,
+      creationDate: new Date(Number(creationDate) * 1000),
+      threshold: Number(threshold),
+      founders,
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function getCompanyById(
+  companyId: bigint,
+  chainId: number = STARTUPCHAIN_CHAIN_ID
+): Promise<Company | null> {
+  try {
+    const contractAddress = getStartupChainAddress(chainId)
+    const client = getPublicClient(chainId)
+
+    const data = await client.readContract({
+      address: contractAddress,
+      abi: startupChainAbi,
+      functionName: 'getCompany',
+      args: [companyId],
+    })
+
+    const [id, ownerAddress, ensName, creationDate, safeAddress, threshold] =
+      data
+
+    // Get founders with equity
+    const foundersData = await client.readContract({
+      address: contractAddress,
+      abi: startupChainAbi,
+      functionName: 'getCompanyFounders',
+      args: [id],
+    })
+
+    const founders: Founder[] = foundersData.map((f) => ({
+      wallet: f.wallet,
+      equityBps: f.equityBps,
+      equityPercent: Number(f.equityBps) / 100,
+      role: f.role,
+    }))
+
+    return {
+      id: id.toString(),
+      ownerAddress,
+      safeAddress,
+      ensName: ensName.endsWith('.eth') ? ensName : `${ensName}.eth`,
+      creationDate: new Date(Number(creationDate) * 1000),
+      threshold: Number(threshold),
+      founders,
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function getTotalCompanies(
+  chainId: number = STARTUPCHAIN_CHAIN_ID
+): Promise<number> {
+  try {
+    const contractAddress = getStartupChainAddress(chainId)
+    const client = getPublicClient(chainId)
+
+    const total = await client.readContract({
+      address: contractAddress,
+      abi: startupChainAbi,
+      functionName: 'getTotalCompanies',
+      args: [],
+    })
+
+    return Number(total)
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Find a company where the given wallet is listed as a founder.
+ * This iterates through companies starting from the most recent.
+ * Returns the first company found where the wallet is a founder.
+ */
+export async function getCompanyByFounderWallet(
+  founderWallet: string,
+  chainId: number = STARTUPCHAIN_CHAIN_ID
+): Promise<Company | null> {
+  if (!founderWallet) return null
+
+  try {
+    const totalCompanies = await getTotalCompanies(chainId)
+    if (totalCompanies === 0) return null
+
+    const normalizedWallet = founderWallet.toLowerCase()
+
+    // Iterate from most recent company backwards (more likely to find recent registrations first)
+    for (let i = totalCompanies; i >= 1; i--) {
+      const company = await getCompanyById(BigInt(i), chainId)
+      if (!company) continue
+
+      // Check if the wallet is a founder in this company
+      const isFounder = company.founders.some(
+        (founder) => founder.wallet.toLowerCase() === normalizedWallet
+      )
+
+      if (isFounder) {
+        return company
+      }
+    }
+
+    return null
+  } catch {
     return null
   }
 }
