@@ -240,82 +240,91 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   ].join(' ')
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <WizardStepsIndicator
         currentStep={draft.currentStep}
         totalSteps={draft.totalSteps}
       />
 
-      <EnsNameCard ensName={initialEnsName} />
-
       {/* Show registration progress when in progress */}
       {isRegistering && (
-        <RegistrationProgressCard
-          step={step}
-          countdown={countdown}
-          paymentTxHash={paymentTxHash}
-        />
+        <div className="mx-auto max-w-2xl">
+          <EnsNameCard ensName={initialEnsName} />
+          <div className="mt-6">
+            <RegistrationProgressCard
+              step={step}
+              countdown={countdown}
+              paymentTxHash={paymentTxHash}
+            />
+          </div>
+        </div>
       )}
 
       {/* Payment step - show when awaiting payment */}
       {isAwaitingPayment && costBreakdown && (
-        <PaymentStep
-          costBreakdown={costBreakdown}
-          treasuryAddress={treasuryAddress}
-          isSendingPayment={isSendingPayment}
-          isConfirmingPayment={isConfirmingPayment}
-          onSendPayment={handleSendPayment}
-        />
+        <div className="mx-auto max-w-2xl">
+          <EnsNameCard ensName={initialEnsName} />
+          <div className="mt-6">
+            <PaymentStep
+              costBreakdown={costBreakdown}
+              treasuryAddress={treasuryAddress}
+              isSendingPayment={isSendingPayment}
+              isConfirmingPayment={isConfirmingPayment}
+              onSendPayment={handleSendPayment}
+            />
+          </div>
+        </div>
       )}
 
       {/* Hide form fields during registration or payment */}
       {!isRegistering && !isAwaitingPayment && (
-        <>
-          <FoundersForm
-            shareholders={draft.shareholders}
-            isMultipleFounders={draft.isMultipleFounders}
-            registerToDifferentAddress={draft.registerToDifferentAddress}
-            customAddress={draft.customAddress}
-            onFounderModeChange={handleFounderModeChange}
-            onAddFounder={handleAddFounder}
-            onRemoveFounder={handleRemoveFounder}
-            onUpdateFounder={handleUpdateFounder}
-            onRegisterToDifferentAddressChange={setRegisterToDifferentAddress}
-            onCustomAddressChange={setCustomAddress}
-          />
-
-          {/* Cost breakdown - only show when authenticated */}
-          {authenticated && (
-            <CostBreakdownCard
-              costs={costBreakdown}
-              isLoading={isLoadingCosts}
+        <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
+          <div className="space-y-6 lg:col-span-2">
+            <EnsNameCard ensName={initialEnsName} />
+            <FoundersForm
+              shareholders={draft.shareholders}
+              isMultipleFounders={draft.isMultipleFounders}
+              registerToDifferentAddress={draft.registerToDifferentAddress}
+              customAddress={draft.customAddress}
+              onFounderModeChange={handleFounderModeChange}
+              onAddFounder={handleAddFounder}
+              onRemoveFounder={handleRemoveFounder}
+              onUpdateFounder={handleUpdateFounder}
+              onRegisterToDifferentAddressChange={setRegisterToDifferentAddress}
+              onCustomAddressChange={setCustomAddress}
             />
-          )}
-        </>
-      )}
+          </div>
 
-      {error && (
-        <div className="border-destructive/20 bg-destructive/10 rounded-2xl border p-3">
-          <p className="text-destructive text-sm font-medium">{error}</p>
-        </div>
-      )}
+          <div className="space-y-6">
+            {/* Cost breakdown - only show when authenticated */}
+            {authenticated && (
+              <CostBreakdownCard
+                costs={costBreakdown}
+                isLoading={isLoadingCosts}
+              />
+            )}
 
-      {!isRegistering && !isAwaitingPayment && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={handleCreateBusiness}
-            disabled={disableCreateButton}
-            className={createButtonClasses}
-          >
-            {isLoadingCosts
-              ? 'Calculating costs...'
-              : !authenticated
-                ? 'Connect Wallet & Create'
-                : costBreakdown
-                  ? `Continue to Payment (${costBreakdown.totalEth} ETH)`
-                  : 'Create Business'}
-          </button>
+            {error && (
+              <div className="border-destructive/20 bg-destructive/10 rounded-xl border p-3">
+                <p className="text-destructive text-sm font-medium">{error}</p>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleCreateBusiness}
+              disabled={disableCreateButton}
+              className={`${createButtonClasses} w-full`}
+            >
+              {isLoadingCosts
+                ? 'Calculating...'
+                : !authenticated
+                  ? 'Connect Wallet'
+                  : costBreakdown
+                    ? `Pay ${parseFloat(costBreakdown.totalEth).toFixed(5)} ETH`
+                    : 'Create Business'}
+            </button>
+          </div>
         </div>
       )}
     </div>
