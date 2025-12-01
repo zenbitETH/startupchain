@@ -58,6 +58,9 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   const clearDraftIfChainMismatch = useDraftStore(
     (state) => state.clearDraftIfChainMismatch
   )
+  const clearDraftIfOwnerMismatch = useDraftStore(
+    (state) => state.clearDraftIfOwnerMismatch
+  )
   const addShareholder = useDraftStore((state) => state.addShareholder)
   const removeShareholder = useDraftStore((state) => state.removeShareholder)
   const updateShareholder = useDraftStore((state) => state.updateShareholder)
@@ -72,12 +75,21 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     clearDraftIfChainMismatch(chainId)
   }, [chainId, clearDraftIfChainMismatch])
 
+  // Clear draft if different wallet connected (prevents using another user's draft)
+  useEffect(() => {
+    const userWallet = user?.wallet?.address
+    if (userWallet) {
+      clearDraftIfOwnerMismatch(userWallet)
+    }
+  }, [user?.wallet?.address, clearDraftIfOwnerMismatch])
+
   // Initialize draft
   useEffect(() => {
     if (!draft) {
-      initializeDraft(initialEnsName, chainId)
+      const userWallet = user?.wallet?.address
+      initializeDraft(initialEnsName, chainId, userWallet)
     }
-  }, [draft, initialEnsName, initializeDraft, chainId])
+  }, [draft, initialEnsName, initializeDraft, chainId, user?.wallet?.address])
 
   // Auto-populate founder with user's wallet
   useEffect(() => {
@@ -171,6 +183,9 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   const handleCreateBusiness = async () => {
     console.log(LOG_PREFIX, '=== handleCreateBusiness START ===')
     console.log(LOG_PREFIX, 'authenticated:', authenticated)
+    console.log(LOG_PREFIX, 'Connected wallet:', user?.wallet?.address)
+    console.log(LOG_PREFIX, 'Draft owner wallet:', draft?.ownerWallet)
+    console.log(LOG_PREFIX, 'Draft shareholders:', draft?.shareholders)
     if (!authenticated) {
       console.log(LOG_PREFIX, 'Not authenticated, calling connect()')
       await connect()
@@ -194,6 +209,11 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
 
       const threshold = calculateThreshold(founders.length)
       console.log(LOG_PREFIX, 'Prepared founders:', founders)
+      console.log(
+        LOG_PREFIX,
+        'Founder addresses being sent:',
+        founders.map((f) => f.address)
+      )
       console.log(LOG_PREFIX, 'Threshold:', threshold)
 
       console.log(LOG_PREFIX, 'Calling initializeRegistration...')
