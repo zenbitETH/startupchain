@@ -1,148 +1,26 @@
 'use client'
 
-import { Info, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { isAddress } from 'viem'
 
-import {
-  type CostBreakdown,
-  useCompanyRegistration,
-} from '@/hooks/use-company-registration'
+import { useCompanyRegistration } from '@/hooks/use-company-registration'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { calculateThreshold } from '@/lib/blockchain/safe-factory'
 import { STARTUPCHAIN_CHAIN_ID } from '@/lib/blockchain/startupchain-config'
-import { type Shareholder, useDraftStore } from '@/lib/store/draft'
+import { useDraftStore } from '@/lib/store/draft'
+
+import { CostBreakdownCard } from './cost-breakdown-card'
+import { EnsNameCard } from './ens-name-card'
+import { FoundersForm } from './founders-form'
+import { PaymentStep } from './payment-step'
+import { RegistrationProgressCard } from './registration-progress-card'
+import { WizardStepsIndicator } from './wizard-steps-indicator'
 
 const LOG_PREFIX = '[UI:SetupWizard]'
 
 interface SetupWizardProps {
   initialEnsName: string
-}
-
-function CostBreakdownCard({
-  costs,
-  isLoading,
-}: {
-  costs: CostBreakdown | null
-  isLoading: boolean
-}) {
-  if (isLoading) {
-    return (
-      <div className="border-border bg-card rounded-2xl border p-6">
-        <div className="flex items-center gap-2">
-          <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-          <span className="text-muted-foreground text-sm">
-            Calculating costs...
-          </span>
-        </div>
-      </div>
-    )
-  }
-
-  if (!costs) return null
-
-  return (
-    <div className="border-border bg-card rounded-2xl border p-6">
-      <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-        <Info className="h-5 w-5" />
-        Registration Cost
-      </h3>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">
-            ENS Registration (1 year)
-          </span>
-          <span className="font-mono">{costs.ensRegistrationCostEth} ETH</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Safe Wallet Deployment</span>
-          <span className="font-mono">~{costs.safeDeploymentCostEth} ETH</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">
-            Service Fee (25%)
-            <span className="ml-1 text-xs opacity-70">
-              — supports StartupChain development
-            </span>
-          </span>
-          <span className="font-mono">{costs.serviceFeeEth} ETH</span>
-        </div>
-        <div className="border-border border-t pt-3">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold">Total</span>
-            <span className="text-primary font-mono text-lg font-bold">
-              {costs.totalEth} ETH
-            </span>
-          </div>
-        </div>
-      </div>
-      <p className="text-muted-foreground mt-4 text-xs">
-        You will pay this amount from your connected wallet. The service fee
-        helps maintain and improve StartupChain.
-      </p>
-    </div>
-  )
-}
-
-function RegistrationProgress({
-  step,
-  countdown,
-  paymentTxHash,
-}: {
-  step: string
-  countdown: number | null
-  treasuryAddress?: string | null
-  paymentTxHash?: string | null
-}) {
-  const stepLabels: Record<string, string> = {
-    checking: 'Checking availability...',
-    'awaiting-payment': 'Waiting for payment...',
-    'payment-pending': 'Confirming payment...',
-    committing: 'Submitting commitment transaction...',
-    waiting: `Waiting for commitment window (${countdown ?? 0}s remaining)`,
-    'deploying-safe': 'Creating your Safe wallet...',
-    'registering-ens': 'Registering ENS name to your Safe...',
-    'registering-company': 'Recording company on-chain...',
-    completed: 'Registration complete!',
-    failed: 'Registration failed',
-  }
-
-  const stepProgress: Record<string, number> = {
-    idle: 0,
-    checking: 5,
-    'awaiting-payment': 10,
-    'payment-pending': 15,
-    committing: 25,
-    waiting: 40,
-    'deploying-safe': 55,
-    'registering-ens': 70,
-    'registering-company': 85,
-    completed: 100,
-    failed: 0,
-  }
-
-  return (
-    <div className="border-primary/20 bg-primary/5 rounded-2xl border p-6">
-      <div className="mb-3 flex items-center gap-3">
-        {step !== 'completed' && step !== 'failed' && (
-          <Loader2 className="text-primary h-5 w-5 animate-spin" />
-        )}
-        <span className="font-medium">{stepLabels[step] || step}</span>
-      </div>
-      <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
-        <div
-          className="bg-primary h-2 rounded-full transition-all duration-500"
-          style={{ width: `${stepProgress[step] ?? 0}%` }}
-        />
-      </div>
-      {step === 'payment-pending' && paymentTxHash && (
-        <p className="text-muted-foreground mt-3 font-mono text-xs">
-          Tx: {paymentTxHash.slice(0, 10)}...{paymentTxHash.slice(-8)}
-        </p>
-      )}
-    </div>
-  )
 }
 
 export function SetupWizard({ initialEnsName }: SetupWizardProps) {
@@ -163,8 +41,6 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     initializeRegistration,
     sendPayment,
     completeRegistration,
-    reset,
-    safeAddress,
     treasuryAddress,
     paymentTxHash,
     isSendingPayment,
@@ -285,15 +161,11 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     field: 'walletAddress' | 'equityPercentage',
     value: string
   ) => {
-    const updates: Partial<Shareholder> = {}
-
     if (field === 'walletAddress') {
-      updates.walletAddress = value
+      updateShareholder(id, { walletAddress: value })
     } else if (field === 'equityPercentage') {
-      updates.equityPercentage = Number.parseFloat(value) || 0
+      updateShareholder(id, { equityPercentage: Number.parseFloat(value) || 0 })
     }
-
-    updateShareholder(id, updates)
   }
 
   const handleCreateBusiness = async () => {
@@ -349,8 +221,6 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   const isRegistering =
     step !== 'idle' && step !== 'failed' && step !== 'completed'
   const isAwaitingPayment = step === 'awaiting-payment'
-  const isPaymentInProgress =
-    step === 'payment-pending' || isSendingPayment || isConfirmingPayment
   const error = registrationError || localError
 
   const disableCreateButton =
@@ -371,54 +241,16 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
 
   return (
     <div className="space-y-8">
-      <div className="mb-8">
-        <div className="mb-2 flex justify-between">
-          {['Company Details', 'Founders & Equity', 'Review & Deploy'].map(
-            (stepName, index) => (
-              <div
-                key={stepName}
-                className={`flex-1 text-center ${
-                  index <= draft.currentStep
-                    ? 'text-primary'
-                    : 'text-muted-foreground'
-                }`}
-              >
-                {stepName}
-              </div>
-            )
-          )}
-        </div>
-        <div className="bg-muted h-2 w-full rounded-full">
-          <div
-            className="bg-primary h-2 rounded-full transition-all duration-300"
-            style={{
-              width: `${((draft.currentStep + 1) / draft.totalSteps) * 100}%`,
-            }}
-          />
-        </div>
-      </div>
+      <WizardStepsIndicator
+        currentStep={draft.currentStep}
+        totalSteps={draft.totalSteps}
+      />
 
-      <div className="border-border bg-card rounded-2xl border p-6">
-        <div className="flex items-center gap-3">
-          <div className="from-secondary to-primary flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br">
-            <div className="text-xl font-bold text-white">
-              {initialEnsName.charAt(0).toUpperCase()}
-            </div>
-          </div>
-          <div>
-            <p className="text-foreground text-xl font-semibold">
-              {initialEnsName}.eth
-            </p>
-            <p className="text-muted-foreground text-sm">
-              Your ENS business name
-            </p>
-          </div>
-        </div>
-      </div>
+      <EnsNameCard ensName={initialEnsName} />
 
       {/* Show registration progress when in progress */}
       {isRegistering && (
-        <RegistrationProgress
+        <RegistrationProgressCard
           step={step}
           countdown={countdown}
           paymentTxHash={paymentTxHash}
@@ -427,208 +259,30 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
 
       {/* Payment step - show when awaiting payment */}
       {isAwaitingPayment && costBreakdown && (
-        <div className="border-primary/20 bg-primary/5 space-y-4 rounded-2xl border p-6">
-          <h3 className="text-lg font-semibold">Confirm Payment</h3>
-          <p className="text-muted-foreground text-sm">
-            Send {costBreakdown.totalEth} ETH to the StartupChain treasury to
-            begin registration. This covers ENS registration, Safe deployment,
-            and service fees.
-          </p>
-          {treasuryAddress && (
-            <p className="text-muted-foreground font-mono text-xs">
-              Treasury: {treasuryAddress}
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={handleSendPayment}
-            disabled={isPaymentInProgress}
-            className="bg-primary text-background hover:bg-primary/90 w-full rounded-2xl px-8 py-4 text-lg font-semibold transition-all duration-200 disabled:opacity-50"
-          >
-            {isPaymentInProgress ? (
-              <span className="flex items-center justify-center gap-2">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                {isSendingPayment
-                  ? 'Confirm in wallet...'
-                  : 'Confirming payment...'}
-              </span>
-            ) : (
-              `Pay ${costBreakdown.totalEth} ETH`
-            )}
-          </button>
-        </div>
+        <PaymentStep
+          costBreakdown={costBreakdown}
+          treasuryAddress={treasuryAddress}
+          isSendingPayment={isSendingPayment}
+          isConfirmingPayment={isConfirmingPayment}
+          onSendPayment={handleSendPayment}
+        />
       )}
 
       {/* Hide form fields during registration or payment */}
       {!isRegistering && !isAwaitingPayment && (
         <>
-          <div className="border-border bg-card rounded-2xl border p-6">
-            <h3 className="mb-4 text-lg font-semibold">Company Structure</h3>
-            <div className="bg-background flex rounded-2xl p-1">
-              <button
-                type="button"
-                onClick={() => handleFounderModeChange(false)}
-                className={`flex-1 cursor-pointer rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
-                  !draft.isMultipleFounders
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-muted-foreground hover:text-white'
-                }`}
-              >
-                Solo founder
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFounderModeChange(true)}
-                className={`flex-1 cursor-pointer rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
-                  draft.isMultipleFounders
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-muted-foreground hover:text-white'
-                }`}
-              >
-                Multiple founders
-              </button>
-            </div>
-          </div>
-
-          {!draft.isMultipleFounders && (
-            <div className="border-border bg-card rounded-2xl border p-6">
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="different-address"
-                  checked={draft.registerToDifferentAddress}
-                  onChange={(event) =>
-                    setRegisterToDifferentAddress(event.currentTarget.checked)
-                  }
-                  className="border-border text-primary focus:ring-primary rounded border"
-                />
-                <label
-                  htmlFor="different-address"
-                  className="text-foreground text-sm"
-                >
-                  Register ENS to a different address
-                </label>
-              </div>
-              {draft.registerToDifferentAddress && (
-                <div className="mt-3">
-                  <input
-                    type="text"
-                    placeholder="Enter ETH address (0x...)"
-                    value={draft.customAddress}
-                    onChange={(event) => setCustomAddress(event.target.value)}
-                    className="border-border bg-background placeholder:text-muted-foreground focus:border-primary focus:ring-primary w-full rounded-2xl border px-4 py-3 text-lg transition-all duration-200 focus:ring-2"
-                  />
-                  <p className="text-muted-foreground mt-2 text-sm">
-                    The ENS name will be registered to this address instead of
-                    your wallet.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="border-border bg-card rounded-2xl border p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-xl font-semibold">
-                {draft.isMultipleFounders
-                  ? 'Founders & Equity'
-                  : 'Your Details'}
-              </h3>
-              {draft.isMultipleFounders && (
-                <div
-                  className={`text-lg font-medium ${
-                    Math.abs(totalEquity - 100) < 0.01
-                      ? 'text-primary'
-                      : 'text-destructive'
-                  }`}
-                >
-                  Total: {totalEquity.toFixed(1)}%
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              {draft.shareholders.map((founder) => (
-                <div
-                  key={founder.id}
-                  className="border-border rounded-xl border p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        placeholder="Email or ETH address"
-                        value={founder.walletAddress}
-                        onChange={(event) =>
-                          handleUpdateFounder(
-                            founder.id,
-                            'walletAddress',
-                            event.target.value
-                          )
-                        }
-                        className="border-border bg-background placeholder:text-muted-foreground focus:border-primary focus:ring-primary w-full rounded-2xl border px-4 py-3 text-lg transition-all duration-200 focus:ring-2"
-                      />
-                    </div>
-
-                    {draft.isMultipleFounders && (
-                      <div className="w-24">
-                        <div className="relative">
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            value={founder.equityPercentage}
-                            onChange={(event) =>
-                              handleUpdateFounder(
-                                founder.id,
-                                'equityPercentage',
-                                event.target.value
-                              )
-                            }
-                            className="border-border bg-background focus:border-primary focus:ring-primary w-full rounded-2xl border px-3 py-3 pr-8 text-center text-lg transition-all duration-200 focus:ring-2"
-                          />
-                          <div className="text-muted-foreground absolute top-1/2 right-2 -translate-y-1/2 text-sm">
-                            %
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {draft.isMultipleFounders &&
-                      draft.shareholders.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFounder(founder.id)}
-                          className="text-muted-foreground hover:text-destructive rounded-2xl p-2 transition-colors"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-                      )}
-                  </div>
-                </div>
-              ))}
-
-              {draft.isMultipleFounders && (
-                <button
-                  type="button"
-                  onClick={handleAddFounder}
-                  className="hover:bg-primary hover:text-background mx-auto flex items-center justify-center gap-2 rounded-xl border border-dashed px-6 py-4 text-lg font-medium transition-colors"
-                >
-                  <Plus className="h-5 w-5" />
-                  Add Founder
-                </button>
-              )}
-            </div>
-
-            {draft.isMultipleFounders && Math.abs(totalEquity - 100) > 0.01 && (
-              <div className="border-destructive/20 bg-destructive/10 mt-4 rounded-2xl border p-3">
-                <p className="text-destructive text-sm font-medium">
-                  Equity must total 100%. Currently: {totalEquity.toFixed(1)}%
-                </p>
-              </div>
-            )}
-          </div>
+          <FoundersForm
+            shareholders={draft.shareholders}
+            isMultipleFounders={draft.isMultipleFounders}
+            registerToDifferentAddress={draft.registerToDifferentAddress}
+            customAddress={draft.customAddress}
+            onFounderModeChange={handleFounderModeChange}
+            onAddFounder={handleAddFounder}
+            onRemoveFounder={handleRemoveFounder}
+            onUpdateFounder={handleUpdateFounder}
+            onRegisterToDifferentAddressChange={setRegisterToDifferentAddress}
+            onCustomAddressChange={setCustomAddress}
+          />
 
           {/* Cost breakdown - only show when authenticated */}
           {authenticated && (
