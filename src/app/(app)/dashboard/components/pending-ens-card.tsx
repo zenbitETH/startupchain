@@ -47,6 +47,7 @@ export function PendingEnsCard({
     Math.max(0, Math.ceil((record.readyAt - Date.now()) / 1000))
   )
   const [isPending, startTransition] = useTransition()
+  const [finalizeError, setFinalizeError] = useState<string | null>(null)
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -69,8 +70,16 @@ export function PendingEnsCard({
 
   const handleFinalize = () => {
     startTransition(async () => {
-      await finalizeEnsRegistrationAction({ ensName: record.ensName })
-      router.refresh()
+      setFinalizeError(null)
+      try {
+        await finalizeEnsRegistrationAction({ ensName: record.ensName })
+        router.refresh()
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to finalize registration'
+        console.error('[PendingEnsCard] finalize error:', err)
+        setFinalizeError(message)
+      }
     })
   }
 
@@ -169,6 +178,12 @@ export function PendingEnsCard({
               </>
             )}
           </button>
+        </div>
+      )}
+
+      {finalizeError && (
+        <div className="text-destructive bg-destructive/10 border-destructive/40 mt-4 rounded-lg border px-3 py-2 text-sm">
+          {finalizeError}
         </div>
       )}
 
