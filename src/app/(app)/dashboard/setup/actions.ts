@@ -573,10 +573,3 @@ export async function validateEnsOwnershipAction(ensName: string, expectedOwner:
   }
 }
 
-// Re-export payment actions for backward compatibility
-export {
-  getTreasuryAddressAction,
-  verifyPrepaymentAction,
-  checkPaymentStatusAction,
-} from "./payment-actions"
-
