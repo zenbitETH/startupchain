@@ -2,9 +2,25 @@
  * Safe Transaction Service API utilities
  * Server-side only - uses SAFE_API_KEY from environment
  */
+import pLimit from 'p-limit'
+
 import { STARTUPCHAIN_CHAIN_ID } from './startupchain-config'
 
 const SAFE_API_KEY = process.env.SAFE_API_KEY
+
+// Rate limiting config
+const MAX_RETRIES = 3
+const INITIAL_BACKOFF_MS = 1000
+
+// Limit concurrent Safe API requests to avoid 429 errors
+const limit = pLimit(2)
+
+/**
+ * Simple delay utility
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 // Chain name mapping for Safe API
 function getChainName(chainId: number): string {
@@ -97,7 +113,7 @@ export type SafeTransactionHistoryItem = {
 }
 
 async function safeFetch<T>(url: string): Promise<T | null> {
-  try {
+  return limit(async () => {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     }
@@ -106,21 +122,48 @@ async function safeFetch<T>(url: string): Promise<T | null> {
       headers['Authorization'] = `Bearer ${SAFE_API_KEY}`
     }
 
-    const response = await fetch(url, {
-      headers,
-      cache: 'no-store', // Always fetch fresh data for Safe info
-    })
+    let lastError: Error | null = null
 
-    if (!response.ok) {
-      console.error(`Safe API error: ${response.status} ${response.statusText}`)
-      return null
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const response = await fetch(url, {
+          headers,
+          next: { revalidate: 30 }, // Cache for 30 seconds
+        })
+
+        if (response.ok) {
+          return response.json()
+        }
+
+        // Handle rate limiting with exponential backoff
+        if (response.status === 429) {
+          const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt)
+          console.warn(
+            `Safe API rate limited (429), retrying in ${backoffMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`
+          )
+          await delay(backoffMs)
+          continue
+        }
+
+        // For other errors, don't retry
+        console.error(
+          `Safe API error: ${response.status} ${response.statusText}`
+        )
+        return null
+      } catch (error) {
+        lastError = error as Error
+        // Network errors - retry with backoff
+        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt)
+        console.warn(
+          `Safe API network error, retrying in ${backoffMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`
+        )
+        await delay(backoffMs)
+      }
     }
 
-    return response.json()
-  } catch (error) {
-    console.error('Safe API fetch error:', error)
+    console.error('Safe API fetch error after retries:', lastError)
     return null
-  }
+  })
 }
 
 /**
