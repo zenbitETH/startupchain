@@ -50,7 +50,14 @@ export function PendingEnsCard({
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      setRemaining(Math.max(0, Math.ceil((record.readyAt - Date.now()) / 1000)))
+      const newRemaining = Math.max(
+        0,
+        Math.ceil((record.readyAt - Date.now()) / 1000)
+      )
+      setRemaining(newRemaining)
+      if (newRemaining <= 0) {
+        window.clearInterval(id)
+      }
     }, 1000)
     return () => window.clearInterval(id)
   }, [record.readyAt])
