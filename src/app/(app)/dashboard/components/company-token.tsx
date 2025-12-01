@@ -54,10 +54,6 @@ export function CompanyToken({ data }: CompanyTokenProps) {
 
       <div className="mt-8 space-y-3">
         <Button className="w-full">Manage Token</Button>
-        <Button variant="outline" className="w-full">
-          <MessageCircle className="h-4 w-4" />
-          Ask a question
-        </Button>
       </div>
     </section>
   )
