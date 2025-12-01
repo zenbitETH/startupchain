@@ -21,13 +21,11 @@ export interface CompanyDraft {
   customAddress: string
   createdAt: string
   updatedAt: string
-  /** Chain ID the draft was created on */
-  chainId: number
 }
 
 interface DraftStore {
   draft: CompanyDraft | null
-  initializeDraft: (ensName: string, chainId: number) => void
+  initializeDraft: (ensName: string) => void
   updateDraft: (draft: Partial<CompanyDraft>) => void
 
   // Shareholder management
@@ -46,18 +44,11 @@ interface DraftStore {
   setCustomAddress: (address: string) => void
   setRegisterToDifferentAddress: (register: boolean) => void
 
-  // Chain management
-  /** Clear draft if chainId doesn't match the draft's chainId */
-  clearDraftIfChainMismatch: (chainId: number) => void
-
   // Cleanup
   resetDraft: () => void
 }
 
-const createInitialDraft = (
-  ensName: string,
-  chainId: number
-): CompanyDraft => ({
+const createInitialDraft = (ensName: string): CompanyDraft => ({
   id: crypto.randomUUID(),
   ensName,
   companyName: '',
@@ -71,7 +62,6 @@ const createInitialDraft = (
   customAddress: '',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
-  chainId,
 })
 
 export const useDraftStore = create<DraftStore>()(
@@ -79,8 +69,8 @@ export const useDraftStore = create<DraftStore>()(
     (set, get) => ({
       draft: null,
 
-      initializeDraft: (ensName: string, chainId: number) => {
-        const draft = createInitialDraft(ensName, chainId)
+      initializeDraft: (ensName: string) => {
+        const draft = createInitialDraft(ensName)
         set({ draft })
       },
 
@@ -219,16 +209,6 @@ export const useDraftStore = create<DraftStore>()(
             updatedAt: new Date().toISOString(),
           },
         })
-      },
-
-      clearDraftIfChainMismatch: (chainId: number) => {
-        const currentDraft = get().draft
-        if (!currentDraft) return
-
-        // Clear draft if it was created on a different chain
-        if (currentDraft.chainId !== chainId) {
-          set({ draft: null })
-        }
       },
 
       goToNextStep: () => {

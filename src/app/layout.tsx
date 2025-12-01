@@ -5,7 +5,6 @@ import { Fredoka } from 'next/font/google'
 import { cookies, headers } from 'next/headers'
 
 import { AIChatTrigger } from '@/components/ai-chat/ai-chat-trigger'
-import { CookieConsent } from '@/components/ui/cookie-consent'
 import { ProvidersShell } from '@/components/providers/providers-shell'
 import { getServerSession } from '@/lib/auth/server-session'
 import '@/style.css'
@@ -69,9 +68,10 @@ export default async function RootLayout({
       <head />
       <body className="antialiased">
         <ProvidersShell initialSession={session || undefined}>
-          <main id="main">{children}</main>
-          <AIChatTrigger />
-          <CookieConsent />
+          <main>
+            {children}
+            <AIChatTrigger />
+          </main>
         </ProvidersShell>
         <Analytics />
         <SpeedInsights />

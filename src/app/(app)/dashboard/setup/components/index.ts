@@ -1,7 +1,0 @@
-export { CostBreakdownCard } from './cost-breakdown-card'
-export { EnsNameCard } from './ens-name-card'
-export { FoundersForm } from './founders-form'
-export { PaymentStep } from './payment-step'
-export { RegistrationProgressCard } from './registration-progress-card'
-export { SetupWizard } from './setup-wizard'
-export { WizardStepsIndicator } from './wizard-steps-indicator'

@@ -42,14 +42,8 @@ export function WalletAuthProvider({ children }: { children: React.ReactNode }) 
   }, [login])
 
   const disconnect = useCallback(async () => {
-    try {
-      await logout()
-    } finally {
-      if (user?.id) {
-        localStorage.removeItem(`business-${user.id}`)
-      }
-    }
-  }, [logout, user?.id])
+    await logout()
+  }, [logout])
 
   const value = useMemo(
     () => ({

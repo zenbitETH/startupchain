@@ -42,7 +42,6 @@
     "node_modules",
     ".next",
     "dist",
-    "build",
-    "src/_archive"
+    "build"
   ]
 }

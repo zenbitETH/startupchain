@@ -1,8 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
-import { useWalletAuth } from '@/hooks/use-wallet-auth'
-
-import { STARTUPCHAIN_CHAIN_ID } from '../../lib/blockchain/startupchain-config'
 import { isValidEnsName } from '../../lib/ens'
 
 interface EnsCheckResult {
@@ -13,11 +10,6 @@ interface EnsCheckResult {
 }
 
 export function useEnsCheck(ensName: string) {
-  const { chainId: walletChainId } = useWalletAuth()
-
-  // Use wallet chain ID if available, otherwise fall back to default
-  const chainId = walletChainId ?? STARTUPCHAIN_CHAIN_ID
-
   const normalizedName = ensName
     .trim()
     .toLowerCase()
@@ -26,11 +18,10 @@ export function useEnsCheck(ensName: string) {
   const shouldCheck = isValidEnsName(ensName) && normalizedName.length >= 3
 
   const { data, error, isLoading } = useQuery<EnsCheckResult>({
-    // Include chainId in query key to refetch on chain change
-    queryKey: ['ens-check', normalizedName, chainId],
+    queryKey: ['ens-check', normalizedName],
     queryFn: async ({ signal }) => {
       const response = await fetch(
-        `/api/ens/check?name=${encodeURIComponent(normalizedName)}&chainId=${chainId}`,
+        `/api/ens/check?name=${encodeURIComponent(normalizedName)}`,
         { signal }
       )
       if (!response.ok) {
@@ -63,6 +54,5 @@ export function useEnsCheck(ensName: string) {
     isAvailable,
     isTaken,
     resolvedAddress,
-    chainId,
   }
 }

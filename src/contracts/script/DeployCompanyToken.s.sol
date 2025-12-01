@@ -6,7 +6,7 @@ import {CompanyToken} from "../src/CompanyToken.sol";
 
 contract DeployCompanyToken is Script {
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
 
         // Configuration from environment or hardcoded for testing

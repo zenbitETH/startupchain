@@ -1,7 +1,7 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { base, baseSepolia, mainnet, sepolia } from 'viem/chains'
+import { mainnet, sepolia } from 'viem/chains'
 import { WagmiProvider } from 'wagmi'
 
 import { WalletAuthProvider } from '@/components/providers/wallet-auth-provider'
@@ -22,7 +22,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
         },
         loginMethods: ['wallet'],
         defaultChain: mainnet,
-        supportedChains: [mainnet, sepolia, base, baseSepolia],
+        supportedChains: [mainnet, sepolia],
       }}
     >
       <WagmiProvider config={wagmiConfig}>

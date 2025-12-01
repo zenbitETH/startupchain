@@ -2,8 +2,6 @@
 
 ### Do
 - **READ THIS FIRST**: Refer to `docs/general/modern-react-nextjs-guide.md` for the latest React 19 & Next.js 16 patterns (Async APIs, Server Actions, `use` hook).
-- **UNDERSTAND THE SYSTEM**: Review `docs/general/system-flow.md` for the complete system architecture diagram before making changes. This shows how all components connect.
-- **KEEP DIAGRAMS UPDATED**: When making architectural changes (new routes, providers, server actions, contract integrations), update `docs/general/system-flow.md` to reflect those changes.
 - look in `docs/general/` for the active plan/context before making changes
 - skim `README.md` for product framing when kicking off new work
 - StartupChain = onchain company OS (ENS identity, Safe treasury, EAS attestations, DeFi rails, company token); status: early production
@@ -52,19 +50,11 @@ Ask first:
 
 ### Project structure
 - `/src/app/` - Next.js app router with (app)/ protected routes, (public)/ public routes, api/ endpoints
-- `/src/app/(app)/dashboard/` - Protected dashboard routes (main, ens, safe, tokens, setup)
-- `/src/components/` - React components organized by feature (auth/, ens/, ui/, modals/)
-- `/src/lib/` - Utilities, web3 integrations, state stores
-- `/src/lib/blockchain/` - Contract ABIs, Safe API, chain config, company data fetchers
-- `/src/hooks/` - Custom React hooks (wallet, registration, costs)
-- `/src/contracts/` - Solidity smart contracts (StartupChain.sol, CompanyToken.sol)
+- `/src/components/` - React components organized by feature (auth/, ens/, ui/, etc.)
+- `/src/lib/` - Utilities, web3 integrations, state stores, SWR configs
+- `/src/hooks/` - Custom React hooks
+- `/src/contracts/` - Solidity smart contracts
 - `/src/style.css` - Global styles
-
-### Key integrations
-- **StartupChain.sol** (Sepolia: `0x4511d1d2B9C1BBA33D1B25c3E547835b5BA1F3aC`) - Company registry with ENS + Safe
-- **Safe Transaction Service API** - Server-side via `SAFE_API_KEY` for treasury data
-- **ENS** - Off-chain registration via @ensdomains/ensjs (commit-reveal scheme)
-- **Privy** - Wallet auth with embedded wallet creation
 
 ### PR checklist
 - format and type check: green
