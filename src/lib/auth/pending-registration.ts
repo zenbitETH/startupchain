@@ -36,6 +36,8 @@ export type PendingRegistration = {
   safeAddress?: `0x${string}`
   safeDeploymentTxHash?: `0x${string}`
   error?: string
+  /** Unique nonce for Safe address generation - allows same owners to have multiple Safes */
+  saltNonce?: string
 }
 
 function serializeCookieValue(data: PendingRegistration) {

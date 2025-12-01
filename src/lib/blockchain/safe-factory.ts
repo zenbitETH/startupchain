@@ -9,7 +9,13 @@
  */
 import SafeApiKit from '@safe-global/api-kit'
 import Safe, { type SafeAccountConfig } from '@safe-global/protocol-kit'
-import { type Account, type Chain, type PublicClient, type Transport, type WalletClient } from 'viem'
+import {
+  type Account,
+  type Chain,
+  type PublicClient,
+  type Transport,
+  type WalletClient,
+} from 'viem'
 import { mainnet, sepolia } from 'viem/chains'
 
 import { isSupportedChain } from './startupchain-config'
@@ -57,6 +63,7 @@ export type DeploySafeParams = {
   walletClient: WalletClient<Transport, Chain, Account>
   publicClient: PublicClient
   threshold?: number // Optional override, otherwise auto-calculated
+  saltNonce?: string // Optional nonce to generate unique Safe addresses for same owner set
 }
 
 export type DeploySafeResult = {
@@ -75,6 +82,7 @@ export async function deploySafe({
   walletClient,
   publicClient,
   threshold: customThreshold,
+  saltNonce,
 }: DeploySafeParams): Promise<DeploySafeResult> {
   if (!isSupportedChain(chainId)) {
     throw new Error(`Chain ${chainId} not supported for Safe deployment`)
@@ -118,6 +126,7 @@ export async function deploySafe({
     signer: signerAddress,
     predictedSafe: {
       safeAccountConfig,
+      safeDeploymentConfig: saltNonce ? { saltNonce } : undefined,
     },
   })
 
@@ -131,12 +140,12 @@ export async function deploySafe({
   // Execute the deployment using the passed wallet client (not Safe SDK's internal signer)
   // Safe SDK's getExternalSigner() doesn't work with public RPC nodes that don't support eth_sendTransaction
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const txHash = await (walletClient as any).sendTransaction({
+  const txHash = (await (walletClient as any).sendTransaction({
     to: deploymentTransaction.to as `0x${string}`,
     value: BigInt(deploymentTransaction.value),
     data: deploymentTransaction.data as `0x${string}`,
     chain,
-  }) as `0x${string}`
+  })) as `0x${string}`
 
   // Wait for transaction receipt
   await publicClient.waitForTransactionReceipt({ hash: txHash })
@@ -175,15 +184,18 @@ export function getSafeApiKit(chainId: number): SafeApiKit {
 
 /**
  * Predict Safe address before deployment (counterfactual)
+ * @param saltNonce - Optional nonce to generate unique Safe addresses for same owner set
  */
 export async function predictSafeAddress({
   owners,
   chainId,
   threshold: customThreshold,
+  saltNonce,
 }: {
   owners: `0x${string}`[]
   chainId: number
   threshold?: number
+  saltNonce?: string
 }): Promise<`0x${string}`> {
   if (!isSupportedChain(chainId)) {
     throw new Error(`Chain ${chainId} not supported`)
@@ -203,6 +215,7 @@ export async function predictSafeAddress({
     provider: rpcUrl,
     predictedSafe: {
       safeAccountConfig,
+      safeDeploymentConfig: saltNonce ? { saltNonce } : undefined,
     },
   })
 

@@ -191,6 +191,11 @@ export async function commitEnsRegistrationAction({
   // Get founder wallet addresses for Safe
   const founderAddresses = founderStructs.map((f) => f.wallet)
 
+  // Generate unique saltNonce for this company - ensures different Safe address per company
+  // Using ENS label + timestamp for uniqueness
+  const saltNonce = `${label}-${Date.now()}`
+  console.log(LOG_PREFIX, 'Generated saltNonce for unique Safe:', saltNonce)
+
   // Predict Safe address before deployment
   console.log(
     LOG_PREFIX,
@@ -201,6 +206,7 @@ export async function commitEnsRegistrationAction({
     owners: founderAddresses,
     chainId: STARTUPCHAIN_CHAIN_ID,
     threshold,
+    saltNonce,
   })
   console.log(LOG_PREFIX, 'Predicted Safe address:', predictedSafeAddress)
 
@@ -287,6 +293,7 @@ export async function commitEnsRegistrationAction({
     updatedAt: startedAt,
     status: 'waiting',
     safeAddress: predictedSafeAddress, // Store predicted Safe address
+    saltNonce, // Store salt for use during Safe deployment
   }
 
   await setPendingRegistration(record)
@@ -362,26 +369,47 @@ export async function finalizeEnsRegistrationAction({
     return record
   }
 
-  // Check if company already exists
-  const safeAddress = pending.safeAddress ?? pending.owner
+  // Check if THIS ENS NAME is already registered as a company
+  // Note: We check by ENS name, not by Safe address, because:
+  // - Same founders can create multiple companies with different ENS names
+  // - Each company gets its own Safe (via saltNonce)
+  console.log(
+    LOG_PREFIX,
+    'Checking if ENS name already registered as company:',
+    label
+  )
   try {
-    const existing = await startupChainPublicClient.readContract({
+    const existingByEns = await startupChainPublicClient.readContract({
       address: contractAddress,
       abi: startupChainAbi,
-      functionName: 'getCompanyByAddress',
-      args: [safeAddress],
+      functionName: 'getCompanyByENS',
+      args: [label],
     })
-    if (existing && existing[0] > 0n) {
+    if (existingByEns && existingByEns[0] > 0n) {
+      console.log(
+        LOG_PREFIX,
+        'Company already exists for this ENS name:',
+        existingByEns
+      )
       const updatedExisting: PendingRecord = {
         ...pending,
         status: 'completed',
-        safeAddress,
+        safeAddress: existingByEns[1] as `0x${string}`, // Use the actual Safe address from contract
         updatedAt: Date.now(),
       }
       return finishAndClear(updatedExisting)
     }
-  } catch {
-    // Continue with registration flow
+    console.log(
+      LOG_PREFIX,
+      'ENS name not yet registered as company, proceeding...'
+    )
+  } catch (err) {
+    // Company doesn't exist yet - continue with registration flow
+    console.log(
+      LOG_PREFIX,
+      'getCompanyByENS check:',
+      err instanceof Error ? err.message : 'not found, continuing'
+    )
   }
 
   const years = Math.max(1, pending.durationYears)
@@ -430,6 +458,7 @@ export async function finalizeEnsRegistrationAction({
         walletClient: startupChainWalletClient,
         publicClient: startupChainPublicClient,
         threshold: pending.threshold,
+        saltNonce: pending.saltNonce, // Use same salt as prediction for correct address
       })
       console.log(LOG_PREFIX, 'Safe deployed!', safeResult)
 
