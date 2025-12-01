@@ -1,11 +1,4 @@
-import {
-  ArrowRight,
-  BadgeCheck,
-  Clock,
-  ExternalLink,
-  Info,
-  ListChecks,
-} from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 
@@ -25,9 +18,13 @@ import {
   type SupportedChainId,
   isSupportedChain,
 } from '@/lib/blockchain/startupchain-config'
-import { shortenAddress } from '@/lib/utils'
 
 import { finalizeEnsRegistrationAction } from '../setup/actions'
+import {
+  CompanyCard,
+  RegistrationHistory,
+  RegistrationStatusCard,
+} from './components'
 
 /**
  * Parse and validate chainId from search params.
@@ -52,11 +49,6 @@ function getEnsAppBase(chainId: SupportedChainId): string {
   return chainId === 1
     ? 'https://app.ens.domains/'
     : 'https://sepolia.app.ens.domains/'
-}
-
-function formatDate(value?: Date) {
-  if (!value) return 'Pending'
-  return value.toLocaleString()
 }
 
 type PageProps = {
@@ -160,242 +152,21 @@ export default async function EnsDashboardPage({ searchParams }: PageProps) {
         )}
 
         <div className="grid gap-4 lg:grid-cols-3">
-          <section className="bg-card border-border rounded-2xl border p-6 shadow-sm lg:col-span-2">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-muted-foreground text-sm">Current company</p>
-                <h2 className="text-foreground text-xl font-semibold">
-                  {company?.ensName ?? 'No ENS name registered'}
-                </h2>
-              </div>
-              {company ? (
-                <BadgeCheck className="text-primary h-6 w-6" />
-              ) : (
-                <Info className="text-muted-foreground h-6 w-6" />
-              )}
-            </div>
+          <CompanyCard
+            company={company}
+            ensAppBase={ensAppBase}
+            explorerBase={explorerBase}
+            latestEventTxHash={latestEvent?.transactionHash}
+          />
 
-            {company ? (
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="bg-muted/40 border-border/70 rounded-xl border p-4">
-                  <p className="text-muted-foreground text-xs">Owner</p>
-                  <p className="font-mono text-sm">
-                    {shortenAddress(company.ownerAddress)}
-                  </p>
-                </div>
-                <div className="bg-muted/40 border-border/70 rounded-xl border p-4">
-                  <p className="text-muted-foreground text-xs">Created</p>
-                  <p className="text-sm">{formatDate(company.creationDate)}</p>
-                </div>
-                <div className="bg-muted/40 border-border/70 rounded-xl border p-4 sm:col-span-2">
-                  <p className="text-muted-foreground text-xs">Founders</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {company.founders.map((founder) => (
-                      <span
-                        key={founder.wallet}
-                        className="bg-background border-border rounded-full border px-3 py-1 font-mono text-xs"
-                      >
-                        {founder.wallet}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="bg-muted/40 border-border/70 flex flex-wrap gap-2 rounded-xl border p-4 sm:col-span-2">
-                  <Link
-                    href={`${ensAppBase}/${company.ensName}`}
-                    className="hover:bg-primary/10 inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold transition"
-                  >
-                    Open in ENS App
-                    <ExternalLink className="h-3 w-3" />
-                  </Link>
-                  {latestEvent?.transactionHash && (
-                    <a
-                      href={`${explorerBase}/tx/${latestEvent.transactionHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:bg-primary/10 inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold transition"
-                    >
-                      View tx on explorer
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="border-border/60 text-muted-foreground mt-4 rounded-xl border border-dashed p-6 text-sm">
-                <p className="text-foreground mb-3 font-medium">
-                  No company found for your wallet.
-                </p>
-                <p>
-                  Start from the setup flow to register your company ENS name
-                  and we&apos;ll surface the on-chain events here.
-                </p>
-              </div>
-            )}
-          </section>
-
-          <section className="bg-card border-border rounded-2xl border p-6 shadow-sm">
-            <div className="flex items-center gap-2">
-              <ListChecks className="text-primary h-5 w-5" />
-              <h3 className="text-foreground text-lg font-semibold">
-                Registration status
-              </h3>
-            </div>
-            {latestEvent ? (
-              <div className="mt-4 space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">ENS</span>
-                  <span className="font-semibold">{latestEvent.ensName}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Block</span>
-                  <span className="font-mono">
-                    {latestEvent.blockNumber.toString()}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Registered</span>
-                  <span>{formatDate(latestEvent.createdAt)}</span>
-                </div>
-              </div>
-            ) : pending?.status === 'completed' ? (
-              <div className="mt-4 space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">ENS</span>
-                  <span className="font-semibold">{pending.ensName}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Status</span>
-                  <span className="text-primary font-semibold">Completed</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Registered</span>
-                  <span>{formatDate(new Date(pending.updatedAt))}</span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-muted-foreground mt-4 text-sm">
-                No registration logs yet. Complete a registration to see history
-                here.
-              </p>
-            )}
-          </section>
+          <RegistrationStatusCard latestEvent={latestEvent} pending={pending} />
         </div>
 
-        <section className="bg-card border-border rounded-2xl border p-6 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Clock className="text-primary h-5 w-5" />
-            <h3 className="text-foreground text-lg font-semibold">
-              Registration history
-            </h3>
-          </div>
-
-          {events.length === 0 &&
-          (!pending || pending.status !== 'completed') ? (
-            <p className="text-muted-foreground mt-4 text-sm">
-              No on-chain registration events found for this wallet.
-            </p>
-          ) : events.length > 0 ? (
-            <div className="mt-4 space-y-3">
-              {events.map((event) => (
-                <div
-                  key={event.transactionHash}
-                  className="border-border bg-muted/40 rounded-xl border p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <BadgeCheck className="text-primary h-4 w-4" />
-                      <div>
-                        <p className="text-sm font-semibold">
-                          {event.ensName}.eth
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          Company #{event.companyId}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-muted-foreground text-xs">
-                      {formatDate(event.createdAt)}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2 font-mono text-xs">
-                    <span className="bg-background border-border rounded-full border px-3 py-1">
-                      Block {event.blockNumber.toString()}
-                    </span>
-                    <a
-                      href={`${explorerBase}/tx/${event.transactionHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:bg-primary/10 inline-flex items-center gap-1 rounded-full px-3 py-1 transition"
-                    >
-                      Tx {event.transactionHash.slice(0, 10)}…
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                    <span className="text-muted-foreground">
-                      Threshold: {event.threshold}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : pending?.status === 'completed' ? (
-            <div className="mt-4 space-y-3">
-              {/* Show tx history from cookie when blockchain events aren't found */}
-              <div className="border-border bg-muted/40 rounded-xl border p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <BadgeCheck className="text-primary h-4 w-4" />
-                    <div>
-                      <p className="text-sm font-semibold">{pending.ensName}</p>
-                      <p className="text-muted-foreground text-xs">
-                        {pending.founders.length} founder(s) • Threshold{' '}
-                        {pending.threshold}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-muted-foreground text-xs">
-                    {formatDate(new Date(pending.updatedAt))}
-                  </span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2 font-mono text-xs">
-                  {pending.safeDeploymentTxHash && (
-                    <a
-                      href={`${explorerBase}/tx/${pending.safeDeploymentTxHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:bg-primary/10 inline-flex items-center gap-1 rounded-full px-3 py-1 transition"
-                    >
-                      Safe Deploy {pending.safeDeploymentTxHash.slice(0, 10)}…
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                  {pending.registrationTxHash && (
-                    <a
-                      href={`${explorerBase}/tx/${pending.registrationTxHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:bg-primary/10 inline-flex items-center gap-1 rounded-full px-3 py-1 transition"
-                    >
-                      ENS Register {pending.registrationTxHash.slice(0, 10)}…
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                  {pending.companyTxHash && (
-                    <a
-                      href={`${explorerBase}/tx/${pending.companyTxHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:bg-primary/10 inline-flex items-center gap-1 rounded-full px-3 py-1 transition"
-                    >
-                      Company Record {pending.companyTxHash.slice(0, 10)}…
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </section>
+        <RegistrationHistory
+          events={events}
+          pending={pending}
+          explorerBase={explorerBase}
+        />
       </div>
     </div>
   )
