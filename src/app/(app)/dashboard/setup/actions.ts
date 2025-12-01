@@ -6,7 +6,6 @@ import { commitName, registerName } from "@ensdomains/ensjs/wallet"
 import { randomBytes } from "node:crypto"
 import { Address, formatEther, isAddress } from "viem"
 import { createPublicClient, http } from "viem"
-import { normalize } from "viem/ens"
 import { mainnet, sepolia } from "viem/chains"
 import { revalidatePath } from "next/cache"
 
@@ -18,7 +17,7 @@ import {
   type PendingRegistration,
 } from "../../../../lib/auth/pending-registration"
 import { isValidEnsName } from "../../../../lib/ens.js"
-import { startupChainAbi, type FounderStruct } from "../../../../lib/blockchain/startupchain-abi"
+import { startupChainAbi } from "../../../../lib/blockchain/startupchain-abi"
 import {
   STARTUPCHAIN_CHAIN_ID,
   getEnsResolverAddress,
@@ -35,6 +34,16 @@ import {
   predictSafeAddress,
   estimateSafeDeploymentGas,
 } from "../../../../lib/blockchain/safe-factory"
+
+import {
+  normalizeEnsInput,
+  ZERO_ADDRESS,
+  toFounderStructs,
+  validateThreshold,
+  toCookieFounders,
+  toContractFounders,
+  type BackendFounderInput,
+} from "./lib"
 
 const chainId = process.env.NEXT_PUBLIC_CHAIN_ID === "1" ? 1 : 11155111
 const baseChain = chainId === 1 ? mainnet : sepolia
@@ -68,13 +77,13 @@ export async function checkEnsAvailabilityAction(name: string) {
     return { name, available: false, address: null as string | null }
   }
 
-  const normalized = normalize(name.endsWith(".eth") ? name : `${name}.eth`)
-  const result = await getOwner(ensPublicClient, { name: normalized })
+  const { fullName } = normalizeEnsInput(name)
+  const result = await getOwner(ensPublicClient, { name: fullName })
   const owner = result?.owner
-  const available = !owner || owner === "0x0000000000000000000000000000000000000000"
+  const available = !owner || owner === ZERO_ADDRESS
 
   return {
-    name: normalized,
+    name: fullName,
     available,
     address: owner ?? null,
   }
@@ -86,11 +95,11 @@ export async function getEnsRegistrationCostAction(name: string, durationYears =
     throw new Error("Invalid ENS name")
   }
 
-  const normalized = normalize(name.endsWith(".eth") ? name : `${name}.eth`)
+  const { fullName } = normalizeEnsInput(name)
   const duration = Math.max(1, durationYears) * 365 * 24 * 60 * 60
 
   const priceData = await getPrice(ensPublicClient, {
-    nameOrNames: normalized,
+    nameOrNames: fullName,
     duration,
   })
 
@@ -107,7 +116,7 @@ export async function getEnsRegistrationCostAction(name: string, durationYears =
   const totalWei = ensWithBuffer + safeGasEstimate + serviceFeeWei
 
   return {
-    name: normalized,
+    name: fullName,
     costWei: ensWithBuffer.toString(),
     costEth: formatEther(ensWithBuffer),
     safeGasWei: safeGasEstimate.toString(),
@@ -124,100 +133,15 @@ export async function getEnsOwnerAction(name: string) {
     return { name, owner: null as string | null }
   }
 
-  const normalized = normalize(name.endsWith(".eth") ? name : `${name}.eth`)
-  const result = await getOwner(ensPublicClient, { name: normalized })
+  const { fullName } = normalizeEnsInput(name)
+  const result = await getOwner(ensPublicClient, { name: fullName })
 
   const owner =
-    result?.owner && result.owner !== "0x0000000000000000000000000000000000000000"
+    result?.owner && result.owner !== ZERO_ADDRESS
       ? result.owner
       : null
 
-  return { name: normalized, owner }
-}
-
-type BackendFounderInput = {
-  wallet: string
-  equityPercent: number
-  role?: string
-}
-
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
-
-function normalizeEnsInput(name: string) {
-  const trimmed = name.trim().toLowerCase()
-  const label = trimmed.endsWith(".eth") ? trimmed.slice(0, -4) : trimmed
-
-  if (!isValidEnsName(label)) {
-    throw new Error("Invalid ENS name")
-  }
-
-  return {
-    label,
-    fullName: normalize(`${label}.eth`),
-  }
-}
-
-function toFounderStructs(founders: BackendFounderInput[]): FounderStruct[] {
-  if (founders.length === 0) {
-    throw new Error("At least one founder required")
-  }
-
-  const structs = founders.map((founder) => {
-    if (!isAddress(founder.wallet)) {
-      throw new Error(`Invalid founder address: ${founder.wallet}`)
-    }
-
-    const equityPercent = Number.isFinite(founder.equityPercent)
-      ? founder.equityPercent
-      : 0
-
-    if (equityPercent < 0) {
-      throw new Error("Equity percentage cannot be negative")
-    }
-
-    return {
-      wallet: founder.wallet as Address,
-      equityBps: BigInt(Math.round(equityPercent * 100)),
-      role: founder.role ?? "",
-    }
-  })
-
-  const totalEquityBps = structs.reduce(
-    (sum, founder) => sum + founder.equityBps,
-    0n
-  )
-
-  if (totalEquityBps > 10_000n) {
-    throw new Error("Total equity cannot exceed 100%")
-  }
-
-  return structs
-}
-
-function validateThreshold(threshold: number, founderCount: number) {
-  if (!Number.isFinite(threshold) || threshold <= 0) {
-    throw new Error("Threshold must be greater than zero")
-  }
-
-  if (threshold > founderCount) {
-    throw new Error("Threshold cannot exceed number of founders")
-  }
-}
-
-function toCookieFounders(founders: FounderStruct[]) {
-  return founders.map((founder) => ({
-    wallet: founder.wallet,
-    equityBps: Number(founder.equityBps),
-    role: founder.role,
-  }))
-}
-
-function toContractFounders(founders: PendingRecord["founders"]): FounderStruct[] {
-  return founders.map((founder) => ({
-    wallet: founder.wallet,
-    equityBps: BigInt(founder.equityBps ?? 0),
-    role: founder.role ?? "",
-  }))
+  return { name: fullName, owner }
 }
 
 type PendingRecord = PendingRegistration
