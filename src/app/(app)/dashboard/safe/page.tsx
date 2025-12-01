@@ -6,6 +6,7 @@ import { getServerSession } from '@/lib/auth/server-session'
 import { getCompanyByFounderWallet } from '@/lib/blockchain/get-company'
 import { getSafeDashboardData } from '@/lib/blockchain/safe-api'
 import { STARTUPCHAIN_CHAIN_ID } from '@/lib/blockchain/startupchain-config'
+import { formatEth } from '@/lib/utils'
 
 import {
   SafeDetailsCard,
@@ -21,12 +22,6 @@ const explorerBase =
   STARTUPCHAIN_CHAIN_ID === 1
     ? 'https://etherscan.io'
     : 'https://sepolia.etherscan.io'
-
-function formatEth(weiString: string): string {
-  const wei = BigInt(weiString)
-  const eth = Number(wei) / 1e18
-  return eth.toFixed(4)
-}
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return 'Pending'
@@ -91,7 +86,10 @@ export default async function SafeDashboardPage() {
         ) : (
           <>
             <SafeOverviewCards
-              ethBalanceFormatted={formatEth(safeData.ethBalanceWei)}
+              ethBalanceFormatted={formatEth(safeData.ethBalanceWei).replace(
+                ' ETH',
+                ''
+              )}
               tokenCount={safeData.tokenBalances.length}
               threshold={safeData.info.threshold}
               ownerCount={safeData.info.owners.length}
@@ -106,7 +104,7 @@ export default async function SafeDashboardPage() {
             <SafePendingTransactions
               transactions={safeData.pendingTransactions}
               safeWalletUrl={safeData.safeWalletUrl}
-              formatEth={formatEth}
+              formatEth={(val) => formatEth(val).replace(' ETH', '')}
               formatDate={formatDate}
             />
 
@@ -114,7 +112,7 @@ export default async function SafeDashboardPage() {
               transactions={safeData.transactionHistory}
               safeWalletUrl={safeData.safeWalletUrl}
               explorerBase={explorerBase}
-              formatEth={formatEth}
+              formatEth={(val) => formatEth(val).replace(' ETH', '')}
               formatDate={formatDate}
             />
 
