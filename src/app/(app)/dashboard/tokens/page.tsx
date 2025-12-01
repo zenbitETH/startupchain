@@ -30,8 +30,6 @@ export default async function TokensDashboardPage() {
     ? await getCompanyByFounderWallet(walletAddress)
     : null
 
-  // TODO: Check if company token is deployed
-  // For now, we show the empty state with deploy CTA
   const hasToken = false
   const tokenAddress: string | null = null
 
