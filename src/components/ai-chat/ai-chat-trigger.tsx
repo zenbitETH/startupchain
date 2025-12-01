@@ -8,6 +8,7 @@ import { AIChatWidget } from '@/components/ai-chat/ai-chat-widget'
 import {
   Sheet,
   SheetContent,
+  SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
@@ -47,13 +48,6 @@ export function AIChatTrigger() {
     [clearError, error]
   )
 
-  const handleSheetChange = useCallback(
-    (nextOpen: boolean) => {
-      handleClose(nextOpen)
-    },
-    [handleClose]
-  )
-
   const handleWidgetClose = useCallback(() => {
     handleClose(false)
     if (error) {
@@ -62,7 +56,7 @@ export function AIChatTrigger() {
   }, [clearError, error, handleClose])
 
   return (
-    <Sheet open={isOpen} onOpenChange={handleSheetChange}>
+    <Sheet open={isOpen} onOpenChange={handleClose}>
       <SheetTrigger asChild>
         <button
           onClick={toggleChat}
@@ -81,6 +75,7 @@ export function AIChatTrigger() {
         side="right"
         className="flex h-auto max-h-[82vh] w-full translate-y-0 flex-col gap-0 p-0 sm:max-w-md sm:bottom-6 sm:right-6 sm:top-auto"
       >
+        <SheetTitle className="sr-only">AI Chat Assistant</SheetTitle>
         <AIChatWidget
           isOpen={isOpen}
           onClose={handleWidgetClose}
