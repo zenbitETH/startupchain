@@ -50,10 +50,7 @@ export function AIChatTrigger() {
 
   const handleWidgetClose = useCallback(() => {
     handleClose(false)
-    if (error) {
-      clearError()
-    }
-  }, [clearError, error, handleClose])
+  }, [handleClose])
 
   return (
     <Sheet open={isOpen} onOpenChange={handleClose}>
@@ -73,7 +70,7 @@ export function AIChatTrigger() {
 
       <SheetContent
         side="right"
-        className="flex h-auto max-h-[82vh] w-full translate-y-0 flex-col gap-0 p-0 sm:max-w-md sm:bottom-6 sm:right-6 sm:top-auto"
+        className="flex h-auto max-h-[82vh] w-full translate-y-0 flex-col gap-0 border-l-0 p-0 sm:max-w-md sm:bottom-6 sm:right-6 sm:top-auto sm:rounded-xl"
       >
         <SheetTitle className="sr-only">AI Chat Assistant</SheetTitle>
         <AIChatWidget
