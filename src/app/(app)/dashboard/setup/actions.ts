@@ -529,47 +529,10 @@ export async function finalizeEnsRegistrationAction({ ensName }: { ensName: stri
   return finishAndClear(completed)
 }
 
-export async function getEnsRegistrationStatusAction(ensName: string) {
-  const { label } = normalizeEnsInput(ensName)
-  const pending = await getPendingRegistration()
-  if (!pending) return null
-  return pending.ensLabel === label ? pending : null
-}
-
 export async function getEnsRegistrationStatusByOwnerAction(owner: string) {
   if (!isAddress(owner)) return null
   const pending = await getPendingRegistration()
   if (!pending) return null
   return pending.owner.toLowerCase() === owner.toLowerCase() ? pending : null
-}
-
-export async function clearEnsRegistrationAction(ensName: string) {
-  const { label } = normalizeEnsInput(ensName)
-  const pending = await getPendingRegistration()
-  if (!pending || pending.ensLabel !== label) {
-    return { cleared: false }
-  }
-  await clearPendingRegistration()
-  return { cleared: true }
-}
-
-/**
- * Validate that ENS is registered to the expected owner
- * Used to verify ENS registration before company registration
- */
-export async function validateEnsOwnershipAction(ensName: string, expectedOwner: string) {
-  const { fullName } = normalizeEnsInput(ensName)
-
-  const result = await getOwner(ensPublicClient, { name: fullName })
-  const owner = result?.owner
-
-  const isOwner = owner && owner.toLowerCase() === expectedOwner.toLowerCase()
-
-  return {
-    ensName: fullName,
-    owner: owner ?? null,
-    expectedOwner,
-    isValid: isOwner,
-  }
 }
 
