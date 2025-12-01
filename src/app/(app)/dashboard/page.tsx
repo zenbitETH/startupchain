@@ -14,7 +14,7 @@ import {
   type SupportedChainId,
   isSupportedChain,
 } from '@/lib/blockchain/startupchain-config'
-import { shortenAddress } from '@/lib/utils'
+import { formatEth, shortenAddress } from '@/lib/utils'
 
 import { ActivityFeed, type ActivityItem } from './components/activity-feed'
 import { CompanyOverview } from './components/company-overview'
@@ -131,16 +131,14 @@ async function getCompanyData(chainId: SupportedChainId): Promise<{
 
       if (safeData.info) {
         // Format ETH balance
-        const ethBalance = Number(safeData.ethBalanceWei) / 1e18
-        const formattedBalance =
-          ethBalance > 0 ? `${ethBalance.toFixed(4)} ETH` : '0 ETH'
+        const formattedBalance = formatEth(safeData.ethBalanceWei)
 
         // Convert transaction history to our format
         const transactions: Transaction[] = safeData.transactionHistory
           .slice(0, 3)
           .map((tx, idx) => {
             const isIncoming = tx.txType === 'ETHEREUM_TRANSACTION'
-            const ethAmount = (Number(tx.value) / 1e18).toFixed(4)
+            const ethAmount = formatEth(tx.value).replace(' ETH', '')
             const date = tx.executionDate ?? tx.submissionDate
             const formattedDate = date
               ? new Date(date).toLocaleDateString('en-US', {
