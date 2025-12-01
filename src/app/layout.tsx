@@ -69,7 +69,7 @@ export default async function RootLayout({
       <head />
       <body className="antialiased">
         <ProvidersShell initialSession={session || undefined}>
-          {children}
+          <main id="main">{children}</main>
           <AIChatTrigger />
           <CookieConsent />
         </ProvidersShell>
