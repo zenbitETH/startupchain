@@ -55,11 +55,18 @@ export async function verifyPrepaymentAction({
 /**
  * Check if user has already sent a payment transaction to treasury
  * by looking at recent transactions (simplified approach)
+ *
+ * SECURITY: This function verifies:
+ * 1. Transaction exists and was successful
+ * 2. Transaction was sent TO the treasury address
+ * 3. Transaction value is >= minimum required (if specified)
  */
 export async function checkPaymentStatusAction({
   paymentTxHash,
+  minValueWei,
 }: {
   paymentTxHash: string
+  minValueWei?: string
 }) {
   if (!paymentTxHash || !paymentTxHash.startsWith("0x")) {
     return { confirmed: false, error: "Invalid transaction hash" }
@@ -81,6 +88,17 @@ export async function checkPaymentStatusAction({
 
     const isToTreasury = tx.to?.toLowerCase() === TREASURY_ADDRESS.toLowerCase()
     const isSuccessful = receipt.status === "success"
+
+    // SECURITY: Verify minimum payment amount if specified
+    if (minValueWei) {
+      const minValue = BigInt(minValueWei)
+      if (tx.value < minValue) {
+        return {
+          confirmed: false,
+          error: `Insufficient payment: received ${tx.value.toString()}, required ${minValueWei}`
+        }
+      }
+    }
 
     return {
       confirmed: isSuccessful && isToTreasury,
