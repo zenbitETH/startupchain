@@ -114,6 +114,12 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
+// Mock payment verification
+const mockCheckPaymentStatus = vi.fn()
+vi.mock('./payment-actions', () => ({
+  checkPaymentStatusAction: (...args: unknown[]) => mockCheckPaymentStatus(...args),
+}))
+
 describe('ENS server actions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -134,6 +140,8 @@ describe('ENS server actions', () => {
       deploymentTxHash: '0xsafe-deploy-tx',
     })
     mockGetCode.mockResolvedValue('0x') // Not deployed by default
+    // Default: payment verified successfully
+    mockCheckPaymentStatus.mockResolvedValue({ confirmed: true, value: '1000000000000000000' })
   })
 
   it('returns unavailable for invalid names', async () => {
@@ -193,7 +201,11 @@ describe('ENS server actions', () => {
       base: 981n,
       premium: 0n,
     })
-    mockGetOwner.mockResolvedValue({ owner: null })
+    // First call: commit checks if ENS is owned by predicted Safe - return yes to skip ENS flow
+    // Subsequent calls: return deployed safe address for finalize
+    mockGetOwner
+      .mockResolvedValueOnce({ owner: '0xsafe-predicted' }) // Initial check - owned by predicted Safe
+      .mockResolvedValue({ owner: '0xsafe-deployed' }) // All subsequent: deployed Safe
 
     mockCommitMakeFunctionData.mockReturnValue({
       to: '0xcommit',
@@ -208,7 +220,6 @@ describe('ENS server actions', () => {
     mockSendTransaction
       .mockResolvedValueOnce('0xcommit-tx')
       .mockResolvedValueOnce('0xregister-tx')
-    mockWriteContract.mockResolvedValue('0xcompany-tx')
     mockWaitForReceipt.mockResolvedValue({ status: 'success' })
 
     const commitResult = await actions.commitEnsRegistrationAction({
@@ -219,9 +230,11 @@ describe('ENS server actions', () => {
       ],
       threshold: 2,
       durationYears: 1,
+      paymentTxHash: '0xpayment-tx-hash', // Required for security
     })
 
-    expect(commitResult.commitTxHash).toBe('0xcommit-tx')
+    // When ENS is already owned by Safe, commit is skipped (no tx hash)
+    expect(commitResult.commitTxHash).toBe('0x0000000000000000000000000000000000000000000000000000000000000000')
     expect(commitResult.safeAddress).toBe('0xsafe-predicted')
 
     // Update the pending registration in cookie to be ready
@@ -236,26 +249,41 @@ describe('ENS server actions', () => {
       ensName: 'acme',
     })
 
-    expect(mockSendTransaction).toHaveBeenCalledTimes(2)
-    expect(mockWriteContract).toHaveBeenCalledWith({
-      address: expect.any(String),
-      abi: expect.any(Array),
-      functionName: 'recordCompany',
-      args: [
-        'acme',
-        '0xsafe-deployed',
-        [
-          { wallet: '0xabc', equityBps: 6000n, role: 'CEO' },
-          { wallet: '0xdef', equityBps: 4000n, role: 'CTO' },
-        ],
-        2n,
-      ],
-      value: expect.any(BigInt),
-      chain: mockStartupChainWalletClient.chain,
-      account: mockStartupChainAccount,
+    // Server no longer calls recordCompany - that happens client-side now
+    // ENS registration also skipped since Safe already owns it
+    expect(mockWriteContract).not.toHaveBeenCalled()
+
+    // Should return ready-to-record for client to sign
+    expect(finalizeResult.status).toBe('ready-to-record')
+    expect(finalizeResult.safeAddress).toBe('0xsafe-deployed')
+  })
+
+  it('confirms recordCompany after client signs', async () => {
+    const actions = await import('./actions.js')
+
+    // Set up a pending registration in ready-to-record state
+    const pendingData = {
+      ensLabel: 'testco',
+      ensName: 'testco.eth',
+      commitTxHash: '0xcommit',
+      readyAt: Date.now() - 1000,
+      owner: '0xsafe',
+      founders: [{ wallet: '0xabc', equityBps: 10000, role: 'CEO' }],
+      threshold: 1,
+      status: 'ready-to-record',
+      secret: '0xsecret',
+      durationYears: 1,
+      createdAt: Date.now() - 120000,
+      updatedAt: Date.now() - 60000,
+      safeAddress: '0xsafe',
+    }
+    mockCookieStore['pending-ens'] = JSON.stringify(pendingData)
+
+    const result = await actions.confirmRecordCompanyAction({
+      companyTxHash: '0xcompany-tx',
     })
-    expect(finalizeResult.registrationTxHash).toBe('0xregister-tx')
-    expect(finalizeResult.companyTxHash).toBe('0xcompany-tx')
-    expect(finalizeResult.status).toBe('completed')
+
+    expect(result.status).toBe('completed')
+    expect(result.companyTxHash).toBe('0xcompany-tx')
   })
 })
