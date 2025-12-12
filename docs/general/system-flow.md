@@ -1,6 +1,6 @@
 # StartupChain System Flow
 
-> **Last Updated:** November 30, 2025
+> **Last Updated:** December 11, 2025
 > **Status:** Early Production
 > **Important:** Keep this diagram updated when making architectural changes.
 
@@ -11,10 +11,11 @@ StartupChain is an onchain company OS that allows founders to:
 - Search & claim an ENS name as their company identity
 - Authenticate via Privy (wallet or create new)
 - Configure company structure (solo/multi-founder with equity splits)
-- **One-click registration:** Deploy Safe → Register ENS to Safe → Record company data
+- **Hybrid registration:** Server handles ENS commit/register/Safe deploy → **User signs** final `recordCompany()` tx
 - Manage from a unified dashboard
+- **Session persistence:** Registration state saved in cookie for page refresh resilience
 
-**Core Flow:** `ENS Check → Auth → Setup Wizard → Prepay to Treasury → (Auto) Commit → Wait 60s → Deploy Safe → Register ENS (to Safe) → Record Company → Dashboard`
+**Core Flow:** `ENS Check → Auth → Setup Wizard → Prepay to Treasury → (Auto) Commit → Wait 60s → Deploy Safe → Register ENS (to Safe) → **User Signs recordCompany()** → Dashboard`
 
 ---
 
@@ -116,7 +117,7 @@ StartupChain is an onchain company OS that allows founders to:
 │    │   │  • Optional: Register to different address                                   │   │  │
 │    │   └─────────────────────────────────────────────────────────────────────────────┘   │  │
 │    │                                                                                      │  │
-│    │   State Management: useDraftStore (Zustand-like local store)                        │  │
+│    │   State Management: useDraftStore (Zustand store with persistence)                  │  │
 │    │                                                                                      │  │
 │    └─────────────────────────────────────────────────────────────────────────────────────┘  │
 │                                                                                              │
@@ -125,7 +126,7 @@ StartupChain is an onchain company OS that allows founders to:
                │ User clicks "Continue to Payment"
                ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│  4. PREPAYMENT & REGISTRATION FLOW                                                           │
+│  4. PREPAYMENT & REGISTRATION FLOW (HYBRID: Server + User-Signed)                            │
 │  ═══════════════════════════════════════════════════════════════════════════════════════════│
 │                                                                                              │
 │    STEP 1: COST CALCULATION & PREPAYMENT                                                     │
@@ -145,12 +146,12 @@ StartupChain is an onchain company OS that allows founders to:
 │    │     • User sends ETH to treasury   │──────▶  Treasury Address (STARTUPCHAIN_SIGNER)    │
 │    │     • status: "payment-pending"    │                                                   │
 │    │     • Wait for tx confirmation     │                                                   │
-│    │     • status: "payment-confirmed"  │                                                   │
+│    │     • Auto-proceed on confirmation │                                                   │
 │    └────────────────────────────────────┘                                                   │
 │                      │                                                                       │
 │                      ▼                                                                       │
 │                                                                                              │
-│    STEP 2: AUTOMATED REGISTRATION (Server Wallet Pays)                                       │
+│    STEP 2: SERVER-SIDE REGISTRATION (ENS + Safe)                                             │
 │    ──────────────────────────────────────────────────────────────────────────────────────   │
 │                                                                                              │
 │    ┌────────────────────────────────────┐                                                   │
@@ -180,14 +181,27 @@ StartupChain is an onchain company OS that allows founders to:
 │    │  • Call ENS registerName()    ─────│──────▶  ETH Mainnet/Sepolia                       │
 │    │  • SERVER WALLET PAYS ENS + GAS    │         (ENS Controller)                          │
 │    │                                    │                                                   │
-│    │  Step C: Company Recording         │                                                   │
+│    │  • status: "ready-to-record"       │  ◄── NEW: Awaits user signature                   │
+│    └────────────────────────────────────┘                                                   │
+│                      │                                                                       │
+│                      ▼                                                                       │
+│                                                                                              │
+│    STEP 3: USER-SIGNED COMPANY RECORDING                                                     │
+│    ──────────────────────────────────────────────────────────────────────────────────────   │
+│                                                                                              │
+│    ┌────────────────────────────────────┐                                                   │
+│    │  signRecordCompany()               │  (Client-Side - User's Wallet)                    │
 │    │  ─────────────────────────────     │                                                   │
-│    │  • status: "registering-company"   │                                                   │
-│    │  • Call recordCompany()       ─────│──────▶  StartupChain Contract                     │
-│    │    args: [label, safeAddress,      │         (Sepolia/Mainnet)                         │
+│    │  • status: "awaiting-signature"    │  ◄── User sees wallet prompt                      │
+│    │  • getRecordCompanyDataAction()    │      (retrieves contract args from session)       │
+│    │  • writeRecordCompany() via wagmi  │                                                   │
+│    │    args: [label, safeAddress,      │                                                   │
 │    │           founders[], threshold]   │                                                   │
-│    │  • SERVICE FEE sent to contract    │         → Fee goes to feeRecipient                │
+│    │  • USER WALLET SIGNS TX       ─────│──────▶  StartupChain Contract                     │
+│    │  • User pays only gas (0 value)    │         (User is msg.sender on-chain!)            │
 │    │                                    │                                                   │
+│    │  • status: "signing-company"       │  ◄── Waiting for tx confirmation                  │
+│    │  • confirmRecordCompanyAction()    │      (updates session, clears pending state)      │
 │    │  • status: "completed" or "failed" │                                                   │
 │    │  • Redirect to /dashboard/ens      │                                                   │
 │    └────────────────────────────────────┘                                                   │
@@ -241,10 +255,10 @@ StartupChain is an onchain company OS that allows founders to:
 │    │  │            │  │  │  • Recent company activity from Safe + contract     │       │ │ │
 │    │  │            │  │  └─────────────────────────────────────────────────────┘       │ │ │
 │    │  │            │  │                                                                 │ │ │
-│    │  │            │  │  ┌─────────────────────────────────────────────────────┐       │ │ │
 │    │  │            │  │  │    PendingEnsCard / RegistrationProgress (pending)  │       │ │ │
 │    │  │            │  │  │  • Shows commit/register/company tx hashes          │       │ │ │
-│    │  │            │  │  │  • Status: waiting → registering → creating → done/failed │ │ │ │
+│    │  │            │  │  │  • Status: waiting → registering → ready-to-record  │       │ │ │
+│    │  │            │  │  │            → awaiting-signature → completed/failed  │       │ │ │
 │    │  │            │  │  └─────────────────────────────────────────────────────┘       │ │ │
 │    │  │            │  │                                                                 │ │ │
 │    │  └────────────┘  └─────────────────────────────────────────────────────────────────┘ │ │
@@ -287,6 +301,8 @@ StartupChain is an onchain company OS that allows founders to:
 │                                                                                              │
 └─────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+
 
 ---
 
@@ -380,18 +396,30 @@ StartupChain is an onchain company OS that allows founders to:
 ### State Management
 
 
-| Layer  | Mechanism                              | Purpose                                   |
-| -------- | ---------------------------------------- | ------------------------------------------- |
-| Server | Cookies (`pending-ens`, `privy-token`) | Session & registration state              |
-| Server | `getServerSession()`                   | Auth verification                         |
-| Server | `TREASURY_ADDRESS`                     | Address for receiving user prepayments    |
-| Server | `SAFE_API_KEY`                         | Safe Transaction Service authentication   |
-| Client | `useDraftStore`                        | Setup wizard form state (chain-aware)     |
-| Client | `useWalletAuth` context                | Auth state, chainId & methods             |
-| Client | `useCompanyRegistration`               | Full registration flow (prepayment mode)  |
-| Client | `useSendTransaction`                   | User payment to treasury                  |
-| Client | React Query                            | Async data fetching (chainId in keys)     |
-| URL    | `?chain=<chainId>` search param        | Chain selection for server components     |
+| Layer  | Mechanism                              | Purpose                                 |
+| -------- | ---------------------------------------- | ----------------------------------------- |
+| Server | Cookies (`pending-ens`, `privy-token`) | Session & registration state            |
+| Server | `getServerSession()`                   | Auth verification                       |
+| Server | `TREASURY_ADDRESS`                     | Address for receiving user prepayments  |
+| Server | `SAFE_API_KEY`                         | Safe Transaction Service authentication |
+| Client | `useDraftStore`                        | Setup wizard form state (chain-aware)   |
+| Client | `useWalletAuth` context                | Auth state, chainId & methods           |
+| Client | `useCompanyRegistration`               | Full registration flow (hybrid mode)    |
+| Client | `useSendTransaction`                   | User payment to treasury                |
+| Client | `useWriteContract`                     | User signs recordCompany() tx           |
+| Client | `resumeRegistrationAction()`           | Session resume on page refresh          |
+| Client | React Query                            | Async data fetching (chainId in keys)   |
+| URL    | `?chain=<chainId>` search param        | Chain selection for server components   |
+
+**Registration States (PendingStatus):**
+
+- `awaiting-payment` → `committing` → `waiting` → `deploying-safe` → `registering` → `ready-to-record` → `completed`
+- New: `ready-to-record` - ENS registered, awaiting user signature for recordCompany()
+
+**Client-Side Steps:**
+
+- `awaiting-signature` - User sees wallet prompt for recordCompany()
+- `signing-company` - Waiting for recordCompany() tx confirmation
 
 ---
 
@@ -420,82 +448,88 @@ The app supports multiple chains (Sepolia, Mainnet) with chain-aware data fetchi
 
 **Key Components:**
 
-| Component | Chain Handling |
-|-----------|----------------|
-| `NetworkSwitcher` | Switches wallet chain + pushes `?chain=<id>` URL param |
-| `getPublicClient(chainId)` | Returns cached Viem client for specific chain |
-| `getCompanyByAddress(addr, chainId)` | Queries correct chain's StartupChain contract |
-| `useEnsCheck` | Includes `chainId` in React Query key for cache invalidation |
-| `useDraftStore` | Stores `chainId` in draft, clears on chain mismatch |
-| Dashboard pages | Read `chain` from searchParams, pass to all data fetchers |
+
+| Component                            | Chain Handling                                              |
+| -------------------------------------- | ------------------------------------------------------------- |
+| `NetworkSwitcher`                    | Switches wallet chain + pushes`?chain=<id>` URL param       |
+| `getPublicClient(chainId)`           | Returns cached Viem client for specific chain               |
+| `getCompanyByAddress(addr, chainId)` | Queries correct chain's StartupChain contract               |
+| `useEnsCheck`                        | Includes`chainId` in React Query key for cache invalidation |
+| `useDraftStore`                      | Stores`chainId` in draft, clears on chain mismatch          |
+| Dashboard pages                      | Read`chain` from searchParams, pass to all data fetchers    |
 
 **Supported Chains:**
+
 - Sepolia (11155111) - Primary testnet
 - Ethereum Mainnet (1) - Production (contract not yet deployed)
 
 ---
 
-## ****Key Technologies
+## Key Technologies
 
 
-| Category       | Technologies                                                                      |
-| ---------------- | ----------------------------------------------------------------------------------- |
-| **Frontend**   | Next.js 16 (App Router), React 19 (Server Components), TailwindCSS v4, shadcn/ui  |
-| **Auth**       | Privy (wallet auth), JWT tokens, HTTP-only cookies                                |
-| **Blockchain** | Viem (client), Wagmi (hooks), @ensdomains/ensjs, Custom Solidity contracts        |
-| **Treasury**   | Safe{Wallet} multisig, Safe Transaction Service API                               |
-| **Chains**     | Ethereum Mainnet, Sepolia (testnet)                                               |
+| Category       | Technologies                                                                     |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| **Frontend**   | Next.js 16 (App Router), React 19 (Server Components), TailwindCSS v4, shadcn/ui |
+| **Auth**       | Privy (wallet auth), JWT tokens, HTTP-only cookies                               |
+| **Blockchain** | Viem (client), Wagmi (hooks), @ensdomains/ensjs, Custom Solidity contracts       |
+| **Treasury**   | Safe{Wallet} multisig, Safe Transaction Service API                              |
+| **Chains**     | Ethereum Mainnet, Sepolia (testnet)                                              |
 
 ---
 
 ## Key Files Reference
 
 
-| File                                                        | Purpose                                                   |
-| ------------------------------------------------------------- | ----------------------------------------------------------- |
-| `src/app/(public)/page.tsx`                                 | Landing page with ENS checker                             |
-| `src/components/ens-name-checker/EnsNameChecker.tsx`        | ENS availability checking UI                              |
-| `src/components/ens-name-checker/useEnsCheck.ts`            | ENS check hook (chain-aware query keys)                   |
-| `src/components/ui/network-switcher.tsx`                    | Chain switcher (updates URL params)                       |
-| `src/app/(app)/dashboard/setup/page.tsx`                    | Company setup wizard page                                 |
-| `src/app/(app)/dashboard/setup/components/setup-wizard.tsx` | Setup wizard with payment step (chain-aware)              |
-| `src/hooks/use-company-registration.ts`                     | Client-side registration hook (prepayment flow)           |
-| `src/app/(app)/dashboard/setup/actions.ts`                  | Server actions for ENS/company + payment verification     |
-| `src/lib/blockchain/startupchain-client.ts`                 | Chain-aware public client factory + server wallet         |
-| `src/lib/auth/pending-registration.ts`                      | Cookie-based registration state                           |
-| `src/lib/auth/server-session.ts`                            | Server-side auth verification                             |
-| `src/components/providers/providers-shell.tsx`              | Client providers wrapper                                  |
-| `src/lib/blockchain/startupchain-config.ts`                 | Chain & contract configuration                            |
-| `src/lib/blockchain/get-company.ts`                         | Contract read functions (chain-aware)                     |
-| `src/lib/blockchain/get-company-events.ts`                  | Company events fetcher (chain-aware)                      |
-| `src/lib/blockchain/safe-api.ts`                            | Safe Transaction Service API wrapper (chain-aware)        |
-| `src/lib/store/draft.ts`                                    | Setup wizard state (includes chainId)                     |
-| `src/app/(app)/dashboard/page.tsx`                          | Main dashboard (reads chain from URL)                     |
-| `src/app/(app)/dashboard/safe/page.tsx`                     | Safe management page (owners, balances, txs)              |
-| `src/app/(app)/dashboard/tokens/page.tsx`                   | Company token page with cap table preview                 |
-| `src/app/(app)/dashboard/ens/page.tsx`                      | ENS management (chain-aware)                              |
-| `src/app/(app)/dashboard/components/treasury-summary.tsx`   | Treasury widget showing Safe balance                      |
-| `src/app/api/ens/check/route.ts`                            | ENS check API (accepts chainId param)                     |
+| File                                                        | Purpose                                               |
+| ------------------------------------------------------------- | ------------------------------------------------------- |
+| `src/app/(public)/page.tsx`                                 | Landing page with ENS checker                         |
+| `src/components/ens-name-checker/EnsNameChecker.tsx`        | ENS availability checking UI                          |
+| `src/components/ens-name-checker/useEnsCheck.ts`            | ENS check hook (chain-aware query keys)               |
+| `src/components/ui/network-switcher.tsx`                    | Chain switcher (updates URL params)                   |
+| `src/app/(app)/dashboard/setup/page.tsx`                    | Company setup wizard page                             |
+| `src/app/(app)/dashboard/setup/components/setup-wizard.tsx` | Setup wizard with payment step (chain-aware)          |
+| `src/hooks/use-company-registration.ts`                     | Client-side registration hook (prepayment flow)       |
+| `src/app/(app)/dashboard/setup/actions.ts`                  | Server actions for ENS/company + payment verification |
+| `src/lib/blockchain/startupchain-client.ts`                 | Chain-aware public client factory + server wallet     |
+| `src/lib/auth/pending-registration.ts`                      | Cookie-based registration state                       |
+| `src/lib/auth/server-session.ts`                            | Server-side auth verification                         |
+| `src/components/providers/providers-shell.tsx`              | Client providers wrapper                              |
+| `src/lib/blockchain/startupchain-config.ts`                 | Chain & contract configuration                        |
+| `src/lib/blockchain/get-company.ts`                         | Contract read functions (chain-aware)                 |
+| `src/lib/blockchain/get-company-events.ts`                  | Company events fetcher (chain-aware)                  |
+| `src/lib/blockchain/safe-api.ts`                            | Safe Transaction Service API wrapper (chain-aware)    |
+| `src/lib/store/draft.ts`                                    | Setup wizard state (includes chainId)                 |
+| `src/app/(app)/dashboard/page.tsx`                          | Main dashboard (reads chain from URL)                 |
+| `src/app/(app)/dashboard/safe/page.tsx`                     | Safe management page (owners, balances, txs)          |
+| `src/app/(app)/dashboard/tokens/page.tsx`                   | Company token page with cap table preview             |
+| `src/app/(app)/dashboard/ens/page.tsx`                      | ENS management (chain-aware)                          |
+| `src/app/(app)/dashboard/components/treasury-summary.tsx`   | Treasury widget showing Safe balance                  |
+| `src/app/api/ens/check/route.ts`                            | ENS check API (accepts chainId param)                 |
 
 ---
 
 ## Payment Model
 
-**Prepayment model: User sends ETH to StartupChain treasury upfront, then server executes all transactions.**
+**Hybrid model: User sends ETH to treasury for ENS/Safe costs, server executes ENS + Safe txs, then user signs final recordCompany() tx.**
 
 
-| Cost Component                | Paid By      | Recipient                     |
-| ------------------------------- | -------------- | ------------------------------- |
-| ENS Registration (1 year)     | Server (from treasury) | ENS Protocol          |
-| Safe Deployment Gas           | Server (from treasury) | Network               |
-| Service Fee (25% of ENS cost) | Server (from treasury) | StartupChain (`feeRecipient`) |
-| Gas fees (commit + register)  | Server (from treasury) | Network               |
-| **User Prepayment**           | User         | StartupChain Treasury         |
+| Cost Component                   | Paid By                | Recipient                     |
+| ---------------------------------- | ------------------------ | ------------------------------- |
+| ENS Registration (1 year)        | Server (from treasury) | ENS Protocol                  |
+| Safe Deployment Gas              | Server (from treasury) | Network                       |
+| Service Fee (25% of ENS cost)    | Server (from treasury) | StartupChain (`feeRecipient`) |
+| Gas fees (commit + register ENS) | Server (from treasury) | Network                       |
+| **recordCompany() Gas**          | **User**               | Network                       |
+| **User Prepayment**              | User                   | StartupChain Treasury         |
 
 **Flow:**
+
 1. `useCompanyRegistration` calculates total costs (ENS + Safe gas + service fee + buffer)
 2. User sends prepayment to `TREASURY_ADDRESS` via wagmi `useSendTransaction`
-3. Payment confirmed → server actions execute all blockchain transactions
-4. Server wallet (`STARTUPCHAIN_SIGNER_KEY`) pays for everything from treasury funds
+3. Payment confirmed → server actions execute ENS commit/register + Safe deployment
+4. Server wallet (`STARTUPCHAIN_SIGNER_KEY`) pays for ENS + Safe from treasury funds
+5. Status becomes `ready-to-record` → user prompted to sign `recordCompany()` tx
+6. User signs with their wallet → user is `msg.sender` on-chain (pays only gas)
 
 The `TREASURY_ADDRESS` is the same as the server signer address for simplicity.

@@ -30,6 +30,7 @@ const statusLabel: Record<PendingStatus, string> = {
   waiting: 'Waiting',
   'deploying-safe': 'Deploying Safe',
   registering: 'Registering',
+  'ready-to-record': 'Ready to Sign',
   creating: 'Creating',
   completed: 'Completed',
   failed: 'Failed',

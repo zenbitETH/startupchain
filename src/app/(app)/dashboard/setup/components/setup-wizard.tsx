@@ -45,6 +45,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     paymentTxHash,
     isSendingPayment,
     isConfirmingPayment,
+    signRecordCompany,
   } = useCompanyRegistration()
 
   const [isLoadingCosts, setIsLoadingCosts] = useState(false)
@@ -138,14 +139,29 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
       completeRegistration()
         .then((result) => {
           console.log(LOG_PREFIX, 'completeRegistration success:', result)
-          router.push('/dashboard/ens')
-          router.refresh()
+          // Only redirect when fully completed (after user signs recordCompany)
+          // If status is 'ready-to-record', stay on page for user to sign
+          if (result.status === 'completed') {
+            router.push('/dashboard/ens')
+            router.refresh()
+          }
+          // If 'ready-to-record', the hook will set step to 'awaiting-signature'
+          // and auto-trigger/show button for user signing
         })
         .catch((err) => {
           console.error(LOG_PREFIX, 'Failed to complete registration:', err)
         })
     }
   }, [canComplete, step, completeRegistration, router])
+
+  // Redirect when registration is fully completed (after user signs recordCompany)
+  useEffect(() => {
+    if (step === 'completed') {
+      console.log(LOG_PREFIX, 'Registration completed! Redirecting to dashboard...')
+      router.push('/dashboard/ens')
+      router.refresh()
+    }
+  }, [step, router])
 
   if (!draft) {
     return <div className="text-muted-foreground text-sm">Loading wizard…</div>
@@ -275,6 +291,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
               step={step}
               countdown={countdown}
               paymentTxHash={paymentTxHash}
+              onSign={signRecordCompany}
             />
           </div>
         </div>
