@@ -10,7 +10,8 @@ const stepLabels: Record<string, string> = {
   waiting: 'Waiting for commitment window',
   'deploying-safe': 'Creating your Safe wallet...',
   'registering-ens': 'Registering ENS name to your Safe...',
-  'registering-company': 'Recording company on-chain...',
+  'awaiting-signature': 'Sign to record your company on-chain...',
+  'signing-company': 'Confirming your transaction...',
   completed: 'Registration complete!',
   failed: 'Registration failed',
 }
@@ -24,7 +25,8 @@ const stepProgress: Record<string, number> = {
   waiting: 40,
   'deploying-safe': 55,
   'registering-ens': 70,
-  'registering-company': 85,
+  'awaiting-signature': 85,
+  'signing-company': 92,
   completed: 100,
   failed: 0,
 }
@@ -33,12 +35,14 @@ interface RegistrationProgressCardProps {
   step: string
   countdown: number | null
   paymentTxHash?: string | null
+  onSign?: () => void
 }
 
 export function RegistrationProgressCard({
   step,
   countdown,
   paymentTxHash,
+  onSign,
 }: RegistrationProgressCardProps) {
   const label =
     step === 'waiting'
@@ -63,6 +67,20 @@ export function RegistrationProgressCard({
         <p className="text-muted-foreground mt-2 font-mono text-xs">
           Tx: {paymentTxHash.slice(0, 10)}...{paymentTxHash.slice(-8)}
         </p>
+      )}
+
+      {step === 'awaiting-signature' && onSign && (
+        <div className="mt-4">
+          <button
+            onClick={onSign}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+          >
+            Sign Transaction
+          </button>
+          <p className="text-muted-foreground mt-2 text-xs">
+            Please sign the transaction in your wallet to record your company.
+          </p>
+        </div>
       )}
     </div>
   )

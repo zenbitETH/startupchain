@@ -9,6 +9,7 @@ export type PendingStatus =
   | 'deploying-safe'
   | 'registering'
   | 'creating'
+  | 'ready-to-record'
   | 'completed'
   | 'failed'
 

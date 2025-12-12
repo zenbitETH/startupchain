@@ -42,6 +42,7 @@ import {
   toFounderStructs,
   validateThreshold,
 } from './lib'
+import { checkPaymentStatusAction } from './payment-actions'
 
 const chainId = process.env.NEXT_PUBLIC_CHAIN_ID === '1' ? 1 : 11155111
 const baseChain = chainId === 1 ? mainnet : sepolia
@@ -168,7 +169,7 @@ export async function commitEnsRegistrationAction({
   threshold: number
   durationYears?: number
   reverseRecord?: boolean
-  paymentTxHash?: string
+  paymentTxHash: string // SECURITY: Required, verified on-chain
 }) {
   console.log(LOG_PREFIX, '=== commitEnsRegistrationAction START ===')
   console.log(LOG_PREFIX, 'Input:', {
@@ -187,6 +188,28 @@ export async function commitEnsRegistrationAction({
   console.log(LOG_PREFIX, 'Normalized:', { label, fullName })
   const founderStructs = toFounderStructs(founders)
   validateThreshold(threshold, founderStructs.length)
+
+  // SECURITY: Verify payment was actually sent to treasury
+  console.log(LOG_PREFIX, 'Verifying payment transaction:', paymentTxHash)
+  if (!paymentTxHash || !paymentTxHash.startsWith('0x')) {
+    throw new Error('Payment transaction hash is required')
+  }
+
+  // Calculate expected cost for verification
+  const verificationYears = Math.max(1, Math.floor(durationYears))
+  const { totalWei } = await getEnsRegistrationCostAction(ensName, verificationYears, founders.length)
+  console.log(LOG_PREFIX, 'Expected payment amount:', totalWei)
+
+  const paymentStatus = await checkPaymentStatusAction({
+    paymentTxHash,
+    minValueWei: totalWei,
+  })
+  console.log(LOG_PREFIX, 'Payment verification result:', paymentStatus)
+
+  if (!paymentStatus.confirmed) {
+    throw new Error(paymentStatus.error || 'Payment not confirmed on-chain')
+  }
+  console.log(LOG_PREFIX, 'Payment verified successfully!')
 
   // Get founder wallet addresses for Safe
   const founderAddresses = founderStructs.map((f) => f.wallet)
@@ -417,17 +440,16 @@ export async function finalizeEnsRegistrationAction({
   }
 
   const years = Math.max(1, pending.durationYears)
-  const { costWei, serviceFeeWei } = await getEnsRegistrationCostAction(
+  const { costWei } = await getEnsRegistrationCostAction(
     label,
     years,
     pending.founders.length
   )
   const registrationCostWei = BigInt(costWei)
-  const serviceFee = BigInt(serviceFeeWei)
 
   let safeDeploymentTxHash = pending.safeDeploymentTxHash
   let registrationTxHash = pending.registrationTxHash
-  let companyTxHash = pending.companyTxHash
+  const companyTxHash = pending.companyTxHash
   let deployedSafeAddress = pending.safeAddress ?? pending.owner
 
   try {
@@ -561,49 +583,26 @@ export async function finalizeEnsRegistrationAction({
       registrationTxHash = pending.commitTxHash
     }
 
-    // STEP 3: Record company on StartupChain contract using recordCompany()
+    // STEP 3: Return ready-to-record status for client-side signing
+    // The user's wallet will call recordCompany() to preserve founder identity on-chain
     console.log(
       LOG_PREFIX,
-      'STEP 3: Recording company on StartupChain contract'
+      'STEP 3: Returning ready-to-record for client signing'
     )
-    await updatePendingRegistration({
-      status: 'creating',
+
+    const readyToRecord: PendingRecord = {
+      ...pending,
+      status: 'ready-to-record',
       registrationTxHash,
       safeAddress: deployedSafeAddress,
-      error: undefined,
-    })
+      safeDeploymentTxHash,
+      updatedAt: Date.now(),
+    }
 
-    console.log(LOG_PREFIX, 'Calling recordCompany with:', {
-      label,
-      safeAddress: deployedSafeAddress,
-      foundersCount: pending.founders.length,
-      threshold: pending.threshold,
-      serviceFee: serviceFee.toString(),
-    })
-    // Use recordCompany instead of registerCompany (no ENS registration in contract)
-    companyTxHash = await startupChainWalletClient.writeContract({
-      address: contractAddress,
-      abi: startupChainAbi,
-      functionName: 'recordCompany',
-      args: [
-        label,
-        deployedSafeAddress,
-        toContractFounders(pending.founders),
-        BigInt(pending.threshold),
-      ],
-      value: serviceFee, // Service fee goes to contract
-      chain: startupChainChain,
-      account: startupChainAccount,
-    })
+    await setPendingRegistration(readyToRecord)
+    console.log(LOG_PREFIX, '=== finalizeEnsRegistrationAction COMPLETE - ready for client signing ===')
 
-    console.log(LOG_PREFIX, 'Company tx hash:', companyTxHash)
-    await updatePendingRegistration({ companyTxHash })
-
-    console.log(LOG_PREFIX, 'Waiting for company tx receipt...')
-    await startupChainPublicClient.waitForTransactionReceipt({
-      hash: companyTxHash,
-    })
-    console.log(LOG_PREFIX, 'Company registration confirmed!')
+    return readyToRecord
   } catch (err) {
     console.log(LOG_PREFIX, 'ERROR in finalizeEnsRegistrationAction:', err)
     const message =
@@ -633,20 +632,6 @@ export async function finalizeEnsRegistrationAction({
     await markFailed(message)
     throw err
   }
-
-  const completed: PendingRecord = {
-    ...pending,
-    status: 'completed',
-    safeAddress: deployedSafeAddress,
-    safeDeploymentTxHash,
-    registrationTxHash:
-      registrationTxHash ?? pending.registrationTxHash ?? pending.commitTxHash,
-    companyTxHash: companyTxHash ?? pending.companyTxHash,
-    updatedAt: Date.now(),
-  }
-
-  await setPendingRegistration(completed)
-  return finishAndClear(completed)
 }
 
 export async function getEnsRegistrationStatusByOwnerAction(owner: string) {
@@ -654,4 +639,88 @@ export async function getEnsRegistrationStatusByOwnerAction(owner: string) {
   const pending = await getPendingRegistration()
   if (!pending) return null
   return pending.owner.toLowerCase() === owner.toLowerCase() ? pending : null
+}
+
+/**
+ * B2: Called by client after user signs recordCompany() transaction
+ * Confirms the company registration is complete and clears the pending state
+ */
+export async function confirmRecordCompanyAction({
+  companyTxHash,
+}: {
+  companyTxHash: `0x${string}`
+}) {
+  console.log(LOG_PREFIX, '=== confirmRecordCompanyAction START ===')
+  console.log(LOG_PREFIX, 'companyTxHash:', companyTxHash)
+
+  const pending = await getPendingRegistration()
+  if (!pending) {
+    console.log(LOG_PREFIX, 'ERROR: No pending registration found')
+    throw new Error('No pending registration found')
+  }
+
+  if (pending.status !== 'ready-to-record') {
+    console.log(LOG_PREFIX, 'WARNING: Unexpected status:', pending.status)
+    // Allow completion if already completed
+    if (pending.status === 'completed') {
+      return pending
+    }
+  }
+
+  const completed: PendingRegistration = {
+    ...pending,
+    status: 'completed',
+    companyTxHash,
+    updatedAt: Date.now(),
+  }
+
+  await setPendingRegistration(completed)
+
+  try {
+    await clearPendingRegistration()
+  } finally {
+    try {
+      revalidatePath('/dashboard')
+    } catch {
+      // Ignore when revalidatePath is unavailable (e.g., unit tests)
+    }
+  }
+
+  console.log(LOG_PREFIX, '=== confirmRecordCompanyAction COMPLETE ===')
+  return completed
+}
+
+/**
+ * Returns the data needed for client to call recordCompany()
+ */
+export async function getRecordCompanyDataAction() {
+  const pending = await getPendingRegistration()
+  if (!pending) {
+    throw new Error('No pending registration found')
+  }
+
+  if (pending.status !== 'ready-to-record') {
+    throw new Error(`Cannot record company: status is ${pending.status}`)
+  }
+
+  const contractAddress = getStartupChainAddress(STARTUPCHAIN_CHAIN_ID)
+
+  return {
+    contractAddress,
+    ensLabel: pending.ensLabel,
+    safeAddress: pending.safeAddress as `0x${string}`,
+    founders: toContractFounders(pending.founders),
+    threshold: BigInt(pending.threshold),
+  }
+}
+
+/**
+ * Called by client on mount to check if there's an active registration session
+ */
+export async function resumeRegistrationAction() {
+  const pending = await getPendingRegistration()
+  if (!pending || pending.status === 'completed' || pending.status === 'failed') {
+    return null
+  }
+  return pending
 }
