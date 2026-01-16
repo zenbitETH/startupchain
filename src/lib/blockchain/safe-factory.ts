@@ -1,11 +1,18 @@
 /**
- * Safe Factory - Deploy company Safes with auto-calculated thresholds
+ * Safe Factory - Deploy company Safes with deterministic (CREATE2) addresses
+ *
+ * Uses Safe Protocol Kit for predictable Safe deployment. The same inputs
+ * (owners, threshold, saltNonce) always produce the same Safe address,
+ * enabling ENS registration to the predicted address before deployment.
  *
  * Threshold presets:
  * - 1 founder → threshold 1 (solo)
  * - 2 founders → threshold 2 (both sign)
  * - 3-5 founders → ceil(n/2) (e.g., 2 for 3, 3 for 5)
  * - 6+ founders → cap at 5
+ *
+ * saltNonce: Unique per company. Generated as `${timestamp}${labelHash}`.
+ * Same owners can have multiple Safes by using different saltNonce values.
  */
 import SafeApiKit from '@safe-global/api-kit'
 import Safe, { type SafeAccountConfig } from '@safe-global/protocol-kit'
