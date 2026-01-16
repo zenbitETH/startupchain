@@ -51,17 +51,19 @@ export async function getCompanyByAddress(
       args: [id],
     })
 
-    const founders: Founder[] = foundersData.map((f) => ({
-      wallet: f.wallet,
-      equityBps: f.equityBps,
-      equityPercent: Number(f.equityBps) / 100, // Convert bps to percentage
-      role: f.role,
-    }))
+    const founders = foundersData.map(
+      (f): Founder => ({
+        wallet: f.wallet as Founder['wallet'],
+        equityBps: f.equityBps,
+        equityPercent: Number(f.equityBps) / 100, // Convert bps to percentage
+        role: f.role,
+      })
+    )
 
     return {
       id: id.toString(),
-      ownerAddress,
-      safeAddress,
+      ownerAddress: ownerAddress as Company['ownerAddress'],
+      safeAddress: safeAddress as Company['safeAddress'],
       ensName: ensName.endsWith('.eth') ? ensName : `${ensName}.eth`,
       creationDate: new Date(Number(creationDate) * 1000),
       threshold: Number(threshold),
@@ -105,18 +107,20 @@ export async function getCompanyByENS(
       args: [id],
     })
 
-    const founders: Founder[] = foundersData.map((f) => ({
-      wallet: f.wallet,
-      equityBps: f.equityBps,
-      equityPercent: Number(f.equityBps) / 100,
-      role: f.role,
-    }))
+    const founders = foundersData.map(
+      (f): Founder => ({
+        wallet: f.wallet as Founder['wallet'],
+        equityBps: f.equityBps,
+        equityPercent: Number(f.equityBps) / 100,
+        role: f.role,
+      })
+    )
 
     return {
       id: id.toString(),
-      ownerAddress,
-      safeAddress,
-      ensName: name.endsWith('.eth') ? name : `${name}.eth`,
+      ownerAddress: ownerAddress as Company['ownerAddress'],
+      safeAddress: safeAddress as Company['safeAddress'],
+      ensName: ensName.endsWith('.eth') ? ensName : `${ensName}.eth`,
       creationDate: new Date(Number(creationDate) * 1000),
       threshold: Number(threshold),
       founders,
@@ -152,17 +156,19 @@ export async function getCompanyById(
       args: [id],
     })
 
-    const founders: Founder[] = foundersData.map((f) => ({
-      wallet: f.wallet,
-      equityBps: f.equityBps,
-      equityPercent: Number(f.equityBps) / 100,
-      role: f.role,
-    }))
+    const founders = foundersData.map(
+      (f): Founder => ({
+        wallet: f.wallet as Founder['wallet'],
+        equityBps: f.equityBps,
+        equityPercent: Number(f.equityBps) / 100,
+        role: f.role,
+      })
+    )
 
     return {
       id: id.toString(),
-      ownerAddress,
-      safeAddress,
+      ownerAddress: ownerAddress as Company['ownerAddress'],
+      safeAddress: safeAddress as Company['safeAddress'],
       ensName: ensName.endsWith('.eth') ? ensName : `${ensName}.eth`,
       creationDate: new Date(Number(creationDate) * 1000),
       threshold: Number(threshold),

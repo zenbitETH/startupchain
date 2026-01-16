@@ -1,4 +1,4 @@
-import { Address, isAddress } from 'viem'
+import { isAddress } from 'viem'
 
 import { type PendingRegistration } from '@/lib/auth/pending-registration'
 import { type FounderStruct } from '@/lib/blockchain/startupchain-abi'
@@ -14,7 +14,9 @@ export type { BackendFounderInput }
 /**
  * Convert backend founder input to FounderStruct for contract calls
  */
-export function toFounderStructs(founders: BackendFounderInput[]): FounderStruct[] {
+export function toFounderStructs(
+  founders: BackendFounderInput[]
+): FounderStruct[] {
   if (founders.length === 0) {
     throw new Error('At least one founder required')
   }
@@ -33,7 +35,7 @@ export function toFounderStructs(founders: BackendFounderInput[]): FounderStruct
     }
 
     return {
-      wallet: founder.wallet as Address,
+      wallet: founder.wallet as FounderStruct['wallet'],
       equityBps: BigInt(Math.round(equityPercent * 100)),
       role: founder.role ?? '',
     }
