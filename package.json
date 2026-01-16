@@ -2,6 +2,7 @@
   "name": "startupchain",
   "version": "0.3",
   "private": true,
+  "packageManager": "yarn@4.12.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -19,8 +19,11 @@ jobs:
           node-version: '20'
           cache: 'yarn'
 
+      - name: Enable Corepack
+        run: corepack enable && corepack prepare yarn@4.12.0 --activate
+
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: Run unit tests
         run: yarn test:unit
@@ -37,8 +40,11 @@ jobs:
           node-version: '20'
           cache: 'yarn'
 
+      - name: Enable Corepack
+        run: corepack enable && corepack prepare yarn@4.12.0 --activate
+
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: Type check
         run: yarn tsc --noEmit
@@ -55,8 +61,11 @@ jobs:
           node-version: '20'
           cache: 'yarn'
 
+      - name: Enable Corepack
+        run: corepack enable && corepack prepare yarn@4.12.0 --activate
+
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: Lint
         run: yarn lint
