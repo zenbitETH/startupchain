@@ -118,9 +118,9 @@ export async function getCompanyByENS(
 
     return {
       id: id.toString(),
-      ownerAddress,
-      safeAddress,
-      ensName: name.endsWith('.eth') ? name : `${name}.eth`,
+      ownerAddress: ownerAddress as Company['ownerAddress'],
+      safeAddress: safeAddress as Company['safeAddress'],
+      ensName: ensName.endsWith('.eth') ? ensName : `${ensName}.eth`,
       creationDate: new Date(Number(creationDate) * 1000),
       threshold: Number(threshold),
       founders,
