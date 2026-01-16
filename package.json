@@ -7,13 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint --ext .js,.jsx,.ts,.tsx src",
-    "tsc": "tsc --noEmit",
-    "prettier": "prettier",
-    "eslint": "eslint",
+    "lint:fix": "eslint --ext .js,.jsx,.ts,.tsx src --fix",
     "test": "vitest",
     "test:unit": "vitest run --exclude='**/**.integration.test.ts'",
-    "check": "tsc --noEmit && eslint --ext .js,.jsx,.ts,.tsx src && vitest run --exclude='**/**.integration.test.ts'",
-    "check:vercel": "next build"
+    "check": "tsc --noEmit && eslint --ext .js,.jsx,.ts,.tsx src && vitest run --exclude='**/**.integration.test.ts'"
   },
   "resolutions": {
     "thread-stream": "3.1.0",
