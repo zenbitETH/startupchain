@@ -52,7 +52,7 @@ export async function getCompanyByAddress(
     })
 
     const founders: Founder[] = foundersData.map((f) => ({
-      wallet: f.wallet,
+      wallet: f.wallet as Founder['wallet'],
       equityBps: f.equityBps,
       equityPercent: Number(f.equityBps) / 100, // Convert bps to percentage
       role: f.role,
@@ -106,7 +106,7 @@ export async function getCompanyByENS(
     })
 
     const founders: Founder[] = foundersData.map((f) => ({
-      wallet: f.wallet,
+      wallet: f.wallet as Founder['wallet'],
       equityBps: f.equityBps,
       equityPercent: Number(f.equityBps) / 100,
       role: f.role,
@@ -153,7 +153,7 @@ export async function getCompanyById(
     })
 
     const founders: Founder[] = foundersData.map((f) => ({
-      wallet: f.wallet,
+      wallet: f.wallet as Founder['wallet'],
       equityBps: f.equityBps,
       equityPercent: Number(f.equityBps) / 100,
       role: f.role,
