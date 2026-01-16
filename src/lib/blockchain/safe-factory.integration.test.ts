@@ -45,7 +45,7 @@ describe.skipIf(!shouldRun)('Safe deterministic deployment (Sepolia)', () => {
       transport: http(SEPOLIA_RPC),
     })
 
-    const owners: `0x${string}`[] = [account.address]
+    const owners: `0x${string}`[] = [account.address as `0x${string}`]
     const chainId = sepolia.id
     const saltNonce = `${Date.now()}`
 
@@ -75,7 +75,7 @@ describe.skipIf(!shouldRun)('Safe deterministic deployment (Sepolia)', () => {
     }
 
     const account = privateKeyToAccount(SEPOLIA_TEST_WALLET_KEY)
-    const owners: `0x${string}`[] = [account.address]
+    const owners: `0x${string}`[] = [account.address as `0x${string}`]
     const chainId = sepolia.id
 
     const addr1 = await predictSafeAddress({
