@@ -1,4 +1,7 @@
-import { useState } from 'react'
+import { type ChangeEvent, useState } from 'react'
+
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 
 interface EnsInputProps {
   ensName: string
@@ -9,41 +12,34 @@ export function EnsInput({ ensName, setEnsName }: EnsInputProps) {
   const [isFocused, setIsFocused] = useState(false)
 
   return (
-    <>
-      {/* Title that disappears on focus */}
+    <div className="group relative w-full">
       <div
-        className={`absolute top-4 right-6 left-6 transition-all duration-300 ${
-          isFocused ? '-translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
-        }`}
-      >
-        <h3 className="text-foreground text-center text-xl font-medium">
-          Enter your business name
-        </h3>
-      </div>
+        className={cn(
+          'from-primary via-accent to-secondary absolute -inset-0.5 rounded-2xl bg-gradient-to-r opacity-30 blur transition duration-500 group-hover:opacity-60',
+          isFocused && 'opacity-100 blur-md duration-200'
+        )}
+      />
 
-      {/* Input field that moves up when focused */}
-      <div
-        className={`relative transition-all duration-300 ${
-          isFocused ? 'translate-y-0' : 'translate-y-12'
-        }`}
-      >
-        <input
+      <div className="relative">
+        <Input
           type="text"
-          placeholder="Your company name"
+          placeholder="search-your-name"
           value={ensName}
-          onChange={(e) =>
+          onChange={(event: ChangeEvent<HTMLInputElement>) =>
             setEnsName(
-              e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+              event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
             )
           }
           onFocus={() => setIsFocused(true)}
-          onBlur={() => !ensName && setIsFocused(false)}
-          className="text-primary border-border focus:ring-primary focus:border-primary placeholder:text-muted-foreground w-full rounded-2xl border bg-white px-6 py-4 pr-16 text-lg transition-all duration-200 focus:ring-2"
+          onBlur={() => setIsFocused(false)}
+          className="border-border/50 bg-background/80 placeholder:text-muted-foreground/80 h-16 w-full rounded-xl px-6 pr-20 text-xl shadow-xl backdrop-blur-xl transition-all focus-visible:border-transparent focus-visible:ring-0 md:text-2xl"
         />
-        <div className="text-muted-foreground absolute top-1/2 right-4 -translate-y-1/2 font-medium">
-          .eth
+        <div className="pointer-events-none absolute inset-y-0 right-6 flex items-center">
+          <span className="text-muted-foreground text-xl font-medium md:text-2xl">
+            .eth
+          </span>
         </div>
       </div>
-    </>
+    </div>
   )
 }
