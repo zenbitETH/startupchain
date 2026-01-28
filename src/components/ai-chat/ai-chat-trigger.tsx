@@ -58,8 +58,9 @@ export function AIChatTrigger() {
         <button
           onClick={toggleChat}
           className={cn(
-            'fixed right-4 bottom-4 z-50 flex cursor-pointer items-center gap-2 rounded-full bg-[#917772] px-5 py-2 text-sm font-semibold text-slate-900 shadow-[0_18px_40px_-18px_rgba(97,199,255,0.65)] transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#61c7ff]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 sm:right-6 sm:bottom-6 dark:bg-gray-700 dark:text-white dark:hover:bg-[#74d0ff]/40',
-            isOpen && 'pointer-events-none opacity-0'
+            'bg-primary text-primary-foreground focus-visible:ring-ring fixed right-4 bottom-4 z-50 flex cursor-pointer items-center gap-2 rounded-full px-5 py-3 text-sm font-medium shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:right-6 sm:bottom-6',
+            !isOpen && 'animate-pulse-slow',
+            isOpen && 'pointer-events-none translate-y-4 opacity-0'
           )}
           aria-label="Open chat"
         >
@@ -70,7 +71,7 @@ export function AIChatTrigger() {
 
       <SheetContent
         side="right"
-        className="flex h-auto max-h-[82vh] w-full translate-y-0 flex-col gap-0 border-l-0 p-0 sm:max-w-md sm:bottom-6 sm:right-6 sm:top-auto sm:rounded-xl"
+        className="flex h-[82vh] w-full translate-y-0 flex-col gap-0 border-l-0 p-0 sm:top-auto sm:right-6 sm:bottom-6 sm:max-w-md sm:rounded-xl"
       >
         <SheetTitle className="sr-only">AI Chat Assistant</SheetTitle>
         <AIChatWidget

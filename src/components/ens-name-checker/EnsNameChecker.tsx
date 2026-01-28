@@ -56,7 +56,7 @@ function EnsLogic({ ensName }: { ensName: string }) {
 
   return (
     <EnsStatus
-      ensName={ensName}
+      ensName={debouncedEnsName}
       normalizedName={normalizedName}
       isLoading={isLoading}
       error={error}
@@ -75,7 +75,7 @@ export function EnsNameChecker() {
 
   return (
     <div className="mx-auto mb-13 max-w-2xl md:mb-15 lg:mx-0">
-      <div className="bg-card border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
+      <div className="bg-card border-border/50 relative min-h-[140px] overflow-hidden rounded-2xl border p-4 shadow-2xl backdrop-blur-sm md:min-h-[200px] md:p-6">
         <EnsInput ensName={ensName} setEnsName={setEnsName} />
         {ready ? (
           <EnsLogic ensName={ensName} />
