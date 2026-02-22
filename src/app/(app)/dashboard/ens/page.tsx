@@ -74,8 +74,7 @@ export default async function EnsDashboardPage({ searchParams }: PageProps) {
 
   if (
     pending &&
-    pending.status !== 'completed' &&
-    pending.status !== 'failed' &&
+    pending.status === 'waiting' &&
     Date.now() >= pending.readyAt
   ) {
     try {

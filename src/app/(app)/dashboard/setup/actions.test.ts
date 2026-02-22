@@ -4,6 +4,18 @@ const mockGetPrice = vi.fn()
 const mockGetOwner = vi.fn()
 const mockPredictSafeAddress = vi.fn()
 const mockEstimateSafeDeploymentGas = vi.fn()
+const mockCommitNameMakeFunctionData = vi.fn()
+const mockRegisterNameMakeFunctionData = vi.fn()
+const mockWaitForTransactionReceipt = vi.fn()
+const mockReadContract = vi.fn()
+const mockGetCode = vi.fn()
+const mockSendTransaction = vi.fn()
+const mockWriteContract = vi.fn()
+const mockDeploySafe = vi.fn()
+const mockGetPendingRegistration = vi.fn()
+const mockSetPendingRegistration = vi.fn()
+const mockUpdatePendingRegistration = vi.fn()
+const mockClearPendingRegistration = vi.fn()
 
 vi.mock('@ensdomains/ensjs/public', () => ({
   getOwner: (...args: unknown[]) => mockGetOwner(...args),
@@ -18,8 +30,14 @@ vi.mock('@ensdomains/ensjs', () => ({
 }))
 
 vi.mock('@ensdomains/ensjs/wallet', () => ({
-  commitName: { makeFunctionData: vi.fn() },
-  registerName: { makeFunctionData: vi.fn() },
+  commitName: {
+    makeFunctionData: (...args: unknown[]) =>
+      mockCommitNameMakeFunctionData(...args),
+  },
+  registerName: {
+    makeFunctionData: (...args: unknown[]) =>
+      mockRegisterNameMakeFunctionData(...args),
+  },
 }))
 
 vi.mock('viem/ens', () => ({
@@ -59,13 +77,14 @@ vi.mock('viem', () => ({
 
 vi.mock('../../../../lib/blockchain/startupchain-client', () => ({
   publicClient: {
-    waitForTransactionReceipt: vi.fn(),
-    readContract: vi.fn(),
-    getCode: vi.fn(),
+    waitForTransactionReceipt: (...args: unknown[]) =>
+      mockWaitForTransactionReceipt(...args),
+    readContract: (...args: unknown[]) => mockReadContract(...args),
+    getCode: (...args: unknown[]) => mockGetCode(...args),
   },
   walletClient: {
-    sendTransaction: vi.fn(),
-    writeContract: vi.fn(),
+    sendTransaction: (...args: unknown[]) => mockSendTransaction(...args),
+    writeContract: (...args: unknown[]) => mockWriteContract(...args),
     chain: { id: 11155111 },
   },
   startupChainAccount: '0xserver',
@@ -78,7 +97,18 @@ vi.mock('../../../../lib/blockchain/safe-factory', () => ({
   estimateSafeDeploymentGas: (...args: unknown[]) =>
     mockEstimateSafeDeploymentGas(...args),
   calculateThreshold: (count: number) => Math.ceil(count / 2),
-  deploySafe: vi.fn(),
+  deploySafe: (...args: unknown[]) => mockDeploySafe(...args),
+}))
+
+vi.mock('../../../../lib/auth/pending-registration', () => ({
+  getPendingRegistration: (...args: unknown[]) =>
+    mockGetPendingRegistration(...args),
+  setPendingRegistration: (...args: unknown[]) =>
+    mockSetPendingRegistration(...args),
+  updatePendingRegistration: (...args: unknown[]) =>
+    mockUpdatePendingRegistration(...args),
+  clearPendingRegistration: (...args: unknown[]) =>
+    mockClearPendingRegistration(...args),
 }))
 
 vi.mock('next/headers', () => ({
@@ -200,5 +230,102 @@ describe('getEnsOwnerAction', () => {
 
     expect(result.owner).toBeNull()
     expect(mockGetOwner).not.toHaveBeenCalled()
+  })
+})
+
+describe('finalizeEnsRegistrationAction', () => {
+  const safeAddress = '0x00000000000000000000000000000000000000aa' as const
+  const existingRegistrationTxHash =
+    '0x00000000000000000000000000000000000000000000000000000000000000bb' as const
+  const deterministicRetryMessage =
+    'ENS registration transaction already submitted. Waiting for confirmation. Retry in a moment.'
+
+  const buildPending = () => ({
+    ensLabel: 'acme',
+    ensName: 'acme.eth',
+    commitTxHash:
+      '0x00000000000000000000000000000000000000000000000000000000000000cc' as `0x${string}`,
+    readyAt: Date.now() - 1000,
+    owner: safeAddress,
+    founders: [
+      {
+        wallet: '0x00000000000000000000000000000000000000d1' as `0x${string}`,
+        equityBps: 10000,
+      },
+    ],
+    threshold: 1,
+    status: 'registering' as const,
+    secret:
+      '0x00000000000000000000000000000000000000000000000000000000000000dd' as `0x${string}`,
+    durationYears: 1,
+    createdAt: Date.now() - 5000,
+    updatedAt: Date.now() - 5000,
+    registrationTxHash: existingRegistrationTxHash,
+    safeAddress,
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    process.env.NEXT_PUBLIC_CHAIN_ID = '11155111'
+    process.env.ALCHEMY_API_KEY = 'https://example-rpc'
+
+    mockGetPrice.mockResolvedValue({ base: 1_000n, premium: 0n })
+    mockEstimateSafeDeploymentGas.mockResolvedValue(0n)
+    mockReadContract.mockResolvedValue([0n, safeAddress])
+    mockGetCode.mockResolvedValue('0x1234')
+    mockUpdatePendingRegistration.mockResolvedValue(null)
+    mockSetPendingRegistration.mockResolvedValue(undefined)
+    mockClearPendingRegistration.mockResolvedValue(undefined)
+  })
+
+  it('reuses existing registration tx hash and does not submit another tx', async () => {
+    const pending = buildPending()
+    mockGetPendingRegistration.mockResolvedValue(pending)
+    mockWaitForTransactionReceipt.mockResolvedValue({ status: 'success' })
+    mockGetOwner
+      .mockResolvedValueOnce({
+        owner: '0x0000000000000000000000000000000000000000',
+      })
+      .mockResolvedValueOnce({
+        owner: safeAddress,
+      })
+
+    const { finalizeEnsRegistrationAction } = await import('./actions.js')
+    const result = await finalizeEnsRegistrationAction({ ensName: 'acme' })
+
+    expect(mockSendTransaction).not.toHaveBeenCalled()
+    expect(mockWaitForTransactionReceipt).toHaveBeenCalledWith({
+      hash: existingRegistrationTxHash,
+    })
+    expect(result.status).toBe('ready-to-record')
+    expect(result.registrationTxHash).toBe(existingRegistrationTxHash)
+  })
+
+  it('returns deterministic retry message and keeps state retryable when existing tx is unresolved', async () => {
+    const pending = buildPending()
+    mockGetPendingRegistration.mockResolvedValue(pending)
+    mockWaitForTransactionReceipt.mockRejectedValue(
+      new Error('transaction still pending')
+    )
+    mockGetOwner.mockResolvedValue({
+      owner: '0x0000000000000000000000000000000000000000',
+    })
+
+    const { finalizeEnsRegistrationAction } = await import('./actions.js')
+
+    await expect(
+      finalizeEnsRegistrationAction({ ensName: 'acme' })
+    ).rejects.toThrow(deterministicRetryMessage)
+
+    expect(mockSendTransaction).not.toHaveBeenCalled()
+    expect(mockUpdatePendingRegistration).toHaveBeenCalledWith({
+      status: 'registering',
+      error: deterministicRetryMessage,
+    })
+    expect(mockUpdatePendingRegistration).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'failed',
+      })
+    )
   })
 })

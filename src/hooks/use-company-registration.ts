@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
- import { isAddress } from 'viem'
+import { isAddress } from 'viem'
 import { useSendTransaction, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 
 import {
@@ -15,6 +15,10 @@ import {
 } from '@/app/(app)/dashboard/setup/actions'
 import { getTreasuryAddressAction } from '@/app/(app)/dashboard/setup/payment-actions'
 import { startupChainAbi } from '@/lib/blockchain/startupchain-abi'
+import {
+  COMPANY_REGISTRATION_PENDING_MESSAGE,
+  shouldBlockRecordCompanySubmit,
+} from '@/hooks/record-company-submit-guard'
 
 const LOG_PREFIX = '[CLIENT:useCompanyRegistration]'
 
@@ -62,6 +66,8 @@ export function useCompanyRegistration() {
   const [error, setError] = useState<string | null>(null)
   const [treasuryAddress, setTreasuryAddress] = useState<string | null>(null)
   const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null)
+  const [isSubmittingCompanySignature, setIsSubmittingCompanySignature] =
+    useState(false)
 
   const ensNameRef = useRef<string | null>(null)
   const readyAtRef = useRef<number | null>(null)
@@ -69,6 +75,7 @@ export function useCompanyRegistration() {
   const foundersRef = useRef<FounderInput[]>([])
   const thresholdRef = useRef<number>(1)
   const durationYearsRef = useRef<number>(1)
+  const recordCompanySubmitLockedRef = useRef(false)
 
   // Wagmi hooks for payment
   const { sendTransaction, data: txHash, isPending: isSending, error: sendError } = useSendTransaction()
@@ -100,8 +107,6 @@ export function useCompanyRegistration() {
     }
   }, [txHash, step])
 
-
-
   // Handle payment errors
   useEffect(() => {
     if (sendError && step === 'awaiting-payment') {
@@ -124,6 +129,11 @@ export function useCompanyRegistration() {
     }
   }, [recordCompanyTxHash, step])
 
+  const releaseRecordCompanySubmitLock = useCallback(() => {
+    recordCompanySubmitLockedRef.current = false
+    setIsSubmittingCompanySignature(false)
+  }, [])
+
   // Handle company signing confirmation - complete registration
   useEffect(() => {
     if (isCompanyConfirmed && recordCompanyTxHash && step === 'signing-company') {
@@ -134,14 +144,21 @@ export function useCompanyRegistration() {
           setStep('completed')
           setCanComplete(false)
           setCountdown(null)
+          releaseRecordCompanySubmitLock()
         })
         .catch((err) => {
           console.log(LOG_PREFIX, 'Error confirming record:', err)
           // Still mark as completed since tx was confirmed on-chain
           setStep('completed')
+          releaseRecordCompanySubmitLock()
         })
     }
-  }, [isCompanyConfirmed, recordCompanyTxHash, step])
+  }, [
+    isCompanyConfirmed,
+    recordCompanyTxHash,
+    step,
+    releaseRecordCompanySubmitLock,
+  ])
 
   // Handle company signing errors
   useEffect(() => {
@@ -149,13 +166,20 @@ export function useCompanyRegistration() {
       console.log(LOG_PREFIX, 'recordCompany sign error:', recordCompanyError)
       setError(recordCompanyError.message || 'Failed to sign transaction')
       setStep('failed')
+      releaseRecordCompanySubmitLock()
     }
     if (companyConfirmError && step === 'signing-company') {
       console.log(LOG_PREFIX, 'recordCompany confirm error:', companyConfirmError)
       setError(companyConfirmError.message || 'Transaction failed')
       setStep('failed')
+      releaseRecordCompanySubmitLock()
     }
-  }, [recordCompanyError, companyConfirmError, step])
+  }, [
+    recordCompanyError,
+    companyConfirmError,
+    step,
+    releaseRecordCompanySubmitLock,
+  ])
 
   // Countdown timer for waiting step
   useEffect(() => {
@@ -396,12 +420,24 @@ export function useCompanyRegistration() {
   const signRecordCompany = useCallback(async () => {
     console.log(LOG_PREFIX, '=== signRecordCompany START ===')
 
-    if (step !== 'awaiting-signature') {
-      const message = 'Not ready to sign recordCompany'
+    const shouldBlock = shouldBlockRecordCompanySubmit({
+      step,
+      isLocked: recordCompanySubmitLockedRef.current,
+      isSigningCompany,
+      isConfirmingCompany,
+      hasRecordCompanyTxHash: Boolean(recordCompanyTxHash),
+    })
+
+    if (shouldBlock) {
+      const message = COMPANY_REGISTRATION_PENDING_MESSAGE
       console.log(LOG_PREFIX, 'ERROR:', message)
       setError(message)
       return
     }
+
+    recordCompanySubmitLockedRef.current = true
+    setError(null)
+    setIsSubmittingCompanySignature(true)
 
     try {
       const data = await getRecordCompanyDataAction()
@@ -423,12 +459,18 @@ export function useCompanyRegistration() {
       console.log(LOG_PREFIX, 'ERROR in signRecordCompany:', err)
       const message =
         err instanceof Error ? err.message : 'Failed to prepare transaction'
+      releaseRecordCompanySubmitLock()
       setError(message)
       setStep('failed')
     }
-  }, [step, writeRecordCompany])
-
-
+  }, [
+    step,
+    isSigningCompany,
+    isConfirmingCompany,
+    recordCompanyTxHash,
+    writeRecordCompany,
+    releaseRecordCompanySubmitLock,
+  ])
 
   // Resume registration from session cookie on mount
   useEffect(() => {
@@ -494,6 +536,7 @@ export function useCompanyRegistration() {
 
   const reset = useCallback(() => {
     console.log(LOG_PREFIX, 'reset called')
+    releaseRecordCompanySubmitLock()
     ensNameRef.current = null
     readyAtRef.current = null
     safeAddressRef.current = undefined
@@ -507,7 +550,7 @@ export function useCompanyRegistration() {
     setError(null)
     setTreasuryAddress(null)
     setPaymentTxHash(null)
-  }, [])
+  }, [releaseRecordCompanySubmitLock])
 
   const safeAddress = useMemo(() => safeAddressRef.current, [])
 
@@ -528,6 +571,7 @@ export function useCompanyRegistration() {
     // Company signing state
     isSigningCompany,
     isConfirmingCompany,
+    isSubmittingCompanySignature,
     // Actions
     calculateCosts,
     initializeRegistration,
