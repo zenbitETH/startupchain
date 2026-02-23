@@ -25,17 +25,17 @@ export function HeroSection() {
           </h1>
 
           {/* Subheadline */}
-          <p className="text-muted-foreground mt-6 max-w-2xl text-lg leading-relaxed md:text-xl">
+          <p className="text-muted-foreground mt-8 max-w-2xl text-lg leading-relaxed md:text-xl">
             The all-in-one operating system for your company. Secure your
             identity, manage treasury, and issue tokens in minutes.
           </p>
 
-          <div className="mt-12 w-full max-w-xl">
+          <div className="mt-14 w-full max-w-xl">
             <EnsNameChecker />
           </div>
 
           {/* Trust strip */}
-          <div className="mt-8 flex w-full max-w-xl gap-4 lg:mt-10 lg:gap-8">
+          <div className="mt-12 flex w-full max-w-xl gap-4 lg:mt-14 lg:gap-8">
             {/* Built at */}
             <div className="flex flex-col items-center gap-2">
               <div className="flex h-14 items-center lg:h-24">
