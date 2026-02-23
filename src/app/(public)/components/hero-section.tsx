@@ -35,28 +35,34 @@ export function HeroSection() {
           </div>
 
           {/* Trust strip */}
-          <div className="mt-12 flex w-full max-w-xl gap-4 lg:mt-14 lg:gap-8">
+          <div className="mt-12 flex w-full max-w-xl flex-col items-center gap-6 lg:mt-14 lg:flex-row lg:gap-8">
             {/* Built at */}
             <div className="flex flex-col items-center gap-2">
-              <div className="flex h-14 items-center lg:h-24">
+              <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase lg:hidden">
+                Built at
+              </p>
+              <div className="flex h-10 items-center lg:h-24">
                 <Image
                   src="/eth-global-logo.png"
                   alt="ETHGlobal New York"
                   width={460}
                   height={50}
-                  className="h-14 w-auto lg:h-24"
+                  className="h-10 w-auto lg:h-24"
                 />
               </div>
-              <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+              <p className="text-muted-foreground hidden text-xs font-medium tracking-widest uppercase lg:block">
                 Built at
               </p>
             </div>
 
-            <div className="bg-muted-foreground/30 w-px self-stretch" />
+            <div className="bg-muted-foreground/30 hidden w-px self-stretch lg:block" />
 
             {/* Powered by */}
             <div className="flex flex-1 flex-col items-center gap-2">
-              <div className="flex h-14 w-full items-center justify-between lg:h-24">
+              <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase lg:hidden">
+                Powered by
+              </p>
+              <div className="flex w-full items-center justify-center gap-6 lg:h-24 lg:justify-between lg:gap-0">
                 <div className="flex items-center gap-1 lg:gap-1.5">
                   <Image
                     src="/ens-logo.png"
@@ -67,13 +73,13 @@ export function HeroSection() {
                   />
                   <span className="text-sm font-semibold lg:text-lg">ENS</span>
                 </div>
-                <div className="flex h-full items-center">
+                <div className="flex items-center">
                   <Image
                     src="/privy-logo.png"
                     alt="Privy"
                     width={120}
                     height={32}
-                    className="h-10 w-auto object-contain lg:h-16"
+                    className="h-8 w-auto object-contain lg:h-16"
                   />
                 </div>
                 <div className="flex items-center gap-1 lg:gap-1.5">
@@ -83,7 +89,7 @@ export function HeroSection() {
                   </span>
                 </div>
               </div>
-              <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+              <p className="text-muted-foreground hidden text-xs font-medium tracking-widest uppercase lg:block">
                 Powered by
               </p>
             </div>
