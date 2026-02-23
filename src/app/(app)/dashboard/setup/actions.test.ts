@@ -239,6 +239,8 @@ describe('finalizeEnsRegistrationAction', () => {
     '0x00000000000000000000000000000000000000000000000000000000000000bb' as const
   const deterministicRetryMessage =
     'ENS registration transaction already submitted. Waiting for confirmation. Retry in a moment.'
+  const revertedTxMessage =
+    'ENS registration transaction reverted. Please retry to submit a new transaction.'
 
   const buildPending = () => ({
     ensLabel: 'acme',
@@ -325,6 +327,66 @@ describe('finalizeEnsRegistrationAction', () => {
     expect(mockUpdatePendingRegistration).not.toHaveBeenCalledWith(
       expect.objectContaining({
         status: 'failed',
+      })
+    )
+  })
+
+  it('clears existing registration tx hash when stored tx is reverted', async () => {
+    const pending = buildPending()
+    mockGetPendingRegistration.mockResolvedValue(pending)
+    mockWaitForTransactionReceipt.mockResolvedValue({ status: 'reverted' })
+    mockGetOwner.mockResolvedValue({
+      owner: '0x0000000000000000000000000000000000000000',
+    })
+
+    const { finalizeEnsRegistrationAction } = await import('./actions.js')
+
+    await expect(
+      finalizeEnsRegistrationAction({ ensName: 'acme' })
+    ).rejects.toThrow(revertedTxMessage)
+
+    expect(mockSendTransaction).not.toHaveBeenCalled()
+    expect(mockUpdatePendingRegistration).toHaveBeenCalledWith({
+      registrationTxHash: undefined,
+    })
+    expect(mockUpdatePendingRegistration).toHaveBeenCalledWith({
+      status: 'registering',
+      registrationTxHash: undefined,
+      error: revertedTxMessage,
+    })
+  })
+
+  it('marks finalize as failed when ownership verification mismatches after confirmed tx', async () => {
+    const pending = buildPending()
+    mockGetPendingRegistration.mockResolvedValue(pending)
+    mockWaitForTransactionReceipt.mockResolvedValue({ status: 'success' })
+    mockGetOwner
+      .mockResolvedValueOnce({
+        owner: '0x0000000000000000000000000000000000000000',
+      })
+      .mockResolvedValueOnce({
+        owner: '0x00000000000000000000000000000000000000ff',
+      })
+
+    const { finalizeEnsRegistrationAction } = await import('./actions.js')
+
+    await expect(
+      finalizeEnsRegistrationAction({ ensName: 'acme' })
+    ).rejects.toThrow(/ENS registration verification failed\. Expected owner/)
+
+    expect(mockSendTransaction).not.toHaveBeenCalled()
+    expect(mockUpdatePendingRegistration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'failed',
+        error: expect.stringMatching(
+          /ENS registration verification failed\. Expected owner/
+        ),
+      })
+    )
+    expect(mockUpdatePendingRegistration).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'registering',
+        error: deterministicRetryMessage,
       })
     )
   })

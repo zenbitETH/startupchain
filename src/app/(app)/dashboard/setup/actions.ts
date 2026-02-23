@@ -73,6 +73,8 @@ const ensPublicClient = createPublicClient({
 const LOG_PREFIX = '[SERVER:actions]'
 const ENS_REGISTRATION_RETRY_MESSAGE =
   'ENS registration transaction already submitted. Waiting for confirmation. Retry in a moment.'
+const ENS_REGISTRATION_REVERTED_MESSAGE =
+  'ENS registration transaction reverted. Please retry to submit a new transaction.'
 
 export async function checkEnsAvailabilityAction(name: string) {
   console.log(LOG_PREFIX, 'checkEnsAvailabilityAction called', { name })
@@ -523,7 +525,9 @@ export async function finalizeEnsRegistrationAction({
         console.log(LOG_PREFIX, 'WARNING: ENS ownership verification failed!')
         console.log(LOG_PREFIX, '  Expected owner:', deployedSafeAddress)
         console.log(LOG_PREFIX, '  Actual owner:', verifiedOwner.owner)
-        throw new Error(ENS_REGISTRATION_RETRY_MESSAGE)
+        throw new Error(
+          `ENS registration verification failed. Expected owner ${deployedSafeAddress}, got ${verifiedOwner.owner}`
+        )
       }
       console.log(LOG_PREFIX, 'ENS ownership verified successfully!')
     }
@@ -542,10 +546,25 @@ export async function finalizeEnsRegistrationAction({
           registrationTxHash
         )
         try {
-          await startupChainPublicClient.waitForTransactionReceipt({
-            hash: registrationTxHash,
-          })
-        } catch {
+          const receipt = await startupChainPublicClient.waitForTransactionReceipt(
+            {
+              hash: registrationTxHash,
+            }
+          )
+          if (receipt.status === 'reverted') {
+            await updatePendingRegistration({
+              registrationTxHash: undefined,
+            })
+            throw new Error(ENS_REGISTRATION_REVERTED_MESSAGE)
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message.toLowerCase() : ''
+          if (message.includes('revert')) {
+            await updatePendingRegistration({
+              registrationTxHash: undefined,
+            })
+            throw new Error(ENS_REGISTRATION_REVERTED_MESSAGE)
+          }
           throw new Error(ENS_REGISTRATION_RETRY_MESSAGE)
         }
         await verifyEnsOwnership()
@@ -591,9 +610,17 @@ export async function finalizeEnsRegistrationAction({
         })
 
         console.log(LOG_PREFIX, 'Waiting for ENS registration receipt...')
-        await startupChainPublicClient.waitForTransactionReceipt({
-          hash: registrationTxHash,
-        })
+        const receipt = await startupChainPublicClient.waitForTransactionReceipt(
+          {
+            hash: registrationTxHash,
+          }
+        )
+        if (receipt.status === 'reverted') {
+          await updatePendingRegistration({
+            registrationTxHash: undefined,
+          })
+          throw new Error(ENS_REGISTRATION_REVERTED_MESSAGE)
+        }
         console.log(LOG_PREFIX, 'ENS registration confirmed!')
         await verifyEnsOwnership()
       }
@@ -631,6 +658,8 @@ export async function finalizeEnsRegistrationAction({
       message.includes('ENS name already taken')
     const alreadySubmittedAndPending =
       message === ENS_REGISTRATION_RETRY_MESSAGE
+    const revertedRegistrationTx =
+      message === ENS_REGISTRATION_REVERTED_MESSAGE
 
     if (alreadyRegistered) {
       const resolvedRegistrationTx =
@@ -655,6 +684,15 @@ export async function finalizeEnsRegistrationAction({
         error: ENS_REGISTRATION_RETRY_MESSAGE,
       })
       throw new Error(ENS_REGISTRATION_RETRY_MESSAGE)
+    }
+
+    if (revertedRegistrationTx) {
+      await updatePendingRegistration({
+        status: 'registering',
+        registrationTxHash: undefined,
+        error: ENS_REGISTRATION_REVERTED_MESSAGE,
+      })
+      throw new Error(ENS_REGISTRATION_REVERTED_MESSAGE)
     }
 
     await markFailed(message)
