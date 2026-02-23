@@ -199,51 +199,6 @@
   }
 }
 
-/* Custom animations for the landing page */
-@keyframes blob {
-  0% {
-    transform: translate(0px, 0px) scale(1);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
-  100% {
-    transform: translate(0px, 0px) scale(1);
-  }
-}
-
-@keyframes gradient-x {
-  0%,
-  100% {
-    background-size: 200% 200%;
-    background-position: left center;
-  }
-  50% {
-    background-size: 200% 200%;
-    background-position: right center;
-  }
-}
-
-.animate-blob {
-  animation: blob 7s infinite;
-}
-
-.animate-gradient-x {
-  animation: gradient-x 5s ease infinite;
-  background-size: 200% 200%;
-}
-
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-
-.animation-delay-4000 {
-  animation-delay: 4s;
-}
-
 @layer utilities {
   /* Gradient text animation */
   .animate-gradient-x {
@@ -319,9 +274,7 @@
   .glow-accent {
     box-shadow: 0 0 20px rgba(var(--accent), 0.3);
   }
-}
 
-@layer utilities {
   /* AnimatedRocket Component Animation Utilities */
 
   /* Animation classes that can be used directly in component className */
@@ -421,6 +374,13 @@
     }
     100% {
       transform: translate(0px, 0) scale(0.8);
+    }
+  }
+
+  /* Shimmer effect */
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
     }
   }
 

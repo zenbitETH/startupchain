@@ -5,8 +5,8 @@ import { Fredoka } from 'next/font/google'
 import { cookies, headers } from 'next/headers'
 
 import { AIChatTrigger } from '@/components/ai-chat/ai-chat-trigger'
-import { CookieConsent } from '@/components/ui/cookie-consent'
 import { ProvidersShell } from '@/components/providers/providers-shell'
+import { CookieConsent } from '@/components/ui/cookie-consent'
 import { getServerSession } from '@/lib/auth/server-session'
 import '@/style.css'
 
@@ -65,7 +65,11 @@ export default async function RootLayout({
   })
 
   return (
-    <html lang="en" className={`${fredoka.variable} dark`}>
+    <html
+      lang="en"
+      className={`${fredoka.variable} dark`}
+      suppressHydrationWarning
+    >
       <head />
       <body className="antialiased">
         <ProvidersShell initialSession={session || undefined}>
