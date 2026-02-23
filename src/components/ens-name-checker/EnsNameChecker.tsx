@@ -7,7 +7,7 @@ import { useProvidersReady } from '@/components/providers/providers-shell'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 
 import { useDebounce } from '../../hooks/use-debounce'
-import { EnsInput } from './EnsInput'
+import { ENS_NAME_INPUT_ID, EnsInput } from './EnsInput'
 import { EnsStatus } from './EnsStatus'
 import { useEnsCheck } from './useEnsCheck'
 
@@ -36,7 +36,7 @@ function EnsLogic({ ensName }: { ensName: string }) {
   }, [authenticated, pendingName, router])
 
   const handleProceed = useCallback(async () => {
-    if (!normalizedName) return
+    if (!normalizedName || !isAvailable) return
 
     if (!authenticated) {
       try {
@@ -52,7 +52,27 @@ function EnsLogic({ ensName }: { ensName: string }) {
     }
 
     router.push(`/dashboard/setup?ensName=${normalizedName}`)
-  }, [authenticated, connect, normalizedName, router])
+  }, [authenticated, connect, isAvailable, normalizedName, router])
+
+  useEffect(() => {
+    const handleInputEnter = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter') return
+
+      const activeElement = document.activeElement
+      if (!(activeElement instanceof HTMLElement)) return
+      if (activeElement.id !== ENS_NAME_INPUT_ID) return
+
+      if (!normalizedName || isLoading || error || isTaken || !isAvailable) {
+        return
+      }
+
+      event.preventDefault()
+      void handleProceed()
+    }
+
+    window.addEventListener('keydown', handleInputEnter)
+    return () => window.removeEventListener('keydown', handleInputEnter)
+  }, [error, handleProceed, isAvailable, isLoading, isTaken, normalizedName])
 
   return (
     <EnsStatus
