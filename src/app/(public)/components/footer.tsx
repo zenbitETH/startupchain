@@ -5,7 +5,7 @@ export function Footer() {
   return (
     <footer className="border-border bg-card/50 border-t py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-center justify-between md:flex-row">
+        <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
           <Link href="/" className="flex items-center space-x-2 py-5">
             <Image
               src="/logo.svg"
@@ -18,7 +18,7 @@ export function Footer() {
             </span>
           </Link>
           <div className="text-muted-foreground flex items-center space-x-6 text-sm">
-           {/*<a href="#" className="hover:text-foreground transition-colors">
+            <a href="#" className="hover:text-foreground transition-colors">
               Privacy
             </a>
             <a href="#" className="hover:text-foreground transition-colors">
@@ -26,12 +26,16 @@ export function Footer() {
             </a>
             <a href="#" className="hover:text-foreground transition-colors">
               Twitter
-            </a>*/}
+            </a>
             <a href="#" className="hover:text-foreground transition-colors">
               Discord
             </a>
- 
           </div>
+        </div>
+        <div className="border-border mt-8 border-t pt-6 text-center">
+          <p className="text-muted-foreground text-sm">
+            &copy; {new Date().getFullYear()} StartUpChain. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>

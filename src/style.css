@@ -227,6 +227,40 @@
   }
 }
 
+@property --ens-border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes ens-border-orbit {
+  to {
+    --ens-border-angle: 360deg;
+  }
+}
+
+.ens-input-shell {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    conic-gradient(
+        from var(--ens-border-angle),
+        var(--border) 0deg,
+        var(--border) 280deg,
+        var(--primary) 312deg,
+        var(--border) 344deg,
+        var(--border) 360deg
+      )
+      border-box;
+  animation: ens-border-orbit 4.5s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ens-input-shell {
+    animation: none;
+  }
+}
+
 .animate-blob {
   animation: blob 7s infinite;
 }

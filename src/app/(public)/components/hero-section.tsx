@@ -1,4 +1,4 @@
-import { Shield, Wallet } from 'lucide-react'
+import { Shield } from 'lucide-react'
 import Image from 'next/image'
 
 import { EnsNameChecker } from '../../../components/ens-name-checker'
@@ -7,7 +7,7 @@ export function HeroSection() {
   return (
     <section
       id="start"
-      className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden pt-20 pb-32"
+      className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden pt-60 pb-20 lg:pt-20"
     >
       {/* Background Effects */}
       <div className="absolute inset-0 -z-10 h-full w-full bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] bg-[size:24px_24px] opacity-20" />
@@ -25,60 +25,73 @@ export function HeroSection() {
           </h1>
 
           {/* Subheadline */}
-          <p className="text-muted-foreground mt-6 max-w-2xl text-lg leading-relaxed md:text-xl">
+          <p className="text-muted-foreground mt-8 max-w-2xl text-lg leading-relaxed md:text-xl">
             The all-in-one operating system for your company. Secure your
             identity, manage treasury, and issue tokens in minutes.
           </p>
 
-          <div className="mt-12 w-full max-w-xl">
+          <div className="mt-14 w-full max-w-xl">
             <EnsNameChecker />
           </div>
 
-          <div className="mt-20 flex flex-col gap-8 lg:mt-24">
-            {/* Built at ETHGlobal */}
-            <div className="flex flex-col items-center gap-3 lg:items-start">
-              <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+          {/* Trust strip */}
+          <div className="mt-12 flex w-full max-w-xl flex-col items-center gap-6 lg:mt-14 lg:flex-row lg:gap-8">
+            {/* Built at */}
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase lg:hidden">
                 Built at
               </p>
-              <div className="bg-card/30 border-border/50 hover:bg-card/50 flex items-center gap-3 rounded-xl border p-3 backdrop-blur-sm transition-colors">
-                <div className="relative h-10 w-10">
-                  <Image
-                    src="/eth-global.png"
-                    alt="ETHGlobal"
-                    fill
-                    className="object-contain invert"
-                  />
-                </div>
-                <span className="font-medium">ETHGlobal New York</span>
+              <div className="flex h-20 items-center lg:h-24">
+                <Image
+                  src="/eth-global-logo.png"
+                  alt="ETHGlobal New York"
+                  width={460}
+                  height={50}
+                  className="h-20 w-auto lg:h-24"
+                />
               </div>
+              <p className="text-muted-foreground hidden text-xs font-medium tracking-widest uppercase lg:block">
+                Built at
+              </p>
             </div>
 
-            {/* Partners */}
-            <div className="flex flex-col items-center gap-4 lg:items-start">
-              <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
-                Powered by industry leaders
+            <div className="bg-muted-foreground/30 hidden w-px self-stretch lg:block" />
+
+            {/* Powered by */}
+            <div className="flex flex-1 flex-col items-center gap-2">
+              <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase lg:hidden">
+                Powered by
               </p>
-              <div className="flex flex-wrap items-center justify-center gap-4 lg:justify-start">
-                <div className="bg-card/30 border-border/50 hover:bg-card/50 flex items-center gap-3 rounded-xl border px-5 py-3 backdrop-blur-sm transition-all hover:scale-105">
-                  <div className="relative h-6 w-6">
-                    <Image
-                      src="/ens-logo.png"
-                      alt="ENS"
-                      fill
-                      className="object-contain brightness-0 invert"
-                    />
-                  </div>
-                  <span className="font-semibold">ENS</span>
+              <div className="flex w-full items-center justify-center gap-10 lg:h-24 lg:justify-between lg:gap-0">
+                <div className="flex items-center gap-1 lg:gap-1.5">
+                  <Image
+                    src="/ens-logo.png"
+                    alt="ENS"
+                    width={40}
+                    height={40}
+                    className="h-5 w-5 object-contain lg:h-8 lg:w-8"
+                  />
+                  <span className="text-sm font-semibold lg:text-lg">ENS</span>
                 </div>
-                <div className="bg-card/30 border-border/50 hover:bg-card/50 flex items-center gap-3 rounded-xl border px-5 py-3 backdrop-blur-sm transition-all hover:scale-105">
-                  <Wallet className="text-accent h-5 w-5" />
-                  <span className="font-semibold">Privy</span>
+                <div className="flex items-center">
+                  <Image
+                    src="/privy-logo.png"
+                    alt="Privy"
+                    width={120}
+                    height={32}
+                    className="h-10 w-auto object-contain lg:h-16"
+                  />
                 </div>
-                <div className="bg-card/30 border-border/50 hover:bg-card/50 flex items-center gap-3 rounded-xl border px-5 py-3 backdrop-blur-sm transition-all hover:scale-105">
-                  <Shield className="text-secondary h-5 w-5" />
-                  <span className="font-semibold">Safe</span>
+                <div className="flex items-center gap-1 lg:gap-1.5">
+                  <Shield className="h-5 w-5 opacity-80 lg:h-7 lg:w-7" />
+                  <span className="text-sm font-semibold opacity-80 lg:text-lg">
+                    Safe
+                  </span>
                 </div>
               </div>
+              <p className="text-muted-foreground hidden text-xs font-medium tracking-widest uppercase lg:block">
+                Powered by
+              </p>
             </div>
           </div>
         </div>

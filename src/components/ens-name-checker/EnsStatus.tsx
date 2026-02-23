@@ -26,7 +26,7 @@ export function EnsStatus({
   isAuthenticating,
 }: EnsStatusProps) {
   return (
-    <div className="mt-4 min-h-[120px]">
+    <div className={ensName.length > 0 ? 'mt-4' : ''}>
       {normalizedName && isValidEnsName(ensName) && (
         <div className="animate-in fade-in duration-300">
           {isLoading ? (
@@ -89,7 +89,7 @@ export function EnsStatus({
                     </>
                   ) : (
                     <>
-                      Proceed to setup
+                      Register
                       <ArrowRight className="h-4 w-4" />
                     </>
                   )}

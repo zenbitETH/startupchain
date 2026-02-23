@@ -94,25 +94,28 @@ export function EnsNameChecker() {
   const [ensName, setEnsName] = useState('')
 
   return (
-    <div className="mx-auto mb-13 max-w-2xl md:mb-15 lg:mx-0">
-      <div className="bg-card border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
-        <EnsInput ensName={ensName} setEnsName={setEnsName} />
-        {ready ? (
-          <EnsLogic ensName={ensName} />
-        ) : (
-          <EnsStatus
-            ensName={ensName}
-            normalizedName=""
-            isLoading={false}
-            error={null}
-            isTaken={false}
-            isAvailable={false}
-            resolvedAddress={null}
-            onProceed={() => {}}
-            isAuthenticating={false}
-          />
-        )}
-      </div>
+    <div className="mx-auto max-w-2xl lg:mx-0">
+      <EnsInput ensName={ensName} setEnsName={setEnsName} />
+      {!ensName && (
+        <p className="text-muted-foreground/60 mt-3 text-center text-sm lg:text-left">
+          Type a name to check .eth availability
+        </p>
+      )}
+      {ready ? (
+        <EnsLogic ensName={ensName} />
+      ) : (
+        <EnsStatus
+          ensName={ensName}
+          normalizedName=""
+          isLoading={false}
+          error={null}
+          isTaken={false}
+          isAvailable={false}
+          resolvedAddress={null}
+          onProceed={() => {}}
+          isAuthenticating={false}
+        />
+      )}
     </div>
   )
 }
