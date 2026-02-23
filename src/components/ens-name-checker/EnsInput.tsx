@@ -3,6 +3,8 @@ import { type ChangeEvent, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
+export const ENS_NAME_INPUT_ID = 'ens-name-input'
+
 interface EnsInputProps {
   ensName: string
   setEnsName: (name: string) => void
@@ -22,6 +24,7 @@ export function EnsInput({ ensName, setEnsName }: EnsInputProps) {
 
       <div className="relative">
         <Input
+          id={ENS_NAME_INPUT_ID}
           type="text"
           placeholder="search-your-name"
           value={ensName}
