@@ -22,12 +22,11 @@ export function PaymentStep({
   const isPaymentInProgress = isSendingPayment || isConfirmingPayment
 
   return (
-    <div className="border-primary/20 bg-primary/5 space-y-4 rounded-xl border p-4">
-      <h3 className="text-base font-semibold">Confirm Payment</h3>
-      <p className="text-muted-foreground text-sm">
-        Send {parseFloat(costBreakdown.totalEth).toFixed(5)} ETH to the
-        StartupChain treasury to begin registration. This covers ENS
-        registration, Safe deployment, and service fees.
+    <div className="border-primary/30 bg-card space-y-4 rounded-2xl border p-5">
+      <h3 className="text-base font-semibold tracking-tight">Pay + Start</h3>
+      <p className="text-muted-foreground text-sm leading-relaxed">
+        One payment starts the full launch flow. This covers ENS registration,
+        Safe deployment, and service fee.
       </p>
       {treasuryAddress && (
         <p className="text-muted-foreground font-mono text-xs">
@@ -38,7 +37,7 @@ export function PaymentStep({
         type="button"
         onClick={onSendPayment}
         disabled={isPaymentInProgress}
-        className="bg-primary text-background hover:bg-primary/90 w-full rounded-xl px-6 py-3 text-base font-semibold transition-all duration-200 disabled:opacity-50"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring w-full rounded-xl px-6 py-3 text-base font-semibold transition-all duration-200 disabled:opacity-50 focus-visible:ring-2 focus-visible:outline-none"
       >
         {isPaymentInProgress ? (
           <span className="flex items-center justify-center gap-2">

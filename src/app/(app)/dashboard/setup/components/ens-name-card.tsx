@@ -13,8 +13,13 @@ export function EnsNameCard({ ensName }: EnsNameCardProps) {
             {ensName.charAt(0).toUpperCase()}
           </div>
         </div>
-        <div>
-          <p className="text-foreground text-lg font-semibold">{ensName}.eth</p>
+        <div className="min-w-0">
+          <p
+            className="text-foreground min-w-0 break-all text-lg font-semibold"
+            title={`${ensName}.eth`}
+          >
+            {ensName}.eth
+          </p>
           <p className="text-muted-foreground text-xs">
             Your ENS business name
           </p>
