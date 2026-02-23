@@ -1,8 +1,9 @@
 'use client'
 
-import { Plus, Trash2 } from 'lucide-react'
+import { AlertCircle, CheckCircle, Loader2, Plus, Trash2 } from 'lucide-react'
 
 import { type Shareholder } from '@/lib/store/draft'
+import { type FounderValidationState } from './founder-validation-utils'
 
 interface FoundersFormProps {
   shareholders: Shareholder[]
@@ -17,6 +18,8 @@ interface FoundersFormProps {
     field: 'walletAddress' | 'equityPercentage',
     value: string
   ) => void
+  onFounderInputChange: (id: string, value: string) => void
+  validationByFounderId: Record<string, FounderValidationState | undefined>
   onRegisterToDifferentAddressChange: (checked: boolean) => void
   onCustomAddressChange: (value: string) => void
 }
@@ -30,6 +33,8 @@ export function FoundersForm({
   onAddFounder,
   onRemoveFounder,
   onUpdateFounder,
+  onFounderInputChange,
+  validationByFounderId,
   onRegisterToDifferentAddressChange,
   onCustomAddressChange,
 }: FoundersFormProps) {
@@ -127,66 +132,80 @@ export function FoundersForm({
         </div>
 
         <div className="space-y-2">
-          {shareholders.map((founder, index) => (
-            <div
-              key={founder.id}
-              className="border-border rounded-lg border p-3"
-            >
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    placeholder="Email or ETH address"
-                    value={founder.walletAddress}
-                    disabled={!isMultipleFounders && index === 0}
-                    onChange={(event) =>
-                      onUpdateFounder(
-                        founder.id,
-                        'walletAddress',
-                        event.target.value
-                      )
-                    }
-                    className="border-border bg-background placeholder:text-muted-foreground focus:border-primary focus:ring-primary disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed w-full rounded-lg border px-3 py-2 text-sm transition-all duration-200 focus:ring-2"
-                  />
-                </div>
+          {shareholders.map((founder, index) => {
+            const validation = validationByFounderId[founder.id]
+            const validationStatus = validation?.status ?? 'idle'
+            const isValidating = validationStatus === 'validating'
+            const isValid = validationStatus === 'valid'
+            const isInvalid = validationStatus === 'invalid'
 
-                {isMultipleFounders && (
-                  <div className="w-20">
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={founder.equityPercentage}
-                        onChange={(event) =>
-                          onUpdateFounder(
-                            founder.id,
-                            'equityPercentage',
-                            event.target.value
-                          )
-                        }
-                        className="border-border bg-background focus:border-primary focus:ring-primary w-full rounded-lg border px-2 py-2 pr-6 text-center text-sm transition-all duration-200 focus:ring-2"
-                      />
-                      <div className="text-muted-foreground absolute top-1/2 right-2 -translate-y-1/2 text-xs">
-                        %
+            return (
+              <div
+                key={founder.id}
+                className="border-border rounded-lg border p-3"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder="ENS name or ETH address"
+                      value={founder.walletAddress}
+                      disabled={!isMultipleFounders && index === 0}
+                      onChange={(event) =>
+                        onFounderInputChange(founder.id, event.target.value)
+                      }
+                      className="border-border bg-background placeholder:text-muted-foreground focus:border-primary focus:ring-primary disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed w-full rounded-lg border px-3 py-2 pr-9 text-sm transition-all duration-200 focus:ring-2"
+                    />
+                    {isValidating && (
+                      <Loader2 className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 animate-spin" />
+                    )}
+                    {isValid && (
+                      <CheckCircle className="text-primary pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
+                    )}
+                    {isInvalid && (
+                      <AlertCircle className="text-destructive pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
+                    )}
+                  </div>
+
+                  {isMultipleFounders && (
+                    <div className="w-20">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          value={founder.equityPercentage}
+                          onChange={(event) =>
+                            onUpdateFounder(
+                              founder.id,
+                              'equityPercentage',
+                              event.target.value
+                            )
+                          }
+                          className="border-border bg-background focus:border-primary focus:ring-primary w-full rounded-lg border px-2 py-2 pr-6 text-center text-sm transition-all duration-200 focus:ring-2"
+                        />
+                        <div className="text-muted-foreground absolute top-1/2 right-2 -translate-y-1/2 text-xs">
+                          %
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {isMultipleFounders && shareholders.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => onRemoveFounder(founder.id)}
-                    className="text-muted-foreground hover:text-destructive rounded-lg p-2 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
+                  {isMultipleFounders && shareholders.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveFounder(founder.id)}
+                      className="text-muted-foreground hover:text-destructive rounded-lg p-2 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
               </div>
-            </div>
-          ))}
+            )
+          })}
 
           {isMultipleFounders && (
             <button

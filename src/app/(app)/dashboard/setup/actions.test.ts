@@ -233,6 +233,83 @@ describe('getEnsOwnerAction', () => {
   })
 })
 
+describe('resolveFounderIdentityAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    process.env.NEXT_PUBLIC_CHAIN_ID = '11155111'
+    process.env.ALCHEMY_API_KEY = 'https://example-rpc'
+  })
+
+  it('returns direct address payload for valid 0x address input', async () => {
+    const { resolveFounderIdentityAction } = await import('./actions.js')
+    const result = await resolveFounderIdentityAction(
+      '0x1234567890abcdef1234567890abcdef12345678'
+    )
+
+    expect(result).toEqual({
+      input: '0x1234567890abcdef1234567890abcdef12345678',
+      source: 'address',
+      resolvedAddress: '0x1234567890abcdef1234567890abcdef12345678',
+      ensName: null,
+      error: null,
+    })
+    expect(mockGetOwner).not.toHaveBeenCalled()
+  })
+
+  it('resolves owned ENS input to owner address', async () => {
+    mockGetOwner.mockResolvedValue({
+      owner: '0x00000000000000000000000000000000000000aa',
+    })
+
+    const { resolveFounderIdentityAction } = await import('./actions.js')
+    const result = await resolveFounderIdentityAction('founder')
+
+    expect(result).toEqual({
+      input: 'founder',
+      source: 'ens',
+      resolvedAddress: '0x00000000000000000000000000000000000000aa',
+      ensName: 'founder.eth',
+      error: null,
+    })
+  })
+
+  it('returns actionable message for invalid ENS format', async () => {
+    const { resolveFounderIdentityAction } = await import('./actions.js')
+    const result = await resolveFounderIdentityAction('ab')
+
+    expect(result.resolvedAddress).toBeNull()
+    expect(result.error).toBe(
+      'Enter a valid ENS name (like yourname.eth) or a 0x address.'
+    )
+  })
+
+  it('returns actionable message for unregistered ENS names', async () => {
+    mockGetOwner.mockResolvedValue({
+      owner: '0x0000000000000000000000000000000000000000',
+    })
+
+    const { resolveFounderIdentityAction } = await import('./actions.js')
+    const result = await resolveFounderIdentityAction('available-name')
+
+    expect(result.resolvedAddress).toBeNull()
+    expect(result.error).toContain(
+      'available-name.eth is not registered yet. Enter a registered ENS name or a 0x address.'
+    )
+  })
+
+  it('returns actionable message when ENS resolution fails', async () => {
+    mockGetOwner.mockRejectedValue(new Error('rpc down'))
+
+    const { resolveFounderIdentityAction } = await import('./actions.js')
+    const result = await resolveFounderIdentityAction('founder')
+
+    expect(result.resolvedAddress).toBeNull()
+    expect(result.error).toBe(
+      'Unable to resolve ENS right now. Try again or use a 0x address.'
+    )
+  })
+})
+
 describe('finalizeEnsRegistrationAction', () => {
   const safeAddress = '0x00000000000000000000000000000000000000aa' as const
   const existingRegistrationTxHash =

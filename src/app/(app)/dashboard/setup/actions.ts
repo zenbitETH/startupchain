@@ -157,6 +157,79 @@ export async function getEnsOwnerAction(name: string) {
   return { name: fullName, owner }
 }
 
+export interface FounderIdentityResolution {
+  input: string
+  source: 'address' | 'ens'
+  resolvedAddress: string | null
+  ensName: string | null
+  error: string | null
+}
+
+export async function resolveFounderIdentityAction(
+  input: string
+): Promise<FounderIdentityResolution> {
+  const trimmedInput = input.trim()
+
+  if (!trimmedInput) {
+    return {
+      input: trimmedInput,
+      source: 'ens',
+      resolvedAddress: null,
+      ensName: null,
+      error: 'Enter an ENS name or Ethereum address.',
+    }
+  }
+
+  if (isAddress(trimmedInput)) {
+    return {
+      input: trimmedInput,
+      source: 'address',
+      resolvedAddress: trimmedInput,
+      ensName: null,
+      error: null,
+    }
+  }
+
+  try {
+    const { fullName } = normalizeEnsInput(trimmedInput)
+    const result = await getOwner(ensPublicClient, { name: fullName })
+    const owner =
+      result?.owner && result.owner !== ZERO_ADDRESS ? result.owner : null
+
+    if (!owner) {
+      return {
+        input: trimmedInput,
+        source: 'ens',
+        resolvedAddress: null,
+        ensName: fullName,
+        error: `${fullName} is not registered yet. Enter a registered ENS name or a 0x address.`,
+      }
+    }
+
+    return {
+      input: trimmedInput,
+      source: 'ens',
+      resolvedAddress: owner,
+      ensName: fullName,
+      error: null,
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Unknown ENS resolution error'
+    const isFormatError = message.includes('Invalid ENS name')
+
+    return {
+      input: trimmedInput,
+      source: 'ens',
+      resolvedAddress: null,
+      ensName: null,
+      error: isFormatError
+        ? 'Enter a valid ENS name (like yourname.eth) or a 0x address.'
+        : 'Unable to resolve ENS right now. Try again or use a 0x address.',
+    }
+  }
+}
+
 type PendingRecord = PendingRegistration
 export type EnsRegistrationRecord = PendingRegistration
 
