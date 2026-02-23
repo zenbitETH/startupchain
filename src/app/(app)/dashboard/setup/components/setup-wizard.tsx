@@ -13,15 +13,25 @@ import { useDraftStore } from '@/lib/store/draft'
 import { CostBreakdownCard } from './cost-breakdown-card'
 import { EnsNameCard } from './ens-name-card'
 import { FoundersForm } from './founders-form'
-import { PaymentStep } from './payment-step'
 import { RegistrationProgressCard } from './registration-progress-card'
-import { WizardStepsIndicator } from './wizard-steps-indicator'
 
 const LOG_PREFIX = '[UI:SetupWizard]'
 
 interface SetupWizardProps {
   initialEnsName: string
 }
+
+const launchSteps = new Set([
+  'awaiting-payment',
+  'payment-pending',
+  'committing',
+  'waiting',
+  'deploying-safe',
+  'registering-ens',
+  'awaiting-signature',
+  'signing-company',
+  'completed',
+])
 
 export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   const router = useRouter()
@@ -33,6 +43,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
   } = useWalletAuth()
   const {
     step,
+    failedPhase,
     countdown,
     error: registrationError,
     costBreakdown,
@@ -47,6 +58,8 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     isConfirmingPayment,
     signRecordCompany,
     isSubmittingCompanySignature,
+    retryCurrentPhase,
+    reset,
   } = useCompanyRegistration()
 
   const [isLoadingCosts, setIsLoadingCosts] = useState(false)
@@ -137,23 +150,11 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
         LOG_PREFIX,
         'canComplete=true, step=waiting -> calling completeRegistration'
       )
-      completeRegistration()
-        .then((result) => {
-          console.log(LOG_PREFIX, 'completeRegistration success:', result)
-          // Only redirect when fully completed (after user signs recordCompany)
-          // If status is 'ready-to-record', stay on page for user to sign
-          if (result.status === 'completed') {
-            router.push('/dashboard/ens')
-            router.refresh()
-          }
-          // If 'ready-to-record', the hook will set step to 'awaiting-signature'
-          // and auto-trigger/show button for user signing
-        })
-        .catch((err) => {
-          console.error(LOG_PREFIX, 'Failed to complete registration:', err)
-        })
+      completeRegistration().catch((err) => {
+        console.error(LOG_PREFIX, 'Failed to complete registration:', err)
+      })
     }
-  }, [canComplete, step, completeRegistration, router])
+  }, [canComplete, step, completeRegistration])
 
   // Redirect when registration is fully completed (after user signs recordCompany)
   useEffect(() => {
@@ -203,6 +204,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     console.log(LOG_PREFIX, 'Connected wallet:', user?.wallet?.address)
     console.log(LOG_PREFIX, 'Draft owner wallet:', draft?.ownerWallet)
     console.log(LOG_PREFIX, 'Draft shareholders:', draft?.shareholders)
+
     if (!authenticated) {
       console.log(LOG_PREFIX, 'Not authenticated, calling connect()')
       await connect()
@@ -233,90 +235,93 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
       )
       console.log(LOG_PREFIX, 'Threshold:', threshold)
 
-      console.log(LOG_PREFIX, 'Calling initializeRegistration...')
-      const result = await initializeRegistration({
+      await initializeRegistration({
         ensName: initialEnsName,
         founders,
         threshold,
         durationYears: 1,
       })
-      console.log(LOG_PREFIX, 'initializeRegistration result:', result)
-
-      // Now in 'awaiting-payment' step - UI will show payment button
     } catch (err) {
       console.error(LOG_PREFIX, 'Failed to initialize registration:', err)
     }
   }
 
-  const handleSendPayment = () => {
+  const handleSendPayment = async () => {
+    if (!authenticated) {
+      await connect()
+      return
+    }
+
     console.log(LOG_PREFIX, '=== handleSendPayment START ===')
     console.log(LOG_PREFIX, 'Sending payment to treasury:', treasuryAddress)
     console.log(LOG_PREFIX, 'Amount:', costBreakdown?.totalEth, 'ETH')
     sendPayment()
   }
 
-  const isRegistering =
-    step !== 'idle' && step !== 'failed' && step !== 'completed'
-  const isAwaitingPayment = step === 'awaiting-payment'
+  const handleRetryPhase = () => {
+    retryCurrentPhase().catch((err) => {
+      console.error(LOG_PREFIX, 'Retry failed:', err)
+    })
+  }
+
   const error = registrationError || localError
+  const isPaymentInFlight = isSendingPayment || isConfirmingPayment
+  const paymentAmountEth = costBreakdown
+    ? parseFloat(costBreakdown.totalEth).toFixed(5)
+    : null
+
+  const showLaunchFailure =
+    step === 'failed' &&
+    (Boolean(treasuryAddress) ||
+      Boolean(paymentTxHash) ||
+      failedPhase === 'safe' ||
+      failedPhase === 'startupchain')
+  const showLaunchSurface = launchSteps.has(step) || showLaunchFailure
 
   const disableCreateButton =
-    isRegistering ||
+    step !== 'idle' ||
     isLoadingCosts ||
     (!authenticated &&
       draft.shareholders.some((founder) => !founder.walletAddress.trim())) ||
     (draft.isMultipleFounders && Math.abs(totalEquity - 100) > 0.01) ||
     (draft.registerToDifferentAddress && !draft.customAddress.trim())
 
-  const createButtonClasses = [
-    'rounded-2xl px-8 py-4 text-lg font-semibold transition-all duration-200',
-    'disabled:cursor-not-allowed disabled:opacity-50',
-    disableCreateButton
-      ? 'bg-muted text-muted-foreground'
-      : 'bg-primary text-background hover:bg-primary/90 hover:text-white',
-  ].join(' ')
-
   return (
-    <div className="space-y-6">
-      <WizardStepsIndicator
-        currentStep={draft.currentStep}
-        totalSteps={draft.totalSteps}
-      />
-
-      {/* Show registration progress when in progress */}
-      {isRegistering && (
-        <div className="mx-auto max-w-2xl">
-          <EnsNameCard ensName={initialEnsName} />
-          <div className="mt-6">
-            <RegistrationProgressCard
-              step={step}
-              countdown={countdown}
-              paymentTxHash={paymentTxHash}
-              onSign={signRecordCompany}
-              isSignSubmitting={isSubmittingCompanySignature}
-            />
-          </div>
+    <div className="space-y-10">
+      <section className="border-primary/30 bg-card relative overflow-hidden rounded-3xl border p-7 shadow-sm md:p-8">
+        <div className="from-primary/12 via-primary/6 pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-r to-transparent" />
+        <div className="relative">
+          <p className="text-primary text-xs font-semibold tracking-[0.2em] uppercase">
+            Create Company
+          </p>
+          <h2 className="text-foreground mt-2 min-w-0 break-words text-2xl font-semibold tracking-tight md:text-3xl">
+            Launch <span className="break-all">{initialEnsName}.eth</span> with confidence
+          </h2>
+          <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
+            You’ll see every step clearly: ENS identity, Safe treasury, and final
+            StartupChain registration.
+          </p>
         </div>
-      )}
+      </section>
 
-      {/* Payment step - show when awaiting payment */}
-      {isAwaitingPayment && costBreakdown && (
-        <div className="mx-auto max-w-2xl">
-          <EnsNameCard ensName={initialEnsName} />
-          <div className="mt-6">
-            <PaymentStep
-              costBreakdown={costBreakdown}
-              treasuryAddress={treasuryAddress}
-              isSendingPayment={isSendingPayment}
-              isConfirmingPayment={isConfirmingPayment}
-              onSendPayment={handleSendPayment}
-            />
-          </div>
+      {showLaunchSurface ? (
+        <div className="space-y-6">
+          <RegistrationProgressCard
+            step={step}
+            countdown={countdown}
+            error={error}
+            failedPhase={failedPhase}
+            paymentAmountEth={paymentAmountEth}
+            permissionDenied={step === 'awaiting-payment' && !authenticated}
+            isPaymentInFlight={isPaymentInFlight}
+            onPayAndStart={handleSendPayment}
+            onSign={signRecordCompany}
+            isSignSubmitting={isSubmittingCompanySignature}
+            onRetry={handleRetryPhase}
+            onBackToEdit={step === 'awaiting-payment' ? reset : undefined}
+          />
         </div>
-      )}
-
-      {/* Hide form fields during registration or payment */}
-      {!isRegistering && !isAwaitingPayment && (
+      ) : (
         <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
           <div className="space-y-6 lg:col-span-2">
             <EnsNameCard ensName={initialEnsName} />
@@ -334,17 +339,13 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
             />
           </div>
 
-          <div className="space-y-6">
-            {/* Cost breakdown - only show when authenticated */}
+          <aside className="space-y-5">
             {authenticated && (
-              <CostBreakdownCard
-                costs={costBreakdown}
-                isLoading={isLoadingCosts}
-              />
+              <CostBreakdownCard costs={costBreakdown} isLoading={isLoadingCosts} />
             )}
 
             {error && (
-              <div className="border-destructive/20 bg-destructive/10 rounded-xl border p-3">
+              <div className="border-destructive/30 bg-destructive/10 rounded-2xl border p-3">
                 <p className="text-destructive text-sm font-medium">{error}</p>
               </div>
             )}
@@ -353,17 +354,19 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
               type="button"
               onClick={handleCreateBusiness}
               disabled={disableCreateButton}
-              className={`${createButtonClasses} w-full`}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring w-full rounded-2xl px-6 py-4 text-base font-semibold transition duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-50 focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none"
             >
               {isLoadingCosts
-                ? 'Calculating...'
+                ? 'Preparing launch...'
                 : !authenticated
                   ? 'Connect Wallet'
-                  : costBreakdown
-                    ? `Pay ${parseFloat(costBreakdown.totalEth).toFixed(5)} ETH`
-                    : 'Create Business'}
+                  : 'Continue to launch'}
             </button>
-          </div>
+            <p className="text-muted-foreground text-xs">
+              Next screen will ask for one payment, then guide you through the 3
+              launch phases.
+            </p>
+          </aside>
         </div>
       )}
     </div>

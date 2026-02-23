@@ -19,22 +19,14 @@ import {
   COMPANY_REGISTRATION_PENDING_MESSAGE,
   shouldBlockRecordCompanySubmit,
 } from '@/hooks/record-company-submit-guard'
+import { toUserFacingRegistrationError } from '@/hooks/registration-error-copy'
+import {
+  inferFailedPhaseFromStep,
+  type RegistrationPhaseId,
+  type RegistrationStep,
+} from '@/hooks/registration-progress-model'
 
 const LOG_PREFIX = '[CLIENT:useCompanyRegistration]'
-
-type RegistrationStep =
-  | 'idle'
-  | 'checking'
-  | 'awaiting-payment'
-  | 'payment-pending'
-  | 'committing'
-  | 'waiting'
-  | 'deploying-safe'
-  | 'registering-ens'
-  | 'awaiting-signature'
-  | 'signing-company'
-  | 'completed'
-  | 'failed'
 
 type FounderInput = {
   address: string
@@ -58,8 +50,21 @@ function toFounderPayload(founders: FounderInput[]) {
   }))
 }
 
+function extractErrorMessage(input: unknown): string {
+  if (typeof input === 'string') return input
+  if (input instanceof Error) return input.message
+  if (input && typeof input === 'object') {
+    const maybeMessage = (input as { message?: unknown }).message
+    if (typeof maybeMessage === 'string') return maybeMessage
+  }
+  return ''
+}
+
 export function useCompanyRegistration() {
   const [step, setStep] = useState<RegistrationStep>('idle')
+  const [failedPhase, setFailedPhase] = useState<RegistrationPhaseId | null>(
+    null
+  )
   const [countdown, setCountdown] = useState<number | null>(null)
   const [costBreakdown, setCostBreakdown] = useState<CostBreakdown | null>(null)
   const [canComplete, setCanComplete] = useState(false)
@@ -98,36 +103,53 @@ export function useCompanyRegistration() {
     hash: recordCompanyTxHash,
   })
 
+  const transitionToStep = useCallback((nextStep: RegistrationStep) => {
+    if (nextStep !== 'failed') {
+      setFailedPhase(null)
+    }
+    setStep(nextStep)
+  }, [])
+
+  const moveToFailed = useCallback(
+    (input: unknown, failedAt: RegistrationStep) => {
+      const rawMessage = extractErrorMessage(input)
+      const phase = inferFailedPhaseFromStep(failedAt, rawMessage)
+      const userFacingMessage = toUserFacingRegistrationError(input, phase)
+      setError(userFacingMessage)
+      setFailedPhase(phase)
+      setStep('failed')
+    },
+    []
+  )
+
   // Handle payment tx hash from wagmi
   useEffect(() => {
     if (txHash && step === 'awaiting-payment') {
       console.log(LOG_PREFIX, 'Payment tx hash received:', txHash)
       setPaymentTxHash(txHash)
-      setStep('payment-pending')
+      transitionToStep('payment-pending')
     }
-  }, [txHash, step])
+  }, [txHash, step, transitionToStep])
 
   // Handle payment errors
   useEffect(() => {
     if (sendError && step === 'awaiting-payment') {
       console.log(LOG_PREFIX, 'Payment send error:', sendError)
-      setError(sendError.message || 'Failed to send payment')
-      setStep('failed')
+      moveToFailed(sendError, 'awaiting-payment')
     }
     if (confirmError && step === 'payment-pending') {
       console.log(LOG_PREFIX, 'Payment confirm error:', confirmError)
-      setError(confirmError.message || 'Payment transaction failed')
-      setStep('failed')
+      moveToFailed(confirmError, 'payment-pending')
     }
-  }, [sendError, confirmError, step])
+  }, [sendError, confirmError, step, moveToFailed])
 
   // Handle company signing - track tx hash
   useEffect(() => {
     if (recordCompanyTxHash && step === 'awaiting-signature') {
       console.log(LOG_PREFIX, 'recordCompany tx hash received:', recordCompanyTxHash)
-      setStep('signing-company')
+      transitionToStep('signing-company')
     }
-  }, [recordCompanyTxHash, step])
+  }, [recordCompanyTxHash, step, transitionToStep])
 
   const releaseRecordCompanySubmitLock = useCallback(() => {
     recordCompanySubmitLockedRef.current = false
@@ -141,7 +163,7 @@ export function useCompanyRegistration() {
       confirmRecordCompanyAction({ companyTxHash: recordCompanyTxHash })
         .then(() => {
           console.log(LOG_PREFIX, 'Registration completed!')
-          setStep('completed')
+          transitionToStep('completed')
           setCanComplete(false)
           setCountdown(null)
           releaseRecordCompanySubmitLock()
@@ -149,7 +171,7 @@ export function useCompanyRegistration() {
         .catch((err) => {
           console.log(LOG_PREFIX, 'Error confirming record:', err)
           // Still mark as completed since tx was confirmed on-chain
-          setStep('completed')
+          transitionToStep('completed')
           releaseRecordCompanySubmitLock()
         })
     }
@@ -158,20 +180,19 @@ export function useCompanyRegistration() {
     recordCompanyTxHash,
     step,
     releaseRecordCompanySubmitLock,
+    transitionToStep,
   ])
 
   // Handle company signing errors
   useEffect(() => {
     if (recordCompanyError && step === 'awaiting-signature') {
       console.log(LOG_PREFIX, 'recordCompany sign error:', recordCompanyError)
-      setError(recordCompanyError.message || 'Failed to sign transaction')
-      setStep('failed')
+      moveToFailed(recordCompanyError, 'awaiting-signature')
       releaseRecordCompanySubmitLock()
     }
     if (companyConfirmError && step === 'signing-company') {
       console.log(LOG_PREFIX, 'recordCompany confirm error:', companyConfirmError)
-      setError(companyConfirmError.message || 'Transaction failed')
-      setStep('failed')
+      moveToFailed(companyConfirmError, 'signing-company')
       releaseRecordCompanySubmitLock()
     }
   }, [
@@ -179,6 +200,7 @@ export function useCompanyRegistration() {
     companyConfirmError,
     step,
     releaseRecordCompanySubmitLock,
+    moveToFailed,
   ])
 
   // Countdown timer for waiting step
@@ -242,29 +264,26 @@ export function useCompanyRegistration() {
       console.log(LOG_PREFIX, '=== initializeRegistration START ===')
       console.log(LOG_PREFIX, 'Input:', { ensName, founders, threshold, durationYears })
       setError(null)
-      setStep('checking')
+      transitionToStep('checking')
 
       const invalidFounder = founders.find(
         (founder) => !isAddress(founder.address)
       )
       if (invalidFounder) {
         const message = 'Please provide valid founder wallet addresses'
-        setError(message)
-        setStep('failed')
+        moveToFailed(message, 'checking')
         throw new Error(message)
       }
 
       if (founders.length === 0) {
         const message = 'Add at least one founder to continue'
-        setError(message)
-        setStep('failed')
+        moveToFailed(message, 'checking')
         throw new Error(message)
       }
 
       if (threshold > founders.length || threshold <= 0) {
         const message = 'Threshold must be between 1 and the number of founders'
-        setError(message)
-        setStep('failed')
+        moveToFailed(message, 'checking')
         throw new Error(message)
       }
 
@@ -284,12 +303,12 @@ export function useCompanyRegistration() {
         await calculateCosts(ensName, durationYears, founders.length)
       }
 
-      setStep('awaiting-payment')
+      transitionToStep('awaiting-payment')
       console.log(LOG_PREFIX, '=== initializeRegistration COMPLETE - awaiting payment ===')
 
       return { treasuryAddress: treasury.address }
     },
-    [costBreakdown, calculateCosts]
+    [costBreakdown, calculateCosts, moveToFailed, transitionToStep]
   )
 
   // Step 2: Send payment to treasury
@@ -315,12 +334,11 @@ export function useCompanyRegistration() {
 
     if (!ensNameRef.current) {
       const message = 'No pending registration found'
-      setError(message)
-      setStep('failed')
+      moveToFailed(message, 'committing')
       throw new Error(message)
     }
 
-    setStep('committing')
+    transitionToStep('committing')
     console.log(LOG_PREFIX, 'Calling commitEnsRegistrationAction...')
 
     try {
@@ -337,19 +355,16 @@ export function useCompanyRegistration() {
       readyAtRef.current = result.readyAt
       setCountdown(Math.max(0, Math.ceil((result.readyAt - Date.now()) / 1000)))
       setCanComplete(false)
-      setStep(result.status === 'waiting' ? 'waiting' : 'committing')
+      transitionToStep(result.status === 'waiting' ? 'waiting' : 'committing')
       console.log(LOG_PREFIX, '=== proceedAfterPayment COMPLETE ===')
 
       return result
     } catch (err) {
       console.log(LOG_PREFIX, 'ERROR in proceedAfterPayment:', err)
-      const message =
-        err instanceof Error ? err.message : 'Failed to start registration'
-      setError(message)
-      setStep('failed')
+      moveToFailed(err, 'committing')
       throw err
     }
-  }, [paymentTxHash])
+  }, [paymentTxHash, moveToFailed, transitionToStep])
 
   // Handle payment confirmation - auto-proceed to commit
   useEffect(() => {
@@ -365,13 +380,12 @@ export function useCompanyRegistration() {
     if (!ensNameRef.current) {
       const message = 'No pending registration found'
       console.log(LOG_PREFIX, 'ERROR:', message)
-      setError(message)
-      setStep('failed')
+      moveToFailed(message, 'deploying-safe')
       throw new Error(message)
     }
 
     setError(null)
-    setStep('deploying-safe')
+    transitionToStep('deploying-safe')
     console.log(LOG_PREFIX, 'Calling finalizeEnsRegistrationAction...')
 
     try {
@@ -383,20 +397,20 @@ export function useCompanyRegistration() {
       // Update step based on status
       if (result.status === 'deploying-safe') {
         console.log(LOG_PREFIX, 'Status: deploying-safe')
-        setStep('deploying-safe')
+        transitionToStep('deploying-safe')
       } else if (result.status === 'registering') {
         console.log(LOG_PREFIX, 'Status: registering-ens')
-        setStep('registering-ens')
+        transitionToStep('registering-ens')
       } else if (result.status === 'ready-to-record') {
         // ENS registered, now user needs to sign recordCompany()
         console.log(LOG_PREFIX, 'Status: ready-to-record - awaiting user signature')
         if (result.safeAddress) {
           safeAddressRef.current = result.safeAddress
         }
-        setStep('awaiting-signature')
+        transitionToStep('awaiting-signature')
       } else if (result.status === 'completed') {
         console.log(LOG_PREFIX, 'Status: completed!')
-        setStep('completed')
+        transitionToStep('completed')
         setCanComplete(false)
         setCountdown(null)
         if (result.safeAddress) {
@@ -408,13 +422,10 @@ export function useCompanyRegistration() {
       return result
     } catch (err) {
       console.log(LOG_PREFIX, 'ERROR in completeRegistration:', err)
-      const message =
-        err instanceof Error ? err.message : 'Failed to finalize registration'
-      setError(message)
-      setStep('failed')
+      moveToFailed(err, 'deploying-safe')
       throw err
     }
-  }, [])
+  }, [moveToFailed, transitionToStep])
 
   // F1: Sign recordCompany() with user's wallet
   const signRecordCompany = useCallback(async () => {
@@ -457,11 +468,8 @@ export function useCompanyRegistration() {
       })
     } catch (err) {
       console.log(LOG_PREFIX, 'ERROR in signRecordCompany:', err)
-      const message =
-        err instanceof Error ? err.message : 'Failed to prepare transaction'
       releaseRecordCompanySubmitLock()
-      setError(message)
-      setStep('failed')
+      moveToFailed(err, 'awaiting-signature')
     }
   }, [
     step,
@@ -470,6 +478,7 @@ export function useCompanyRegistration() {
     recordCompanyTxHash,
     writeRecordCompany,
     releaseRecordCompanySubmitLock,
+    moveToFailed,
   ])
 
   // Resume registration from session cookie on mount
@@ -508,22 +517,22 @@ export function useCompanyRegistration() {
         // Restore step
         switch (pending.status) {
           case 'waiting':
-            setStep('waiting')
+            transitionToStep('waiting')
             setCountdown(Math.max(0, Math.ceil((pending.readyAt - Date.now()) / 1000)))
             setCanComplete(false)
             break
           case 'deploying-safe':
-            setStep('deploying-safe')
+            transitionToStep('deploying-safe')
             break
           case 'registering': // Mapped to registering-ens
-            setStep('registering-ens')
+            transitionToStep('registering-ens')
             break
           case 'ready-to-record': // Mapped to awaiting-signature
-            setStep('awaiting-signature')
+            transitionToStep('awaiting-signature')
             break
           default:
             // For committing, creating, etc. maybe just idle or specific steps
-            if (pending.status === 'committing') setStep('committing')
+            if (pending.status === 'committing') transitionToStep('committing')
         }
       } catch (err) {
         console.error(LOG_PREFIX, 'Failed to resume registration:', err)
@@ -532,7 +541,36 @@ export function useCompanyRegistration() {
 
     resume()
     return () => { mounted = false }
-  }, [])
+  }, [transitionToStep])
+
+  const retryCurrentPhase = useCallback(async () => {
+    if (step !== 'failed') return
+
+    setError(null)
+
+    if (failedPhase === 'ens') {
+      if (paymentTxHash && ensNameRef.current) {
+        await proceedAfterPayment()
+        return
+      }
+      transitionToStep('awaiting-payment')
+      return
+    }
+
+    if (failedPhase === 'safe' || failedPhase === 'startupchain') {
+      await completeRegistration()
+      return
+    }
+
+    transitionToStep('awaiting-payment')
+  }, [
+    step,
+    failedPhase,
+    paymentTxHash,
+    proceedAfterPayment,
+    completeRegistration,
+    transitionToStep,
+  ])
 
   const reset = useCallback(() => {
     console.log(LOG_PREFIX, 'reset called')
@@ -543,20 +581,21 @@ export function useCompanyRegistration() {
     foundersRef.current = []
     thresholdRef.current = 1
     durationYearsRef.current = 1
-    setStep('idle')
+    transitionToStep('idle')
     setCountdown(null)
     setCanComplete(false)
     setCostBreakdown(null)
     setError(null)
     setTreasuryAddress(null)
     setPaymentTxHash(null)
-  }, [releaseRecordCompanySubmitLock])
+  }, [releaseRecordCompanySubmitLock, transitionToStep])
 
   const safeAddress = useMemo(() => safeAddressRef.current, [])
 
   return {
     // State
     step,
+    failedPhase,
     countdown,
     costBreakdown,
     canComplete,
@@ -578,6 +617,7 @@ export function useCompanyRegistration() {
     sendPayment,
     completeRegistration,
     signRecordCompany,
+    retryCurrentPhase,
     reset,
   }
 }
