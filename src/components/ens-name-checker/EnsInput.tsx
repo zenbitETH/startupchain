@@ -15,7 +15,7 @@ export function EnsInput({ ensName, setEnsName }: EnsInputProps) {
       <Input
         id={ENS_NAME_INPUT_ID}
         type="text"
-        placeholder="search-your-name"
+        placeholder=""
         value={ensName}
         onChange={(event: ChangeEvent<HTMLInputElement>) =>
           setEnsName(

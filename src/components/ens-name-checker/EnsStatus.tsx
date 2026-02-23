@@ -89,7 +89,7 @@ export function EnsStatus({
                     </>
                   ) : (
                     <>
-                      Proceed to setup
+                      Register
                       <ArrowRight className="h-4 w-4" />
                     </>
                   )}
