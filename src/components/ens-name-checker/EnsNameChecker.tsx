@@ -95,8 +95,13 @@ export function EnsNameChecker() {
 
   return (
     <div className="mx-auto mb-13 max-w-2xl md:mb-15 lg:mx-0">
-      <div className="bg-card border-border/50 relative min-h-[200px] overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
+      <div className="bg-card border-border/50 relative overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
         <EnsInput ensName={ensName} setEnsName={setEnsName} />
+        {!ensName && (
+          <p className="text-muted-foreground/60 mt-4 text-center text-sm">
+            Type a name to check .eth availability
+          </p>
+        )}
         {ready ? (
           <EnsLogic ensName={ensName} />
         ) : (

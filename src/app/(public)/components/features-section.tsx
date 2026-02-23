@@ -63,8 +63,7 @@ export function FeaturesSection() {
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {features.map((feature, index) => (
             <div key={index} className="group relative">
-              <div className="from-primary/20 to-accent/20 absolute inset-0 rounded-2xl bg-gradient-to-r opacity-25 blur transition-opacity group-hover:opacity-40"></div>
-              <div className="bg-card border-border hover:border-primary/50 relative rounded-2xl border p-8 transition-all duration-300">
+              <div className="bg-card border-border hover:border-primary/50 relative rounded-2xl border p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
                 <div className="bg-primary/10 mb-6 flex h-12 w-12 items-center justify-center rounded-2xl">
                   {feature.icon}
                 </div>
