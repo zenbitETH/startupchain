@@ -94,7 +94,7 @@ export function EnsNameChecker() {
   const [ensName, setEnsName] = useState('')
 
   return (
-    <div className="mx-auto mb-13 max-w-2xl md:mb-15 lg:mx-0">
+    <div className="mx-auto max-w-2xl lg:mx-0">
       <div className="bg-card border-border/50 relative overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-sm">
         <EnsInput ensName={ensName} setEnsName={setEnsName} />
         {!ensName && (

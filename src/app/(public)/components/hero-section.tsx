@@ -7,7 +7,7 @@ export function HeroSection() {
   return (
     <section
       id="start"
-      className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden pt-20 pb-20"
+      className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden pt-60 pb-20 lg:pt-20"
     >
       {/* Background Effects */}
       <div className="absolute inset-0 -z-10 h-full w-full bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] bg-[size:24px_24px] opacity-20" />
@@ -35,45 +35,57 @@ export function HeroSection() {
           </div>
 
           {/* Trust strip */}
-          <div className="mt-12 flex flex-col items-center gap-4 lg:mt-16 lg:items-start">
-            <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
-              Built at ETHGlobal &middot; Powered by
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="bg-card/30 border-border/50 flex items-center gap-2.5 overflow-hidden rounded-xl border px-4 py-2.5 backdrop-blur-sm">
+          <div className="mt-8 flex w-full max-w-xl gap-4 lg:mt-10 lg:gap-8">
+            {/* Built at */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex h-14 items-center lg:h-24">
                 <Image
                   src="/eth-global-logo.png"
                   alt="ETHGlobal New York"
-                  width={120}
-                  height={32}
-                  className="h-6 w-auto"
+                  width={460}
+                  height={50}
+                  className="h-14 w-auto lg:h-24"
                 />
               </div>
-              <div className="bg-border/50 hidden h-6 w-px sm:block" />
-              <div className="bg-card/30 border-border/50 flex items-center gap-2 rounded-xl border px-4 py-2.5 backdrop-blur-sm">
-                <div className="relative h-5 w-5">
+              <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+                Built at
+              </p>
+            </div>
+
+            <div className="bg-muted-foreground/30 w-px self-stretch" />
+
+            {/* Powered by */}
+            <div className="flex flex-1 flex-col items-center gap-2">
+              <div className="flex h-14 w-full items-center justify-between lg:h-24">
+                <div className="flex items-center gap-1 lg:gap-1.5">
                   <Image
                     src="/ens-logo.png"
                     alt="ENS"
-                    fill
-                    className="object-contain brightness-0 invert"
+                    width={40}
+                    height={40}
+                    className="h-5 w-5 object-contain lg:h-8 lg:w-8"
+                  />
+                  <span className="text-sm font-semibold lg:text-lg">ENS</span>
+                </div>
+                <div className="flex h-full items-center">
+                  <Image
+                    src="/privy-logo.png"
+                    alt="Privy"
+                    width={120}
+                    height={32}
+                    className="h-10 w-auto object-contain lg:h-16"
                   />
                 </div>
-                <span className="text-sm font-semibold">ENS</span>
+                <div className="flex items-center gap-1 lg:gap-1.5">
+                  <Shield className="h-5 w-5 opacity-80 lg:h-7 lg:w-7" />
+                  <span className="text-sm font-semibold opacity-80 lg:text-lg">
+                    Safe
+                  </span>
+                </div>
               </div>
-              <div className="bg-card/30 border-border/50 flex items-center gap-2 rounded-xl border px-4 py-2.5 backdrop-blur-sm">
-                <Image
-                  src="/privy-logo.png"
-                  alt="Privy"
-                  width={64}
-                  height={18}
-                  className="h-4 w-auto object-contain"
-                />
-              </div>
-              <div className="bg-card/30 border-border/50 flex items-center gap-2 rounded-xl border px-4 py-2.5 backdrop-blur-sm">
-                <Shield className="text-secondary h-4 w-4" />
-                <span className="text-sm font-semibold">Safe</span>
-              </div>
+              <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+                Powered by
+              </p>
             </div>
           </div>
         </div>
