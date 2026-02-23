@@ -15,8 +15,7 @@
   },
   "resolutions": {
     "thread-stream": "3.1.0",
-    "pino": "10.0.0",
-    "@walletconnect/logger": "3.0.0"
+    "pino": "10.0.0"
   },
   "dependencies": {
     "@ai-sdk/google": "^2.0.32",
