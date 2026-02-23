@@ -3,6 +3,8 @@ import SafeApiKit from '@safe-global/api-kit'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { getServerSession } from '../../../../lib/auth/server-session'
+import { getCompanyByAddress } from '../../../../lib/blockchain/get-company'
 import {
   getSafeApiKitConfig,
   isSafeApiConfigurationError,
@@ -30,8 +32,42 @@ const proposeSchema = z.object({
   }),
 })
 
+function readCookieFromRequestHeader(
+  request: Request,
+  key: string,
+): { value?: string } | undefined {
+  const rawCookie = request.headers.get('cookie')
+  if (!rawCookie) {
+    return undefined
+  }
+
+  for (const pair of rawCookie.split(';')) {
+    const [name, ...valueParts] = pair.trim().split('=')
+    if (name === key) {
+      return {
+        value: decodeURIComponent(valueParts.join('=')),
+      }
+    }
+  }
+
+  return undefined
+}
+
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession({
+      headers: request.headers,
+      cookies: {
+        get: key => readCookieFromRequestHeader(request, key),
+      },
+    })
+    if (!session?.walletAddress) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 },
+      )
+    }
+
     const body = await request.json()
     const parsed = proposeSchema.parse(body)
 
@@ -39,6 +75,18 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: `Unsupported chain ${parsed.chainId}` },
         { status: 400 },
+      )
+    }
+
+    const company = await getCompanyByAddress(parsed.safeAddress, parsed.chainId)
+    const sessionWallet = session.walletAddress.toLowerCase()
+    const isFounder = company?.founders.some(
+      founder => founder.wallet.toLowerCase() === sessionWallet,
+    )
+    if (!company || !isFounder) {
+      return NextResponse.json(
+        { error: 'You are not authorized to propose for this Safe' },
+        { status: 403 },
       )
     }
 

@@ -106,7 +106,7 @@ export function SubdomainManagerCard({
   }, [wallets])
 
   useEffect(() => {
-    if (pendingOps.length === 0)
+    if (!pendingOpsKey)
       return
 
     setPendingOps((current) =>

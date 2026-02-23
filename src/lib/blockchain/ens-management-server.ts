@@ -123,9 +123,19 @@ export async function getCompanySubdomainsSnapshot(
       functionName: 'getCompanySubdomains',
       args: [parsedCompanyId],
     })
+    const uniqueNames: string[] = []
+    const seenNames = new Set<string>()
+    for (const name of names) {
+      const dedupeKey = name.toLowerCase()
+      if (seenNames.has(dedupeKey)) {
+        continue
+      }
+      seenNames.add(dedupeKey)
+      uniqueNames.push(name)
+    }
 
     const subdomains = await Promise.all(
-      names.map(async (name) => {
+      uniqueNames.map(async (name) => {
         const details = await client.readContract({
           address: startupChainAddress,
           abi: startupChainAbi,
