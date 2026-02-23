@@ -15,14 +15,6 @@ import { STARTUPCHAIN_CHAIN_ID } from '@/lib/blockchain/startupchain-config'
 import { useDraftStore } from '@/lib/store/draft'
 
 import { CostBreakdownCard } from './cost-breakdown-card'
-import { EnsNameCard } from './ens-name-card'
-import {
-  clearFounderValidationTimer,
-  createIdleFounderValidation,
-  scheduleFounderValidation,
-  shouldApplyFounderResolution,
-  type FounderValidationState,
-} from './founder-validation-utils'
 import { FoundersForm } from './founders-form'
 import { RegistrationProgressCard } from './registration-progress-card'
 
@@ -629,7 +621,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
 
   return (
     <div className="space-y-10">
-      <section className="border-primary/30 bg-card relative overflow-hidden rounded-3xl border p-7 shadow-sm md:p-8">
+      <section className="bg-card border-border relative overflow-hidden rounded-2xl border p-6 shadow-sm md:p-8">
         <div className="from-primary/12 via-primary/6 pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-r to-transparent" />
         <div className="relative">
           <p className="text-primary text-xs font-semibold tracking-[0.2em] uppercase">
@@ -665,7 +657,6 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
       ) : (
         <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
           <div className="space-y-6 lg:col-span-2">
-            <EnsNameCard ensName={initialEnsName} />
             <FoundersForm
               shareholders={draft.shareholders}
               isMultipleFounders={draft.isMultipleFounders}
