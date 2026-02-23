@@ -34,4 +34,10 @@ describe('getSafeApiKitConfig', () => {
       )
     }
   })
+
+  it('throws explicit error when chainId is invalid', () => {
+    vi.stubEnv('SAFE_API_KEY', 'test-safe-api-key')
+
+    expect(() => getSafeApiKitConfig(Number.NaN)).toThrow('Safe chain ID is invalid')
+  })
 })

@@ -22,6 +22,10 @@ export function isSafeApiConfigurationError(
 }
 
 export function getSafeApiKitConfig(chainId: number): SafeApiKitConfigResolved {
+  if (!Number.isInteger(chainId) || chainId <= 0) {
+    throw new Error('Safe chain ID is invalid')
+  }
+
   const apiKey = process.env.SAFE_API_KEY?.trim()
   if (!apiKey) {
     throw new SafeApiConfigurationError(

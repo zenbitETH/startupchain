@@ -43,6 +43,19 @@ type PrivyWallet = {
   }>
 }
 
+function parseWalletChainId(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isInteger(value)) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isInteger(parsed)) {
+      return parsed
+    }
+  }
+  return null
+}
+
 export function SubdomainManagerCard({
   companyId,
   chainId,
@@ -69,16 +82,17 @@ export function SubdomainManagerCard({
 
   const [labelInput, setLabelInput] = useState('')
   const [ownerInput, setOwnerInput] = useState(primaryAddress ?? '')
+  const [ownerTouched, setOwnerTouched] = useState(false)
   const [busyAction, setBusyAction] = useState<BusySubdomainAction>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [safeApiUnavailable, setSafeApiUnavailable] = useState(false)
   const [pendingOps, setPendingOps] = useState<PendingSubdomainOperation[]>([])
 
   useEffect(() => {
-    if (!ownerInput && primaryAddress) {
+    if (!ownerTouched && !ownerInput && primaryAddress) {
       setOwnerInput(primaryAddress)
     }
-  }, [ownerInput, primaryAddress])
+  }, [ownerInput, ownerTouched, primaryAddress])
 
   useEffect(() => {
     walletsRef.current = wallets as PrivyWallet[]
@@ -148,9 +162,14 @@ export function SubdomainManagerCard({
 
     if (wallet.switchChain) {
       const walletChain
-        = wallet.chainId == null ? null : Number(wallet.chainId)
-      if (walletChain === null || Number.isNaN(walletChain) || walletChain !== chainId) {
-        await wallet.switchChain(chainId)
+        = parseWalletChainId(wallet.chainId)
+      if (walletChain === null || walletChain !== chainId) {
+        try {
+          await wallet.switchChain(chainId)
+        }
+        catch {
+          throw new Error('Failed to switch to required network. Please switch manually.')
+        }
       }
     }
 
@@ -158,6 +177,14 @@ export function SubdomainManagerCard({
     if (!provider) {
       throw new Error('Wallet provider is unavailable')
     }
+
+    const providerChainId = parseWalletChainId(
+      await provider.request({ method: 'eth_chainId' }),
+    )
+    if (providerChainId !== null && providerChainId !== chainId) {
+      throw new Error('Wallet is on the wrong network. Please switch and try again.')
+    }
+
     if (!wallet.address || !isAddress(wallet.address)) {
       throw new Error('Wallet address is unavailable')
     }
@@ -362,7 +389,10 @@ export function SubdomainManagerCard({
               <Input
                 id="subdomain-owner"
                 value={ownerInput}
-                onChange={event => setOwnerInput(event.target.value)}
+                onChange={(event) => {
+                  setOwnerTouched(true)
+                  setOwnerInput(event.target.value)
+                }}
                 placeholder="0x..."
                 disabled={anyActionBusy || !authenticated || !subdomainsSupported || safeApiUnavailable}
               />
