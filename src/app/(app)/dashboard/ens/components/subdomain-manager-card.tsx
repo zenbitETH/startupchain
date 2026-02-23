@@ -1,7 +1,7 @@
 'use client'
 
 import { ExternalLink, Loader2, ShieldAlert } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isAddress } from 'viem'
 
@@ -17,6 +17,7 @@ import {
   isSafeProposeClientError,
   proposeSafeTransactionFromWallet,
 } from '@/lib/blockchain/safe-proposal-client'
+import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { useWallets } from '@/lib/privy'
 import { shortenAddress } from '@/lib/utils'
@@ -28,6 +29,11 @@ type PendingSubdomainOperation = {
   safeTxHash: string
 }
 
+type BusySubdomainAction
+  = | { type: 'create' }
+    | { type: 'revoke'; label: string }
+    | null
+
 type PrivyWallet = {
   address?: string
   chainId?: number | string
@@ -35,11 +41,6 @@ type PrivyWallet = {
   getEthereumProvider?: () => Promise<{
     request: (args: { method: string, params?: unknown[] | object }) => Promise<unknown>
   }>
-}
-
-function getSafeQueueUrl(chainId: number, safeAddress: string): string {
-  const prefix = chainId === 1 ? 'eth' : 'sep'
-  return `https://app.safe.global/transactions/queue?safe=${prefix}:${safeAddress}`
 }
 
 export function SubdomainManagerCard({
@@ -60,11 +61,15 @@ export function SubdomainManagerCard({
   const router = useRouter()
   const { authenticated, connect, primaryAddress } = useWalletAuth()
   const walletsResult = useWallets()
-  const wallets = walletsResult?.wallets ?? []
+  const wallets = useMemo(
+    () => walletsResult?.wallets ?? [],
+    [walletsResult?.wallets],
+  )
+  const walletsRef = useRef<PrivyWallet[]>(wallets as PrivyWallet[])
 
   const [labelInput, setLabelInput] = useState('')
   const [ownerInput, setOwnerInput] = useState(primaryAddress ?? '')
-  const [busy, setBusy] = useState(false)
+  const [busyAction, setBusyAction] = useState<BusySubdomainAction>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [safeApiUnavailable, setSafeApiUnavailable] = useState(false)
   const [pendingOps, setPendingOps] = useState<PendingSubdomainOperation[]>([])
@@ -74,6 +79,10 @@ export function SubdomainManagerCard({
       setOwnerInput(primaryAddress)
     }
   }, [ownerInput, primaryAddress])
+
+  useEffect(() => {
+    walletsRef.current = wallets as PrivyWallet[]
+  }, [wallets])
 
   useEffect(() => {
     if (pendingOps.length === 0)
@@ -112,20 +121,35 @@ export function SubdomainManagerCard({
     () => subdomains.filter(subdomain => subdomain.active),
     [subdomains],
   )
+  const anyActionBusy = Boolean(busyAction)
+  const createBusy = busyAction?.type === 'create'
+
+  async function waitForPrimaryWallet(): Promise<PrivyWallet | undefined> {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const wallet = walletsRef.current[0]
+      if (wallet) {
+        return wallet
+      }
+      await new Promise(resolve => window.setTimeout(resolve, 100))
+    }
+
+    return walletsRef.current[0]
+  }
 
   async function ensureWalletReady() {
     if (!authenticated) {
       await connect()
     }
 
-    const wallet = wallets[0] as PrivyWallet | undefined
+    const wallet = await waitForPrimaryWallet()
     if (!wallet) {
       throw new Error('Connect a founder wallet to submit Safe proposals')
     }
 
     if (wallet.switchChain) {
-      const walletChain = Number(wallet.chainId)
-      if (!Number.isNaN(walletChain) && walletChain !== chainId) {
+      const walletChain
+        = wallet.chainId == null ? null : Number(wallet.chainId)
+      if (walletChain === null || Number.isNaN(walletChain) || walletChain !== chainId) {
         await wallet.switchChain(chainId)
       }
     }
@@ -150,7 +174,7 @@ export function SubdomainManagerCard({
     }
 
     try {
-      setBusy(true)
+      setBusyAction({ type: 'create' })
       setErrorMessage(null)
 
       const normalizedLabel = normalizeSubdomainLabel(labelInput)
@@ -202,7 +226,7 @@ export function SubdomainManagerCard({
       }
     }
     finally {
-      setBusy(false)
+      setBusyAction(null)
     }
   }
 
@@ -212,7 +236,7 @@ export function SubdomainManagerCard({
     }
 
     try {
-      setBusy(true)
+      setBusyAction({ type: 'revoke', label })
       setErrorMessage(null)
 
       const { walletAddress, provider } = await ensureWalletReady()
@@ -256,7 +280,7 @@ export function SubdomainManagerCard({
       }
     }
     finally {
-      setBusy(false)
+      setBusyAction(null)
     }
   }
 
@@ -300,7 +324,11 @@ export function SubdomainManagerCard({
         <div className="mt-4 rounded-xl border border-dashed px-3 py-3 text-sm">
           <p className="font-medium">Safe proposal service is not configured.</p>
           <p className="text-muted-foreground mt-1">
-            Proposal actions are disabled until `SAFE_API_KEY` is configured on the server.
+            Proposal actions are disabled until
+            {' '}
+            <code className="font-mono">SAFE_API_KEY</code>
+            {' '}
+            is configured on the server.
           </p>
         </div>
       )}
@@ -324,7 +352,7 @@ export function SubdomainManagerCard({
                 value={labelInput}
                 onChange={event => setLabelInput(event.target.value)}
                 placeholder="alice"
-                disabled={busy || !authenticated || !subdomainsSupported || safeApiUnavailable}
+                disabled={anyActionBusy || !authenticated || !subdomainsSupported || safeApiUnavailable}
               />
             </div>
             <div>
@@ -336,7 +364,7 @@ export function SubdomainManagerCard({
                 value={ownerInput}
                 onChange={event => setOwnerInput(event.target.value)}
                 placeholder="0x..."
-                disabled={busy || !authenticated || !subdomainsSupported || safeApiUnavailable}
+                disabled={anyActionBusy || !authenticated || !subdomainsSupported || safeApiUnavailable}
               />
             </div>
           </div>
@@ -346,7 +374,7 @@ export function SubdomainManagerCard({
               size="sm"
               onClick={handleCreateSubdomain}
               disabled={
-                busy
+                anyActionBusy
                 || !authenticated
                 || !labelInput.trim()
                 || !ownerInput.trim()
@@ -354,7 +382,7 @@ export function SubdomainManagerCard({
                 || safeApiUnavailable
               }
             >
-              {busy && <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />}
+              {createBusy && <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />}
               Propose create
             </Button>
           </div>
@@ -394,9 +422,11 @@ export function SubdomainManagerCard({
                         size="sm"
                         variant="destructive"
                         onClick={() => handleRevokeSubdomain(subdomain.name)}
-                        disabled={busy || !authenticated || !subdomainsSupported || safeApiUnavailable}
+                        disabled={anyActionBusy || !authenticated || !subdomainsSupported || safeApiUnavailable}
                       >
-                        {busy && <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />}
+                        {busyAction?.type === 'revoke' && busyAction.label === subdomain.name && (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+                        )}
                         Propose revoke
                       </Button>
                     </div>

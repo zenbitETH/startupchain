@@ -99,19 +99,29 @@ function isMethodUnsupportedError(error: unknown): boolean {
   )
 }
 
+function parseCompanyId(companyId: string): bigint {
+  const normalizedCompanyId = companyId.trim()
+  if (!/^\d+$/.test(normalizedCompanyId)) {
+    throw new Error('Company ID is invalid')
+  }
+
+  return BigInt(normalizedCompanyId)
+}
+
 export async function getCompanySubdomainsSnapshot(
   companyId: string,
   chainId: number = STARTUPCHAIN_CHAIN_ID,
 ): Promise<{ supported: boolean, subdomains: SubdomainRecord[] }> {
   const client = getPublicClient(chainId)
   const startupChainAddress = getStartupChainAddress(chainId)
+  const parsedCompanyId = parseCompanyId(companyId)
 
   try {
     const names = await client.readContract({
       address: startupChainAddress,
       abi: startupChainAbi,
       functionName: 'getCompanySubdomains',
-      args: [BigInt(companyId)],
+      args: [parsedCompanyId],
     })
 
     const subdomains = await Promise.all(
@@ -120,7 +130,7 @@ export async function getCompanySubdomainsSnapshot(
           address: startupChainAddress,
           abi: startupChainAbi,
           functionName: 'getSubdomain',
-          args: [BigInt(companyId), name],
+          args: [parsedCompanyId, name],
         })
 
         return toSubdomainRecord(details)

@@ -293,10 +293,10 @@ StartupChain is an onchain company OS that allows founders to:
 │    ┌────────────────────────────────────────────────────────────────────────────────────┐   │
 │    │  /dashboard/ens - ENS Management Page                                              │   │
 │    │  ┌──────────────────────────────────────────────────────────────────────────────┐  │   │
-│    │  │  • ENS name display with expiry                                              │  │   │
-│    │  │  • Registration history (from cookie fallback or blockchain events)          │  │   │
-│    │  │  • Safe deployment tx, ENS registration tx, Company recording tx             │  │   │
-│    │  │  • Links to block explorer for each transaction                              │  │   │
+│    │  │  • ENS profile traits (avatar/description/url) with proposal-first updates   │  │   │
+│    │  │  • Subdomain create/revoke proposals submitted to Safe queue                 │  │   │
+│    │  │  • Pending proposal badges + periodic refresh until onchain confirmation     │  │   │
+│    │  │  • Links to Safe queue + explorer traces for registration/proposal txs       │  │   │
 │    │  └──────────────────────────────────────────────────────────────────────────────┘  │   │
 │    └────────────────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                              │

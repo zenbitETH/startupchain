@@ -1,12 +1,13 @@
 'use client'
 
 import { ExternalLink, Loader2, ShieldAlert } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { isAddress } from 'viem'
 import { useRouter } from 'next/navigation'
 
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { buildSetEnsTraitTransaction, type EnsTraitKey, type EnsTraits } from '@/lib/blockchain/ens-management'
+import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
 import {
   isSafeProposeClientError,
   proposeSafeTransactionFromWallet,
@@ -28,11 +29,6 @@ const traitLabels: Record<TraitKey, string> = {
   avatar: 'Avatar URL',
   description: 'Description',
   url: 'Website URL',
-}
-
-function getSafeQueueUrl(chainId: number, safeAddress: string): string {
-  const prefix = chainId === 1 ? 'eth' : 'sep'
-  return `https://app.safe.global/transactions/queue?safe=${prefix}:${safeAddress}`
 }
 
 type PrivyWallet = {
@@ -60,7 +56,11 @@ export function EnsTraitsCard({
   const router = useRouter()
   const { authenticated, connect } = useWalletAuth()
   const walletsResult = useWallets()
-  const wallets = walletsResult?.wallets ?? []
+  const wallets = useMemo(
+    () => walletsResult?.wallets ?? [],
+    [walletsResult?.wallets],
+  )
+  const walletsRef = useRef<PrivyWallet[]>(wallets as PrivyWallet[])
 
   const [formValues, setFormValues] = useState<EnsTraits>(traits)
   const [busyKey, setBusyKey] = useState<TraitKey | null>(null)
@@ -75,6 +75,10 @@ export function EnsTraitsCard({
   useEffect(() => {
     setFormValues(traits)
   }, [traits])
+
+  useEffect(() => {
+    walletsRef.current = wallets as PrivyWallet[]
+  }, [wallets])
 
   useEffect(() => {
     setPending((current) => {
@@ -108,19 +112,32 @@ export function EnsTraitsCard({
     }
   }, [hasPending, router])
 
+  async function waitForPrimaryWallet(): Promise<PrivyWallet | undefined> {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const wallet = walletsRef.current[0]
+      if (wallet) {
+        return wallet
+      }
+      await new Promise(resolve => window.setTimeout(resolve, 100))
+    }
+
+    return walletsRef.current[0]
+  }
+
   async function ensureWalletReady() {
     if (!authenticated) {
       await connect()
     }
 
-    const wallet = wallets[0] as PrivyWallet | undefined
+    const wallet = await waitForPrimaryWallet()
     if (!wallet) {
       throw new Error('Connect a founder wallet to submit Safe proposals')
     }
 
     if (wallet.switchChain) {
-      const walletChain = Number(wallet.chainId)
-      if (!Number.isNaN(walletChain) && walletChain !== chainId) {
+      const walletChain
+        = wallet.chainId == null ? null : Number(wallet.chainId)
+      if (walletChain === null || Number.isNaN(walletChain) || walletChain !== chainId) {
         await wallet.switchChain(chainId)
       }
     }
@@ -241,7 +258,11 @@ export function EnsTraitsCard({
         <div className="mt-4 rounded-xl border border-dashed px-3 py-3 text-sm">
           <p className="font-medium">Safe proposal service is not configured.</p>
           <p className="text-muted-foreground mt-1">
-            Proposal actions are disabled until `SAFE_API_KEY` is configured on the server.
+            Proposal actions are disabled until
+            {' '}
+            <code className="font-mono">SAFE_API_KEY</code>
+            {' '}
+            is configured on the server.
           </p>
         </div>
       )}

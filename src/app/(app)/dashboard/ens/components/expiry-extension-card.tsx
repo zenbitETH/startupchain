@@ -35,8 +35,7 @@ export function ExpiryExtensionCard({
             rel="noopener noreferrer"
             className="hover:bg-primary/10 inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold transition-colors motion-reduce:transition-none"
           >
-            Open Safe
-            {'{Wallet}'}
+            Open Safe Wallet
             <ExternalLink className="h-3 w-3" />
           </a>
         )}
