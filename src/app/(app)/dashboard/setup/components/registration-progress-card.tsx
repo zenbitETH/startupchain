@@ -36,6 +36,7 @@ interface RegistrationProgressCardProps {
   countdown: number | null
   paymentTxHash?: string | null
   onSign?: () => void
+  isSignSubmitting?: boolean
 }
 
 export function RegistrationProgressCard({
@@ -43,6 +44,7 @@ export function RegistrationProgressCard({
   countdown,
   paymentTxHash,
   onSign,
+  isSignSubmitting = false,
 }: RegistrationProgressCardProps) {
   const label =
     step === 'waiting'
@@ -72,10 +74,19 @@ export function RegistrationProgressCard({
       {step === 'awaiting-signature' && onSign && (
         <div className="mt-4">
           <button
+            type="button"
             onClick={onSign}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+            disabled={isSignSubmitting}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Sign Transaction
+            {isSignSubmitting ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Submitting...
+              </span>
+            ) : (
+              'Sign Transaction'
+            )}
           </button>
           <p className="text-muted-foreground mt-2 text-xs">
             Please sign the transaction in your wallet to record your company.

@@ -46,6 +46,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     isSendingPayment,
     isConfirmingPayment,
     signRecordCompany,
+    isSubmittingCompanySignature,
   } = useCompanyRegistration()
 
   const [isLoadingCosts, setIsLoadingCosts] = useState(false)
@@ -292,6 +293,7 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
               countdown={countdown}
               paymentTxHash={paymentTxHash}
               onSign={signRecordCompany}
+              isSignSubmitting={isSubmittingCompanySignature}
             />
           </div>
         </div>
