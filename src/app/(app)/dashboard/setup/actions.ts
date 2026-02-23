@@ -165,14 +165,12 @@ export async function commitEnsRegistrationAction({
   founders,
   threshold,
   durationYears = 1,
-  reverseRecord = false,
   paymentTxHash,
 }: {
   ensName: string
   founders: BackendFounderInput[]
   threshold: number
   durationYears?: number
-  reverseRecord?: boolean
   paymentTxHash: string // SECURITY: Required, verified on-chain
 }) {
   console.log(LOG_PREFIX, '=== commitEnsRegistrationAction START ===')
@@ -201,7 +199,11 @@ export async function commitEnsRegistrationAction({
 
   // Calculate expected cost for verification
   const verificationYears = Math.max(1, Math.floor(durationYears))
-  const { totalWei } = await getEnsRegistrationCostAction(ensName, verificationYears, founders.length)
+  const { totalWei } = await getEnsRegistrationCostAction(
+    ensName,
+    verificationYears,
+    founders.length
+  )
   console.log(LOG_PREFIX, 'Expected payment amount:', totalWei)
 
   const paymentStatus = await checkPaymentStatusAction({
@@ -274,7 +276,6 @@ export async function commitEnsRegistrationAction({
       secret,
       resolverAddress: getEnsResolverAddress(STARTUPCHAIN_CHAIN_ID),
       records: undefined,
-      reverseRecord,
       fuses: {
         named: [],
         unnamed: [],
@@ -546,11 +547,10 @@ export async function finalizeEnsRegistrationAction({
           registrationTxHash
         )
         try {
-          const receipt = await startupChainPublicClient.waitForTransactionReceipt(
-            {
+          const receipt =
+            await startupChainPublicClient.waitForTransactionReceipt({
               hash: registrationTxHash,
-            }
-          )
+            })
           if (receipt.status === 'reverted') {
             await updatePendingRegistration({
               registrationTxHash: undefined,
@@ -576,7 +576,6 @@ export async function finalizeEnsRegistrationAction({
           secret: pending.secret,
           resolverAddress: getEnsResolverAddress(STARTUPCHAIN_CHAIN_ID),
           records: undefined,
-          reverseRecord: false,
           fuses: {
             named: [],
             unnamed: [],
@@ -610,11 +609,10 @@ export async function finalizeEnsRegistrationAction({
         })
 
         console.log(LOG_PREFIX, 'Waiting for ENS registration receipt...')
-        const receipt = await startupChainPublicClient.waitForTransactionReceipt(
-          {
+        const receipt =
+          await startupChainPublicClient.waitForTransactionReceipt({
             hash: registrationTxHash,
-          }
-        )
+          })
         if (receipt.status === 'reverted') {
           await updatePendingRegistration({
             registrationTxHash: undefined,
@@ -645,7 +643,10 @@ export async function finalizeEnsRegistrationAction({
     }
 
     await setPendingRegistration(readyToRecord)
-    console.log(LOG_PREFIX, '=== finalizeEnsRegistrationAction COMPLETE - ready for client signing ===')
+    console.log(
+      LOG_PREFIX,
+      '=== finalizeEnsRegistrationAction COMPLETE - ready for client signing ==='
+    )
 
     return readyToRecord
   } catch (err) {
@@ -658,8 +659,7 @@ export async function finalizeEnsRegistrationAction({
       message.includes('ENS name already taken')
     const alreadySubmittedAndPending =
       message === ENS_REGISTRATION_RETRY_MESSAGE
-    const revertedRegistrationTx =
-      message === ENS_REGISTRATION_REVERTED_MESSAGE
+    const revertedRegistrationTx = message === ENS_REGISTRATION_REVERTED_MESSAGE
 
     if (alreadyRegistered) {
       const resolvedRegistrationTx =
@@ -785,7 +785,11 @@ export async function getRecordCompanyDataAction() {
  */
 export async function resumeRegistrationAction() {
   const pending = await getPendingRegistration()
-  if (!pending || pending.status === 'completed' || pending.status === 'failed') {
+  if (
+    !pending ||
+    pending.status === 'completed' ||
+    pending.status === 'failed'
+  ) {
     return null
   }
   return pending
