@@ -1,6 +1,6 @@
 # StartupChain System Flow
 
-> **Last Updated:** December 11, 2025
+> **Last Updated:** February 23, 2026
 > **Status:** Early Production
 > **Important:** Keep this diagram updated when making architectural changes.
 
@@ -13,6 +13,7 @@ StartupChain is an onchain company OS that allows founders to:
 - Configure company structure (solo/multi-founder with equity splits)
 - **Hybrid registration:** Server handles ENS commit/register/Safe deploy → **User signs** final `recordCompany()` tx
 - Manage from a unified dashboard
+- **ENS management (proposal-first):** founders propose ENS trait/subdomain updates via Safe queue, UI reflects onchain confirmation
 - **Session persistence:** Registration state saved in cookie for page refresh resilience
 
 **Core Flow:** `ENS Check → Auth → Setup Wizard → Prepay to Treasury → (Auto) Commit → Wait 60s → Deploy Safe → Register ENS (to Safe) → **User Signs recordCompany()** → Dashboard`
@@ -292,10 +293,10 @@ StartupChain is an onchain company OS that allows founders to:
 │    ┌────────────────────────────────────────────────────────────────────────────────────┐   │
 │    │  /dashboard/ens - ENS Management Page                                              │   │
 │    │  ┌──────────────────────────────────────────────────────────────────────────────┐  │   │
-│    │  │  • ENS name display with expiry                                              │  │   │
-│    │  │  • Registration history (from cookie fallback or blockchain events)          │  │   │
-│    │  │  • Safe deployment tx, ENS registration tx, Company recording tx             │  │   │
-│    │  │  • Links to block explorer for each transaction                              │  │   │
+│    │  │  • ENS profile traits (avatar/description/url) with proposal-first updates   │  │   │
+│    │  │  • Subdomain create/revoke proposals submitted to Safe queue                 │  │   │
+│    │  │  • Pending proposal badges + periodic refresh until onchain confirmation     │  │   │
+│    │  │  • Links to Safe queue + explorer traces for registration/proposal txs       │  │   │
 │    │  └──────────────────────────────────────────────────────────────────────────────┘  │   │
 │    └────────────────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                              │

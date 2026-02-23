@@ -12,18 +12,26 @@ import {
   getCompanyByFounderWallet,
 } from '@/lib/blockchain/get-company'
 import { getCompanyEvents } from '@/lib/blockchain/get-company-events'
+import { createEmptyEnsTraits } from '@/lib/blockchain/ens-management'
+import { getEnsManagementSnapshot } from '@/lib/blockchain/ens-management-server'
+import { getSafeWalletUrl } from '@/lib/blockchain/safe-api'
 import {
   BLOCK_EXPLORERS,
   STARTUPCHAIN_CHAIN_ID,
   type SupportedChainId,
+  getEnsResolverAddress,
+  getStartupChainAddress,
   isSupportedChain,
 } from '@/lib/blockchain/startupchain-config'
 
 import { finalizeEnsRegistrationAction } from '../setup/actions'
 import {
   CompanyCard,
+  EnsTraitsCard,
+  ExpiryExtensionCard,
   RegistrationHistory,
   RegistrationStatusCard,
+  SubdomainManagerCard,
 } from './components'
 
 /**
@@ -114,6 +122,24 @@ export default async function EnsDashboardPage({ searchParams }: PageProps) {
   // Get events by owner address (either user's wallet or pending registration owner)
   const eventsOwner = company?.ownerAddress || pending?.owner || walletAddress
   const events = eventsOwner ? await getCompanyEvents(eventsOwner, chainId) : []
+  const safeWalletUrl = company?.safeAddress
+    ? getSafeWalletUrl(company.safeAddress, chainId)
+    : undefined
+  const ensManagement = company
+    ? await getEnsManagementSnapshot({
+        ensName: company.ensName,
+        companyId: company.id,
+        chainId,
+      }).catch((error) => {
+        console.error('Failed to fetch ENS management snapshot', error)
+        return {
+          traits: createEmptyEnsTraits(),
+          resolverAddress: getEnsResolverAddress(chainId),
+          subdomains: [],
+          subdomainsSupported: false,
+        }
+      })
+    : null
 
   const latestEvent = events[0]
 
@@ -166,6 +192,33 @@ export default async function EnsDashboardPage({ searchParams }: PageProps) {
           pending={pending}
           explorerBase={explorerBase}
         />
+
+        {company && ensManagement && (
+          <>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <EnsTraitsCard
+                ensName={company.ensName}
+                safeAddress={company.safeAddress}
+                chainId={chainId}
+                resolverAddress={ensManagement.resolverAddress}
+                traits={ensManagement.traits}
+              />
+              <SubdomainManagerCard
+                companyId={company.id}
+                chainId={chainId}
+                safeAddress={company.safeAddress}
+                startupChainAddress={getStartupChainAddress(chainId)}
+                subdomains={ensManagement.subdomains}
+                subdomainsSupported={ensManagement.subdomainsSupported}
+              />
+            </div>
+            <ExpiryExtensionCard
+              ensName={company.ensName}
+              ensAppBase={ensAppBase}
+              safeWalletUrl={safeWalletUrl}
+            />
+          </>
+        )}
       </div>
     </div>
   )

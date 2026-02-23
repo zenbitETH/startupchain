@@ -4,6 +4,7 @@
  */
 import pLimit from 'p-limit'
 
+import { getSafeApiBaseUrl, getSafeWalletUrl as getSafeWalletUrlFromLinks } from './safe-links'
 import { STARTUPCHAIN_CHAIN_ID } from './startupchain-config'
 
 const SAFE_API_KEY = process.env.SAFE_API_KEY
@@ -20,35 +21,6 @@ const limit = pLimit(2)
  */
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-// Chain name mapping for Safe API
-function getChainName(chainId: number): string {
-  switch (chainId) {
-    case 1:
-      return 'eth'
-    case 11155111:
-      return 'sep'
-    case 10:
-      return 'oeth'
-    case 8453:
-      return 'base'
-    default:
-      return 'sep' // Default to Sepolia
-  }
-}
-
-function getSafeApiBaseUrl(chainId: number = STARTUPCHAIN_CHAIN_ID): string {
-  const chainName = getChainName(chainId)
-  return `https://api.safe.global/tx-service/${chainName}/api`
-}
-
-function getSafeWalletUrl(
-  safeAddress: string,
-  chainId: number = STARTUPCHAIN_CHAIN_ID
-): string {
-  const prefix = chainId === 1 ? 'eth' : 'sep'
-  return `https://app.safe.global/home?safe=${prefix}:${safeAddress}`
 }
 
 export type SafeInfo = {
@@ -250,8 +222,8 @@ export async function getSafeDashboardData(
     tokenBalances,
     pendingTransactions: pendingTxs ?? [],
     transactionHistory: history ?? [],
-    safeWalletUrl: getSafeWalletUrl(safeAddress, chainId),
+    safeWalletUrl: getSafeWalletUrlFromLinks(safeAddress, chainId),
   }
 }
 
-export { getSafeWalletUrl }
+export { getSafeWalletUrlFromLinks as getSafeWalletUrl }
