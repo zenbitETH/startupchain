@@ -87,6 +87,13 @@ export function SubdomainManagerCard({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [safeApiUnavailable, setSafeApiUnavailable] = useState(false)
   const [pendingOps, setPendingOps] = useState<PendingSubdomainOperation[]>([])
+  const pendingOpsKey = useMemo(
+    () =>
+      pendingOps
+        .map(op => `${op.type}:${op.label}:${op.owner ?? ''}:${op.safeTxHash}`)
+        .join('|'),
+    [pendingOps],
+  )
 
   useEffect(() => {
     if (!ownerTouched && !ownerInput && primaryAddress) {
@@ -116,7 +123,7 @@ export function SubdomainManagerCard({
         return !(currentItem && !currentItem.active)
       }),
     )
-  }, [subdomains, pendingOps.length])
+  }, [subdomains, pendingOpsKey])
 
   const hasPending = pendingOps.length > 0
 
