@@ -41,13 +41,13 @@ export function HeroSection() {
               <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase lg:hidden">
                 Built at
               </p>
-              <div className="flex h-10 items-center lg:h-24">
+              <div className="flex h-20 items-center lg:h-24">
                 <Image
                   src="/eth-global-logo.png"
                   alt="ETHGlobal New York"
                   width={460}
                   height={50}
-                  className="h-10 w-auto lg:h-24"
+                  className="h-20 w-auto lg:h-24"
                 />
               </div>
               <p className="text-muted-foreground hidden text-xs font-medium tracking-widest uppercase lg:block">
@@ -62,7 +62,7 @@ export function HeroSection() {
               <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase lg:hidden">
                 Powered by
               </p>
-              <div className="flex w-full items-center justify-center gap-6 lg:h-24 lg:justify-between lg:gap-0">
+              <div className="flex w-full items-center justify-center gap-10 lg:h-24 lg:justify-between lg:gap-0">
                 <div className="flex items-center gap-1 lg:gap-1.5">
                   <Image
                     src="/ens-logo.png"
@@ -79,7 +79,7 @@ export function HeroSection() {
                     alt="Privy"
                     width={120}
                     height={32}
-                    className="h-8 w-auto object-contain lg:h-16"
+                    className="h-10 w-auto object-contain lg:h-16"
                   />
                 </div>
                 <div className="flex items-center gap-1 lg:gap-1.5">
