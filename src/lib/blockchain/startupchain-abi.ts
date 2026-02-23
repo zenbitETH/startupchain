@@ -161,6 +161,51 @@ export const startupChainAbi = [
     outputs: [{ name: '', type: 'uint256' }],
   },
 
+  // Functions - Subdomain management
+  {
+    type: 'function',
+    name: 'createSubdomain',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: '_companyId', type: 'uint256' },
+      { name: '_subdomain', type: 'string' },
+      { name: '_owner', type: 'address' },
+    ],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'revokeSubdomain',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: '_companyId', type: 'uint256' },
+      { name: '_subdomain', type: 'string' },
+    ],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'getSubdomain',
+    stateMutability: 'view',
+    inputs: [
+      { name: '_companyId', type: 'uint256' },
+      { name: '_subdomain', type: 'string' },
+    ],
+    outputs: [
+      { name: 'name', type: 'string' },
+      { name: 'subdomainOwner', type: 'address' },
+      { name: 'createdAt', type: 'uint256' },
+      { name: 'active', type: 'bool' },
+    ],
+  },
+  {
+    type: 'function',
+    name: 'getCompanySubdomains',
+    stateMutability: 'view',
+    inputs: [{ name: '_companyId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'string[]' }],
+  },
+
   // Functions - Updates
   {
     type: 'function',

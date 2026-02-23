@@ -25,6 +25,7 @@ import {
 } from 'viem'
 import { mainnet, sepolia } from 'viem/chains'
 
+import { getSafeApiKitConfig } from './safe-api-config'
 import { isSupportedChain } from './startupchain-config'
 
 // Chain config mapping
@@ -184,9 +185,7 @@ export function getSafeApiKit(chainId: number): SafeApiKit {
     throw new Error(`Chain ${chainId} not supported`)
   }
 
-  return new SafeApiKit({
-    chainId: BigInt(chainId),
-  })
+  return new SafeApiKit(getSafeApiKitConfig(chainId))
 }
 
 /**
