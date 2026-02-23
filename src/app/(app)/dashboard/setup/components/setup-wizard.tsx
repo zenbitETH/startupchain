@@ -1,9 +1,13 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { isAddress } from 'viem'
 
+import {
+  resolveFounderIdentityAction,
+  type FounderIdentityResolution,
+} from '../actions'
 import { useCompanyRegistration } from '@/hooks/use-company-registration'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { calculateThreshold } from '@/lib/blockchain/safe-factory'
@@ -12,6 +16,13 @@ import { useDraftStore } from '@/lib/store/draft'
 
 import { CostBreakdownCard } from './cost-breakdown-card'
 import { EnsNameCard } from './ens-name-card'
+import {
+  clearFounderValidationTimer,
+  createIdleFounderValidation,
+  scheduleFounderValidation,
+  shouldApplyFounderResolution,
+  type FounderValidationState,
+} from './founder-validation-utils'
 import { FoundersForm } from './founders-form'
 import { RegistrationProgressCard } from './registration-progress-card'
 
@@ -20,6 +31,15 @@ const LOG_PREFIX = '[UI:SetupWizard]'
 interface SetupWizardProps {
   initialEnsName: string
 }
+
+type FounderValidationMap = Record<string, FounderValidationState | undefined>
+
+interface FounderValidationResult {
+  founderId: string
+  valid: boolean
+  resolvedAddress: string | null
+}
+const FOUNDER_VALIDATION_DEBOUNCE_MS = 350
 
 const launchSteps = new Set([
   'awaiting-payment',
@@ -64,6 +84,12 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
 
   const [isLoadingCosts, setIsLoadingCosts] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
+  const [validationByFounderId, setValidationByFounderId] =
+    useState<FounderValidationMap>({})
+  const validationTimersRef = useRef<
+    Record<string, ReturnType<typeof setTimeout> | undefined>
+  >({})
+  const validationVersionByFounderIdRef = useRef<Record<string, number>>({})
 
   // Use wallet chain or fall back to default
   const chainId = walletChainId ?? STARTUPCHAIN_CHAIN_ID
@@ -117,6 +143,80 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
       addShareholder(userWallet, 100)
     }
   }, [authenticated, user, draft, addShareholder])
+
+  // Keep founder validation map in sync with current shareholder rows.
+  // Auto-mark the single read-only founder row as valid when it already has a 0x address.
+  useEffect(() => {
+    if (!draft) {
+      return
+    }
+
+    setValidationByFounderId((previous) => {
+      const next: FounderValidationMap = {}
+      let changed = Object.keys(previous).length !== draft.shareholders.length
+
+      draft.shareholders.forEach((founder, index) => {
+        const existing = previous[founder.id]
+        const founderInput = founder.walletAddress
+
+        if (existing && existing.input === founderInput) {
+          next[founder.id] = existing
+          return
+        }
+
+        const autoMarkAsValidAddress =
+          !draft.isMultipleFounders &&
+          index === 0 &&
+          Boolean(founderInput.trim()) &&
+          isAddress(founderInput.trim())
+
+        if (autoMarkAsValidAddress) {
+          next[founder.id] = {
+            status: 'valid',
+            input: founderInput,
+            resolvedAddress: founderInput.trim(),
+            ensName: null,
+            source: 'address',
+            error: null,
+          }
+        } else {
+          next[founder.id] = createIdleFounderValidation(founderInput)
+        }
+
+        changed = true
+      })
+
+      return changed ? next : previous
+    })
+  }, [draft])
+
+  // Clear timers/version slots for founders removed from the form.
+  useEffect(() => {
+    if (!draft) {
+      return
+    }
+
+    const activeFounderIds = new Set(draft.shareholders.map((founder) => founder.id))
+    const timerFounderIds = Object.keys(validationTimersRef.current)
+
+    timerFounderIds.forEach((founderId) => {
+      if (!activeFounderIds.has(founderId)) {
+        clearFounderValidationTimer(founderId, validationTimersRef.current)
+        delete validationVersionByFounderIdRef.current[founderId]
+      }
+    })
+  }, [draft])
+
+  // Prevent debounce timers from firing after unmount.
+  useEffect(() => {
+    const timers = validationTimersRef.current
+    return () => {
+      const founderIds = Object.keys(timers)
+      founderIds.forEach((founderId) => {
+        clearFounderValidationTimer(founderId, timers)
+      })
+    }
+  }, [])
 
   // Load costs when draft is ready
   useEffect(() => {
@@ -174,6 +274,183 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     0
   )
 
+  const applyFounderResolution = (
+    input: string,
+    resolution: FounderIdentityResolution
+  ): FounderValidationState => {
+    if (resolution.error || !resolution.resolvedAddress) {
+      return {
+        status: 'invalid',
+        input,
+        resolvedAddress: null,
+        ensName: resolution.ensName,
+        source: resolution.source,
+        error: resolution.error || 'Unable to resolve founder identity.',
+      }
+    }
+
+    return {
+      status: 'valid',
+      input,
+      resolvedAddress: resolution.resolvedAddress,
+      ensName: resolution.ensName,
+      source: resolution.source,
+      error: null,
+    }
+  }
+
+  const getNextFounderValidationVersion = (founderId: string) => {
+    const nextVersion = (validationVersionByFounderIdRef.current[founderId] ?? 0) + 1
+    validationVersionByFounderIdRef.current[founderId] = nextVersion
+    return nextVersion
+  }
+
+  const validateFounderById = async (
+    founderId: string,
+    options?: {
+      inputOverride?: string
+      requestVersion?: number
+      setValidatingState?: boolean
+    }
+  ): Promise<FounderValidationResult> => {
+    const currentDraft = useDraftStore.getState().draft
+    const founder = currentDraft?.shareholders.find(
+      (candidate) => candidate.id === founderId
+    )
+
+    if (!founder) {
+      return { founderId, valid: false, resolvedAddress: null }
+    }
+
+    const founderInput = (options?.inputOverride ?? founder.walletAddress).trim()
+    if (!founderInput) {
+      setValidationByFounderId((previous) => ({
+        ...previous,
+        [founderId]: createIdleFounderValidation(founder.walletAddress),
+      }))
+      return { founderId, valid: false, resolvedAddress: null }
+    }
+
+    const requestVersion =
+      options?.requestVersion ?? validationVersionByFounderIdRef.current[founderId] ?? 0
+
+    if (options?.setValidatingState !== false) {
+      setValidationByFounderId((previous) => ({
+        ...previous,
+        [founderId]: {
+          status: 'validating',
+          input: founder.walletAddress,
+          resolvedAddress: null,
+          ensName: null,
+          source: null,
+          error: null,
+        },
+      }))
+    }
+
+    try {
+      const resolution = await resolveFounderIdentityAction(founderInput)
+      const latestDraft = useDraftStore.getState().draft
+      const latestFounder = latestDraft?.shareholders.find(
+        (candidate) => candidate.id === founderId
+      )
+
+      if (!latestFounder || latestFounder.walletAddress.trim() !== founderInput) {
+        return { founderId, valid: false, resolvedAddress: null }
+      }
+
+      const shouldApplyResult = shouldApplyFounderResolution({
+        requestVersion,
+        latestVersion: validationVersionByFounderIdRef.current[founderId] ?? 0,
+        requestInput: founderInput,
+        latestInput: latestFounder.walletAddress,
+      })
+      if (!shouldApplyResult) {
+        return { founderId, valid: false, resolvedAddress: null }
+      }
+
+      const nextValidation = applyFounderResolution(
+        latestFounder.walletAddress,
+        resolution
+      )
+
+      setValidationByFounderId((previous) => ({
+        ...previous,
+        [founderId]: nextValidation,
+      }))
+
+      return {
+        founderId,
+        valid:
+          nextValidation.status === 'valid' && !!nextValidation.resolvedAddress,
+        resolvedAddress: nextValidation.resolvedAddress,
+      }
+    } catch (error) {
+      const latestDraft = useDraftStore.getState().draft
+      const latestFounder = latestDraft?.shareholders.find(
+        (candidate) => candidate.id === founderId
+      )
+      if (!latestFounder) {
+        return { founderId, valid: false, resolvedAddress: null }
+      }
+
+      const shouldApplyError = shouldApplyFounderResolution({
+        requestVersion,
+        latestVersion: validationVersionByFounderIdRef.current[founderId] ?? 0,
+        requestInput: founderInput,
+        latestInput: latestFounder.walletAddress,
+      })
+      if (!shouldApplyError) {
+        return { founderId, valid: false, resolvedAddress: null }
+      }
+
+      setValidationByFounderId((previous) => ({
+        ...previous,
+        [founderId]: {
+          status: 'invalid',
+          input: latestFounder.walletAddress,
+          resolvedAddress: null,
+          ensName: null,
+          source: null,
+          error: 'Unable to resolve ENS right now. Try again or use a 0x address.',
+        },
+      }))
+
+      console.error(LOG_PREFIX, 'Founder validation failed:', error)
+      return { founderId, valid: false, resolvedAddress: null }
+    }
+  }
+
+  const queueFounderValidation = (founderId: string, input: string) => {
+    const requestVersion = getNextFounderValidationVersion(founderId)
+    scheduleFounderValidation({
+      founderId,
+      input,
+      delayMs: FOUNDER_VALIDATION_DEBOUNCE_MS,
+      timers: validationTimersRef.current,
+      onDebouncedValidate: (debouncedFounderId, debouncedInput) => {
+        setValidationByFounderId((previous) => ({
+          ...previous,
+          [debouncedFounderId]: {
+            status: 'validating',
+            input: debouncedInput,
+            resolvedAddress: null,
+            ensName: null,
+            source: null,
+            error: null,
+          },
+        }))
+        validateFounderById(debouncedFounderId, {
+          inputOverride: debouncedInput,
+          requestVersion,
+          setValidatingState: false,
+        }).catch((error) => {
+          console.error(LOG_PREFIX, 'Founder debounce validation failed:', error)
+        })
+      },
+    })
+  }
+
   const handleFounderModeChange = (isMultiple: boolean) => {
     setFounderMode(isMultiple)
   }
@@ -191,11 +468,26 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     field: 'walletAddress' | 'equityPercentage',
     value: string
   ) => {
-    if (field === 'walletAddress') {
-      updateShareholder(id, { walletAddress: value })
-    } else if (field === 'equityPercentage') {
+    if (field === 'equityPercentage') {
       updateShareholder(id, { equityPercentage: Number.parseFloat(value) || 0 })
     }
+  }
+
+  const handleFounderInputChange = (founderId: string, value: string) => {
+    updateShareholder(founderId, { walletAddress: value })
+    setValidationByFounderId((previous) => ({
+      ...previous,
+      [founderId]: createIdleFounderValidation(value),
+    }))
+
+    const trimmedValue = value.trim()
+    if (!trimmedValue) {
+      getNextFounderValidationVersion(founderId)
+      clearFounderValidationTimer(founderId, validationTimersRef.current)
+      return
+    }
+
+    queueFounderValidation(founderId, value)
   }
 
   const handleCreateBusiness = async () => {
@@ -219,9 +511,31 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
     setLocalError(null)
 
     try {
+      const validationResults = await Promise.all(
+        draft.shareholders.map((founder) => {
+          clearFounderValidationTimer(founder.id, validationTimersRef.current)
+          const requestVersion = getNextFounderValidationVersion(founder.id)
+          return validateFounderById(founder.id, { requestVersion })
+        })
+      )
+      const hasInvalidFounder = validationResults.some(
+        (result) => !result.valid || !result.resolvedAddress
+      )
+
+      if (hasInvalidFounder) {
+        return
+      }
+
+      const resolvedAddressByFounderId = new Map(
+        validationResults.map((result) => [
+          result.founderId,
+          result.resolvedAddress,
+        ])
+      )
+
       const founders = draft.shareholders.map(
-        ({ walletAddress, equityPercentage }) => ({
-          address: walletAddress,
+        ({ id, equityPercentage }) => ({
+          address: resolvedAddressByFounderId.get(id) || '',
           equity: equityPercentage.toString(),
         })
       )
@@ -278,11 +592,38 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
       failedPhase === 'startupchain')
   const showLaunchSurface = launchSteps.has(step) || showLaunchFailure
 
+  const hasUnresolvedFounderIdentity =
+    authenticated &&
+    draft.shareholders.some((founder) => {
+      const founderInput = founder.walletAddress.trim()
+      if (!founderInput) {
+        return true
+      }
+
+      const validation = validationByFounderId[founder.id]
+      if (!validation) {
+        return true
+      }
+
+      if (validation.status === 'validating' || validation.status === 'invalid') {
+        return true
+      }
+
+      if (validation.status === 'idle') {
+        return true
+      }
+
+      return (
+        validation.input.trim() !== founderInput || !validation.resolvedAddress
+      )
+    })
+
   const disableCreateButton =
     step !== 'idle' ||
     isLoadingCosts ||
     (!authenticated &&
       draft.shareholders.some((founder) => !founder.walletAddress.trim())) ||
+    hasUnresolvedFounderIdentity ||
     (draft.isMultipleFounders && Math.abs(totalEquity - 100) > 0.01) ||
     (draft.registerToDifferentAddress && !draft.customAddress.trim())
 
@@ -334,6 +675,8 @@ export function SetupWizard({ initialEnsName }: SetupWizardProps) {
               onAddFounder={handleAddFounder}
               onRemoveFounder={handleRemoveFounder}
               onUpdateFounder={handleUpdateFounder}
+              onFounderInputChange={handleFounderInputChange}
+              validationByFounderId={validationByFounderId}
               onRegisterToDifferentAddressChange={setRegisterToDifferentAddress}
               onCustomAddressChange={setCustomAddress}
             />
