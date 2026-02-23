@@ -15,6 +15,13 @@ import { STARTUPCHAIN_CHAIN_ID } from '@/lib/blockchain/startupchain-config'
 import { useDraftStore } from '@/lib/store/draft'
 
 import { CostBreakdownCard } from './cost-breakdown-card'
+import {
+  clearFounderValidationTimer,
+  createIdleFounderValidation,
+  scheduleFounderValidation,
+  shouldApplyFounderResolution,
+  type FounderValidationState,
+} from './founder-validation-utils'
 import { FoundersForm } from './founders-form'
 import { RegistrationProgressCard } from './registration-progress-card'
 
