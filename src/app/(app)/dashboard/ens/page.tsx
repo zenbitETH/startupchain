@@ -6,20 +6,22 @@ import { DashboardHeader } from '@/app/(app)/dashboard/components/dashboard-head
 import { RegistrationProgress } from '@/app/(app)/dashboard/components/registration-progress'
 import { getPendingRegistration } from '@/lib/auth/pending-registration'
 import { getServerSession } from '@/lib/auth/server-session'
+import { createEmptyEnsTraits } from '@/lib/blockchain/ens-management'
+import { getEnsManagementSnapshot } from '@/lib/blockchain/ens-management-server'
 import {
   getCompanyByAddress,
   getCompanyByENS,
   getCompanyByFounderWallet,
 } from '@/lib/blockchain/get-company'
 import { getCompanyEvents } from '@/lib/blockchain/get-company-events'
-import { createEmptyEnsTraits } from '@/lib/blockchain/ens-management'
-import { getEnsManagementSnapshot } from '@/lib/blockchain/ens-management-server'
 import { getSafeWalletUrl } from '@/lib/blockchain/safe-api'
 import {
   BLOCK_EXPLORERS,
   STARTUPCHAIN_CHAIN_ID,
   type SupportedChainId,
+  getEnsControllerAddress,
   getEnsResolverAddress,
+  getEnsReverseRegistrarAddress,
   getStartupChainAddress,
   isSupportedChain,
 } from '@/lib/blockchain/startupchain-config'
@@ -29,9 +31,11 @@ import {
   CompanyCard,
   EnsTraitsCard,
   ExpiryExtensionCard,
+  FounderSubdomainCard,
   RegistrationHistory,
   RegistrationStatusCard,
   SubdomainManagerCard,
+  SubdomainProfileCard,
 } from './components'
 
 /**
@@ -195,6 +199,18 @@ export default async function EnsDashboardPage({ searchParams }: PageProps) {
 
         {company && ensManagement && (
           <>
+            {company.founders.length > 0 && (
+              <FounderSubdomainCard
+                companyId={company.id}
+                ensName={company.ensName}
+                chainId={chainId}
+                safeAddress={company.safeAddress}
+                startupChainAddress={getStartupChainAddress(chainId)}
+                founders={company.founders}
+                subdomains={ensManagement.subdomains}
+                subdomainsSupported={ensManagement.subdomainsSupported}
+              />
+            )}
             <div className="grid gap-4 xl:grid-cols-2">
               <EnsTraitsCard
                 ensName={company.ensName}
@@ -212,10 +228,21 @@ export default async function EnsDashboardPage({ searchParams }: PageProps) {
                 subdomainsSupported={ensManagement.subdomainsSupported}
               />
             </div>
+            <SubdomainProfileCard
+              ensName={company.ensName}
+              chainId={chainId}
+              safeAddress={company.safeAddress}
+              resolverAddress={ensManagement.resolverAddress}
+              reverseRegistrarAddress={getEnsReverseRegistrarAddress(chainId)}
+              subdomains={ensManagement.subdomains}
+            />
             <ExpiryExtensionCard
               ensName={company.ensName}
               ensAppBase={ensAppBase}
               safeWalletUrl={safeWalletUrl}
+              chainId={chainId}
+              safeAddress={company.safeAddress}
+              controllerAddress={getEnsControllerAddress(chainId)}
             />
           </>
         )}

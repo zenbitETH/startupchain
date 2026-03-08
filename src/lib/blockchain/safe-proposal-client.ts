@@ -12,7 +12,10 @@ export type SafeProposeError = {
 }
 
 type Eip1193Provider = {
-  request: (args: { method: string, params?: unknown[] | object }) => Promise<unknown>
+  request: (args: {
+    method: string
+    params?: unknown[] | object
+  }) => Promise<unknown>
 }
 
 type ProposeResponse = {
@@ -23,7 +26,10 @@ export class SafeProposeClientError extends Error {
   code?: SafeProposeErrorCode
   status?: number
 
-  constructor(message: string, options?: { code?: SafeProposeErrorCode, status?: number }) {
+  constructor(
+    message: string,
+    options?: { code?: SafeProposeErrorCode; status?: number }
+  ) {
     super(message)
     this.name = 'SafeProposeClientError'
     this.code = options?.code
@@ -31,7 +37,9 @@ export class SafeProposeClientError extends Error {
   }
 }
 
-export function isSafeProposeClientError(error: unknown): error is SafeProposeClientError {
+export function isSafeProposeClientError(
+  error: unknown
+): error is SafeProposeClientError {
   return error instanceof SafeProposeClientError
 }
 
@@ -40,15 +48,13 @@ function parseSafeProposeError(data: unknown): SafeProposeError | null {
     return null
   }
 
-  const payload = data as { error?: unknown, code?: unknown }
+  const payload = data as { error?: unknown; code?: unknown }
   if (typeof payload.error !== 'string') {
     return null
   }
 
-  const maybeCode
-    = payload.code === 'SAFE_API_KEY_MISSING'
-      ? payload.code
-      : undefined
+  const maybeCode =
+    payload.code === 'SAFE_API_KEY_MISSING' ? payload.code : undefined
 
   return {
     error: payload.error,
@@ -56,14 +62,16 @@ function parseSafeProposeError(data: unknown): SafeProposeError | null {
   }
 }
 
-function toSerializableSafeTransactionData(input: unknown): Record<string, unknown> {
+function toSerializableSafeTransactionData(
+  input: unknown
+): Record<string, unknown> {
   return JSON.parse(
     JSON.stringify(input, (_, value) => {
       if (typeof value === 'bigint') {
         return value.toString()
       }
       return value
-    }),
+    })
   ) as Record<string, unknown>
 }
 
@@ -82,6 +90,35 @@ export async function proposeSafeTransactionFromWallet({
   transaction: SafeTransactionRequest
   origin?: string
 }): Promise<ProposeResponse> {
+  return proposeBatchSafeTransactionFromWallet({
+    provider,
+    chainId,
+    safeAddress,
+    senderAddress,
+    transactions: [transaction],
+    origin,
+  })
+}
+
+export async function proposeBatchSafeTransactionFromWallet({
+  provider,
+  chainId,
+  safeAddress,
+  senderAddress,
+  transactions,
+  origin,
+}: {
+  provider: Eip1193Provider
+  chainId: number
+  safeAddress: `0x${string}`
+  senderAddress: `0x${string}`
+  transactions: SafeTransactionRequest[]
+  origin?: string
+}): Promise<ProposeResponse> {
+  if (transactions.length === 0) {
+    throw new Error('At least one transaction is required')
+  }
+
   const protocolKit = await Safe.init({
     provider,
     signer: senderAddress,
@@ -89,7 +126,7 @@ export async function proposeSafeTransactionFromWallet({
   })
 
   const safeTransaction = await protocolKit.createTransaction({
-    transactions: [transaction],
+    transactions,
   })
   const safeTxHash = await protocolKit.getTransactionHash(safeTransaction)
   const signature = await protocolKit.signHash(safeTxHash)
@@ -105,7 +142,9 @@ export async function proposeSafeTransactionFromWallet({
       safeTxHash,
       senderAddress,
       senderSignature: signature.data,
-      safeTransactionData: toSerializableSafeTransactionData(safeTransaction.data),
+      safeTransactionData: toSerializableSafeTransactionData(
+        safeTransaction.data
+      ),
       origin,
     }),
   })

@@ -1,6 +1,8 @@
 export { CompanyCard } from './company-card'
 export { EnsTraitsCard } from './ens-traits-card'
 export { ExpiryExtensionCard } from './expiry-extension-card'
+export { FounderSubdomainCard } from './founder-subdomain-card'
 export { RegistrationHistory } from './registration-history'
 export { RegistrationStatusCard } from './registration-status-card'
 export { SubdomainManagerCard } from './subdomain-manager-card'
+export { SubdomainProfileCard } from './subdomain-profile-card'

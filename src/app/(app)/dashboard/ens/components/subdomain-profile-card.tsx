@@ -1,0 +1,285 @@
+'use client'
+
+import { ExternalLink, Loader2, ShieldAlert } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useMemo, useState } from 'react'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { useSafeWallet } from '@/hooks/use-safe-wallet'
+import {
+  ENS_TRAIT_KEYS,
+  ENS_TRAIT_LABELS,
+  type EnsTraitKey,
+  type EnsTraits,
+  type SubdomainRecord,
+  buildSetEnsTraitTransaction,
+  buildSetPrimaryNameTransaction,
+} from '@/lib/blockchain/ens-management'
+import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
+import {
+  isSafeProposeClientError,
+  proposeSafeTransactionFromWallet,
+} from '@/lib/blockchain/safe-proposal-client'
+
+export function SubdomainProfileCard({
+  ensName,
+  chainId,
+  safeAddress,
+  resolverAddress,
+  reverseRegistrarAddress,
+  subdomains,
+}: {
+  ensName: string
+  chainId: number
+  safeAddress: `0x${string}`
+  resolverAddress: `0x${string}`
+  reverseRegistrarAddress: `0x${string}`
+  subdomains: SubdomainRecord[]
+}) {
+  const router = useRouter()
+  const { authenticated, ensureWalletReady } = useSafeWallet({ chainId })
+
+  const activeSubdomains = useMemo(
+    () => subdomains.filter((s) => s.active),
+    [subdomains]
+  )
+
+  const [selectedSubdomain, setSelectedSubdomain] = useState<string>(
+    activeSubdomains[0]?.name ?? ''
+  )
+  const [formValues, setFormValues] = useState<EnsTraits>(() => {
+    const empty: Record<string, string> = {}
+    for (const key of ENS_TRAIT_KEYS) {
+      empty[key] = ''
+    }
+    return empty as EnsTraits
+  })
+  const [busyKey, setBusyKey] = useState<EnsTraitKey | 'primary' | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const fullSubdomainName = selectedSubdomain
+    ? `${selectedSubdomain}.${ensName}`
+    : ''
+
+  async function handleProposeTraitUpdate(key: EnsTraitKey) {
+    const value = formValues[key].trim()
+    if (!value || !fullSubdomainName) return
+
+    try {
+      setErrorMessage(null)
+      setBusyKey(key)
+
+      const { walletAddress, provider } = await ensureWalletReady()
+      const transaction = buildSetEnsTraitTransaction({
+        ensName: fullSubdomainName,
+        resolverAddress,
+        key,
+        value,
+      })
+
+      await proposeSafeTransactionFromWallet({
+        provider,
+        chainId,
+        safeAddress,
+        senderAddress: walletAddress,
+        transaction,
+        origin: `startupchain:subdomain-trait:${key}`,
+      })
+
+      router.refresh()
+    } catch (error) {
+      if (
+        isSafeProposeClientError(error) &&
+        error.code === 'SAFE_API_KEY_MISSING'
+      ) {
+        setErrorMessage(
+          'Safe proposal service is not configured. Add SAFE_API_KEY on server.'
+        )
+      } else {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Failed to propose trait update'
+        )
+      }
+    } finally {
+      setBusyKey(null)
+    }
+  }
+
+  async function handleSetPrimaryName() {
+    if (!fullSubdomainName) return
+
+    try {
+      setErrorMessage(null)
+      setBusyKey('primary')
+
+      const { walletAddress, provider } = await ensureWalletReady()
+      const transaction = buildSetPrimaryNameTransaction({
+        reverseRegistrarAddress,
+        name: fullSubdomainName,
+      })
+
+      await proposeSafeTransactionFromWallet({
+        provider,
+        chainId,
+        safeAddress,
+        senderAddress: walletAddress,
+        transaction,
+        origin: 'startupchain:subdomain:set-primary',
+      })
+
+      router.refresh()
+    } catch (error) {
+      if (
+        isSafeProposeClientError(error) &&
+        error.code === 'SAFE_API_KEY_MISSING'
+      ) {
+        setErrorMessage(
+          'Safe proposal service is not configured. Add SAFE_API_KEY on server.'
+        )
+      } else {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Failed to propose primary name'
+        )
+      }
+    } finally {
+      setBusyKey(null)
+    }
+  }
+
+  if (activeSubdomains.length === 0) return null
+
+  return (
+    <section className="bg-card border-border rounded-2xl border p-6 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-foreground text-lg font-semibold">
+            Subdomain profile
+          </h3>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Set traits and primary name for a subdomain via Safe proposals.
+          </p>
+        </div>
+        <a
+          href={getSafeQueueUrl(chainId, safeAddress)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:text-primary/80 inline-flex items-center gap-1 text-xs font-semibold transition-colors motion-reduce:transition-none"
+        >
+          Open Safe queue
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      </div>
+
+      {!authenticated && (
+        <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>Wallet connection required to submit Safe proposals.</p>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="bg-destructive/10 text-destructive mt-4 rounded-xl border border-current/20 px-3 py-2 text-sm">
+          {errorMessage}
+        </div>
+      )}
+
+      <div className="mt-4">
+        <label
+          className="mb-1 block text-xs font-medium"
+          htmlFor="subdomain-select"
+        >
+          Subdomain
+        </label>
+        <select
+          id="subdomain-select"
+          value={selectedSubdomain}
+          onChange={(e) => setSelectedSubdomain(e.target.value)}
+          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
+        >
+          {activeSubdomains.map((sub) => (
+            <option key={sub.name} value={sub.name}>
+              {sub.name}.{ensName}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {fullSubdomainName && (
+        <>
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <p className="text-sm font-medium">Set as primary name</p>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={handleSetPrimaryName}
+              disabled={!authenticated || busyKey !== null}
+            >
+              {busyKey === 'primary' && (
+                <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+              )}
+              Set primary name
+            </Button>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {ENS_TRAIT_KEYS.map((key) => {
+              const value = formValues[key]
+              const isBusy = busyKey === key
+
+              return (
+                <div
+                  key={key}
+                  className="border-border/70 rounded-xl border p-3"
+                >
+                  <label
+                    className="mb-1 block text-xs font-medium"
+                    htmlFor={`sub-trait-${key}`}
+                  >
+                    {ENS_TRAIT_LABELS[key]}
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      id={`sub-trait-${key}`}
+                      value={value}
+                      onChange={(e) =>
+                        setFormValues((current) => ({
+                          ...current,
+                          [key]: e.target.value,
+                        }))
+                      }
+                      placeholder={ENS_TRAIT_LABELS[key]}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleProposeTraitUpdate(key)}
+                      disabled={
+                        !value.trim() ||
+                        isBusy ||
+                        !authenticated ||
+                        busyKey !== null
+                      }
+                    >
+                      {isBusy && (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+                      )}
+                      Propose
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </section>
+  )
+}
