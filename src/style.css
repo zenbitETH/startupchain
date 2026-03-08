@@ -353,6 +353,7 @@
   .glow-accent {
     box-shadow: 0 0 20px rgba(var(--accent), 0.3);
   }
+
 }
 
 @layer utilities {

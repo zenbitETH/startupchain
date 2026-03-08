@@ -1,5 +1,7 @@
 import { BadgeCheck, Clock, ExternalLink } from 'lucide-react'
 
+import { formatDate } from '../utils'
+
 interface CompanyEvent {
   transactionHash: string
   ensName: string
@@ -26,9 +28,48 @@ interface RegistrationHistoryProps {
   explorerBase: string
 }
 
-function formatDate(value?: Date) {
-  if (!value) return 'Pending'
-  return value.toLocaleString()
+function EventRow({
+  event,
+  explorerBase,
+}: {
+  event: CompanyEvent
+  explorerBase: string
+}) {
+  return (
+    <div className="border-border bg-muted/40 rounded-xl border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <BadgeCheck className="text-primary h-4 w-4" />
+          <div>
+            <p className="text-sm font-semibold">{event.ensName}.eth</p>
+            <p className="text-muted-foreground text-xs">
+              Company #{event.companyId.toString()}
+            </p>
+          </div>
+        </div>
+        <span className="text-muted-foreground text-xs">
+          {formatDate(event.createdAt)}
+        </span>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2 font-mono text-xs">
+        <span className="bg-background border-border rounded-full border px-3 py-1">
+          Block {event.blockNumber.toString()}
+        </span>
+        <a
+          href={`${explorerBase}/tx/${event.transactionHash}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:bg-primary/10 inline-flex items-center gap-1 rounded-full px-3 py-1 transition"
+        >
+          Tx {event.transactionHash.slice(0, 10)}...
+          <ExternalLink className="h-3 w-3" />
+        </a>
+        <span className="text-muted-foreground">
+          Threshold: {event.threshold}
+        </span>
+      </div>
+    </div>
+  )
 }
 
 export function RegistrationHistory({
@@ -48,51 +89,35 @@ export function RegistrationHistory({
         </h3>
       </div>
 
-      {events.length === 0 &&
-      (!pending || pending.status !== 'completed') ? (
+      {events.length === 0 && (!pending || pending.status !== 'completed') ? (
         <p className="text-muted-foreground mt-4 text-sm">
           No on-chain registration events found for this wallet.
         </p>
       ) : events.length > 0 ? (
         <div className="mt-4 space-y-3">
-          {events.map((event) => (
-            <div
+          {events.slice(0, 3).map((event) => (
+            <EventRow
               key={event.transactionHash}
-              className="border-border bg-muted/40 rounded-xl border p-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <BadgeCheck className="text-primary h-4 w-4" />
-                  <div>
-                    <p className="text-sm font-semibold">{event.ensName}.eth</p>
-                    <p className="text-muted-foreground text-xs">
-                      Company #{event.companyId.toString()}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-muted-foreground text-xs">
-                  {formatDate(event.createdAt)}
-                </span>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2 font-mono text-xs">
-                <span className="bg-background border-border rounded-full border px-3 py-1">
-                  Block {event.blockNumber.toString()}
-                </span>
-                <a
-                  href={`${explorerBase}/tx/${event.transactionHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:bg-primary/10 inline-flex items-center gap-1 rounded-full px-3 py-1 transition"
-                >
-                  Tx {event.transactionHash.slice(0, 10)}…
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-                <span className="text-muted-foreground">
-                  Threshold: {event.threshold}
-                </span>
-              </div>
-            </div>
+              event={event}
+              explorerBase={explorerBase}
+            />
           ))}
+          {events.length > 3 && (
+            <details>
+              <summary className="text-primary mt-3 cursor-pointer text-sm font-medium">
+                Show {events.length - 3} more events
+              </summary>
+              <div className="mt-3 space-y-3">
+                {events.slice(3).map((event) => (
+                  <EventRow
+                    key={event.transactionHash}
+                    event={event}
+                    explorerBase={explorerBase}
+                  />
+                ))}
+              </div>
+            </details>
+          )}
         </div>
       ) : showPendingHistory && pending ? (
         <div className="mt-4 space-y-3">

@@ -32,8 +32,9 @@ import {
   CompanyCardFounders,
   EnsTraitsCard,
   ExpiryExtensionCard,
+  ManagementTabs,
   RegistrationHistory,
-  RegistrationStatusCard,
+  RegistrationStatusInline,
   SubdomainManagerCard,
   SubdomainProfileCard,
 } from './components'
@@ -123,35 +124,40 @@ export default async function EnsDashboardPage({ searchParams }: PageProps) {
     company = await getCompanyByFounderWallet(walletAddress, chainId)
   }
 
-  // Get events by owner address (either user's wallet or pending registration owner)
+  // Get events and management snapshot in parallel
   const eventsOwner = company?.ownerAddress || pending?.owner || walletAddress
-  const events = eventsOwner ? await getCompanyEvents(eventsOwner, chainId) : []
   const safeWalletUrl = company?.safeAddress
     ? getSafeWalletUrl(company.safeAddress, chainId)
     : undefined
-  const ensManagement = company
-    ? await getEnsManagementSnapshot({
-        ensName: company.ensName,
-        companyId: company.id,
-        chainId,
-      }).catch((error) => {
-        console.error('Failed to fetch ENS management snapshot', error)
-        return {
-          traits: createEmptyEnsTraits(),
-          resolverAddress: getEnsResolverAddress(chainId),
-          subdomains: [],
-          subdomainsSupported: false,
-        }
-      })
-    : null
+
+  const [events, ensManagement] = await Promise.all([
+    eventsOwner ? getCompanyEvents(eventsOwner, chainId) : Promise.resolve([]),
+    company
+      ? getEnsManagementSnapshot({
+          ensName: company.ensName,
+          companyId: company.id,
+          chainId,
+        }).catch((error) => {
+          console.error('Failed to fetch ENS management snapshot', error)
+          return {
+            traits: createEmptyEnsTraits(),
+            resolverAddress: getEnsResolverAddress(chainId),
+            subdomains: [],
+            subdomainsSupported: false,
+          }
+        })
+      : Promise.resolve(null),
+  ])
 
   const latestEvent = events[0]
 
   return (
-    <div className="bg-background text-foreground">
+    <div className="bg-background text-foreground relative">
+      <div className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:48px_48px] opacity-[0.03] md:block" />
+
       <DashboardHeader title="ENS Company Names" />
 
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 pt-6 pb-12 md:px-6">
+      <div className="relative mx-auto flex max-w-6xl flex-col gap-6 px-4 pt-6 pb-12 md:px-6">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -180,47 +186,59 @@ export default async function EnsDashboardPage({ searchParams }: PageProps) {
           />
         )}
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          <CompanyCard
-            company={company}
-            ensAppBase={ensAppBase}
-            explorerBase={explorerBase}
-            latestEventTxHash={latestEvent?.transactionHash}
-            foundersSlot={
-              company && ensManagement ? (
-                <CompanyCardFounders
-                  companyId={company.id}
-                  ensName={company.ensName}
-                  chainId={chainId}
-                  safeAddress={company.safeAddress}
-                  startupChainAddress={getStartupChainAddress(chainId)}
-                  founders={company.founders}
-                  subdomains={ensManagement.subdomains}
-                  subdomainsSupported={ensManagement.subdomainsSupported}
-                />
-              ) : undefined
-            }
-          />
-
-          <RegistrationStatusCard latestEvent={latestEvent} pending={pending} />
-        </div>
-
-        <RegistrationHistory
-          events={events}
-          pending={pending}
+        <CompanyCard
+          company={company}
+          ensAppBase={ensAppBase}
           explorerBase={explorerBase}
+          latestEventTxHash={latestEvent?.transactionHash}
+          foundersSlot={
+            company && ensManagement ? (
+              <CompanyCardFounders
+                companyId={company.id}
+                ensName={company.ensName}
+                chainId={chainId}
+                safeAddress={company.safeAddress}
+                startupChainAddress={getStartupChainAddress(chainId)}
+                founders={company.founders}
+                subdomains={ensManagement.subdomains}
+                subdomainsSupported={ensManagement.subdomainsSupported}
+              />
+            ) : undefined
+          }
+          statusSlot={
+            latestEvent || pending?.status === 'completed' ? (
+              <RegistrationStatusInline
+                latestEvent={latestEvent}
+                pending={pending}
+              />
+            ) : undefined
+          }
         />
 
         {company && ensManagement && (
-          <>
-            <div className="grid gap-4 xl:grid-cols-2">
-              <EnsTraitsCard
-                ensName={company.ensName}
-                safeAddress={company.safeAddress}
-                chainId={chainId}
-                resolverAddress={ensManagement.resolverAddress}
-                traits={ensManagement.traits}
-              />
+          <ManagementTabs
+            identityContent={
+              <div className="space-y-4">
+                <EnsTraitsCard
+                  ensName={company.ensName}
+                  safeAddress={company.safeAddress}
+                  chainId={chainId}
+                  resolverAddress={ensManagement.resolverAddress}
+                  traits={ensManagement.traits}
+                />
+                <SubdomainProfileCard
+                  ensName={company.ensName}
+                  chainId={chainId}
+                  safeAddress={company.safeAddress}
+                  resolverAddress={ensManagement.resolverAddress}
+                  reverseRegistrarAddress={getEnsReverseRegistrarAddress(
+                    chainId
+                  )}
+                  subdomains={ensManagement.subdomains}
+                />
+              </div>
+            }
+            teamContent={
               <SubdomainManagerCard
                 companyId={company.id}
                 chainId={chainId}
@@ -229,24 +247,33 @@ export default async function EnsDashboardPage({ searchParams }: PageProps) {
                 subdomains={ensManagement.subdomains}
                 subdomainsSupported={ensManagement.subdomainsSupported}
               />
-            </div>
-            <SubdomainProfileCard
-              ensName={company.ensName}
-              chainId={chainId}
-              safeAddress={company.safeAddress}
-              resolverAddress={ensManagement.resolverAddress}
-              reverseRegistrarAddress={getEnsReverseRegistrarAddress(chainId)}
-              subdomains={ensManagement.subdomains}
-            />
-            <ExpiryExtensionCard
-              ensName={company.ensName}
-              ensAppBase={ensAppBase}
-              safeWalletUrl={safeWalletUrl}
-              chainId={chainId}
-              safeAddress={company.safeAddress}
-              controllerAddress={getEnsControllerAddress(chainId)}
-            />
-          </>
+            }
+            historyContent={
+              <RegistrationHistory
+                events={events}
+                pending={pending}
+                explorerBase={explorerBase}
+              />
+            }
+            renewalContent={
+              <ExpiryExtensionCard
+                ensName={company.ensName}
+                ensAppBase={ensAppBase}
+                safeWalletUrl={safeWalletUrl}
+                chainId={chainId}
+                safeAddress={company.safeAddress}
+                controllerAddress={getEnsControllerAddress(chainId)}
+              />
+            }
+          />
+        )}
+
+        {!company && !ensManagement && (
+          <RegistrationHistory
+            events={events}
+            pending={pending}
+            explorerBase={explorerBase}
+          />
         )}
       </div>
     </div>

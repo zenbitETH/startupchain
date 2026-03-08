@@ -1,17 +1,17 @@
 'use client'
 
 import { ExternalLink, Loader2, ShieldAlert } from 'lucide-react'
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { useSafeWallet } from '@/hooks/use-safe-wallet'
 import { buildRenewEnsTransaction } from '@/lib/blockchain/ens-management'
+import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
 import {
   isSafeProposeClientError,
   proposeSafeTransactionFromWallet,
 } from '@/lib/blockchain/safe-proposal-client'
-import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
-import { useSafeWallet } from '@/hooks/use-safe-wallet'
 
 const DURATION_OPTIONS = [
   { label: '1 year', seconds: 31536000n },
@@ -93,8 +93,13 @@ export function ExpiryExtensionCard({
 
       router.refresh()
     } catch (error) {
-      if (isSafeProposeClientError(error) && error.code === 'SAFE_API_KEY_MISSING') {
-        setErrorMessage('Safe proposal service is not configured. Add SAFE_API_KEY on server.')
+      if (
+        isSafeProposeClientError(error) &&
+        error.code === 'SAFE_API_KEY_MISSING'
+      ) {
+        setErrorMessage(
+          'Safe proposal service is not configured. Add SAFE_API_KEY on server.'
+        )
       } else {
         setErrorMessage(
           error instanceof Error ? error.message : 'Failed to propose renewal'
@@ -106,8 +111,10 @@ export function ExpiryExtensionCard({
   }
 
   return (
-    <section className="bg-card border-border rounded-2xl border p-6 shadow-sm">
-      <h3 className="text-foreground text-lg font-semibold">Expiry extension</h3>
+    <section className="bg-card border-border hover-lift border-l-accent/30 rounded-2xl border border-l-2 p-6 shadow-sm">
+      <h3 className="text-foreground text-lg font-semibold">
+        Expiry extension
+      </h3>
       <p className="text-muted-foreground mt-1 text-sm">
         {canPropose
           ? 'Propose a renewal via Safe to extend your ENS registration.'
@@ -115,7 +122,7 @@ export function ExpiryExtensionCard({
       </p>
 
       {!authenticated && chainId && safeAddress && (
-        <div className="bg-amber-500/10 text-amber-700 mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 px-3 py-2 text-sm">
+        <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700">
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <p>Wallet connection required to submit Safe proposals.</p>
         </div>
@@ -130,7 +137,10 @@ export function ExpiryExtensionCard({
       {chainId && safeAddress && controllerAddress && (
         <div className="mt-4 space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium" htmlFor="renewal-duration">
+            <label
+              className="mb-1 block text-xs font-medium"
+              htmlFor="renewal-duration"
+            >
               Duration
             </label>
             <select
@@ -140,13 +150,18 @@ export function ExpiryExtensionCard({
               className="border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
             >
               {DURATION_OPTIONS.map((opt, idx) => (
-                <option key={opt.label} value={idx}>{opt.label}</option>
+                <option key={opt.label} value={idx}>
+                  {opt.label}
+                </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium" htmlFor="renewal-value">
+            <label
+              className="mb-1 block text-xs font-medium"
+              htmlFor="renewal-value"
+            >
               Value (wei) - leave empty for 0
             </label>
             <input
@@ -158,7 +173,8 @@ export function ExpiryExtensionCard({
               className="border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
             />
             <p className="text-muted-foreground mt-1 text-xs">
-              ENS renewal requires ETH. Query rentPrice on the controller for exact cost.
+              ENS renewal requires ETH. Query rentPrice on the controller for
+              exact cost.
             </p>
           </div>
 
@@ -169,7 +185,9 @@ export function ExpiryExtensionCard({
               onClick={handleProposeRenewal}
               disabled={!canPropose}
             >
-              {isBusy && <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />}
+              {isBusy && (
+                <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+              )}
               Propose renewal
             </Button>
           </div>

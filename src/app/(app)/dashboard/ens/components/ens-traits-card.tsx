@@ -2,7 +2,7 @@
 
 import { ExternalLink, Loader2, ShieldAlert } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -162,7 +162,7 @@ export function EnsTraitsCard({
   }
 
   return (
-    <section className="bg-card border-border rounded-2xl border p-6 shadow-sm">
+    <section className="bg-card border-border hover-lift border-l-primary/30 rounded-2xl border border-l-2 p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-foreground text-lg font-semibold">
@@ -221,95 +221,100 @@ export function EnsTraitsCard({
         </div>
       )}
 
-      <div className="mt-4 space-y-6">
-        {traitSections.map((section) => (
-          <div key={section.title}>
-            <h4 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+      <div className="mt-4 grid gap-x-6 gap-y-3 md:grid-cols-2 xl:grid-cols-3">
+        {traitSections.map((section, sectionIndex) => (
+          <Fragment key={section.title}>
+            <h4
+              className={[
+                'text-muted-foreground text-xs font-semibold tracking-wide uppercase md:col-span-2 xl:col-span-3',
+                sectionIndex > 0 && 'mt-2',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               {section.title}
             </h4>
-            <div className="space-y-3">
-              {section.keys.map((key) => {
-                const value = formValues[key]
-                const isDirty = value.trim() !== traits[key].trim()
-                const isBusy = busyKey === key
-                const pendingUpdate = pending[key]
-                const disabled =
-                  !isDirty || isBusy || !authenticated || safeApiUnavailable
+            {section.keys.map((key) => {
+              const value = formValues[key]
+              const isDirty = value.trim() !== traits[key].trim()
+              const isBusy = busyKey === key
+              const pendingUpdate = pending[key]
+              const disabled =
+                !isDirty || isBusy || !authenticated || safeApiUnavailable
 
-                return (
-                  <div
-                    key={key}
-                    className="border-border/70 rounded-xl border p-4"
-                  >
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <label
-                        className="text-sm font-medium"
-                        htmlFor={`ens-trait-${key}`}
-                      >
-                        {ENS_TRAIT_LABELS[key]}
-                      </label>
-                      {pendingUpdate && (
-                        <span className="rounded-full bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-700">
-                          Proposed
-                        </span>
-                      )}
-                    </div>
-
-                    {key === 'description' || key === 'notice' ? (
-                      <textarea
-                        id={`ens-trait-${key}`}
-                        value={value}
-                        onChange={(event) =>
-                          setFormValues((current) => ({
-                            ...current,
-                            [key]: event.target.value,
-                          }))
-                        }
-                        rows={3}
-                        className="border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
-                      />
-                    ) : (
-                      <Input
-                        id={`ens-trait-${key}`}
-                        value={value}
-                        onChange={(event) =>
-                          setFormValues((current) => ({
-                            ...current,
-                            [key]: event.target.value,
-                          }))
-                        }
-                      />
-                    )}
-
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-muted-foreground text-xs">
-                        Current: {traits[key] || 'not set'}
-                      </p>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleProposeTraitUpdate(key)}
-                        disabled={disabled}
-                      >
-                        {isBusy && (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
-                        )}
-                        Propose update
-                      </Button>
-                    </div>
-
+              return (
+                <div
+                  key={key}
+                  className="border-border/70 rounded-xl border p-4"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor={`ens-trait-${key}`}
+                    >
+                      {ENS_TRAIT_LABELS[key]}
+                    </label>
                     {pendingUpdate && (
-                      <p className="text-muted-foreground mt-2 text-xs">
-                        Safe tx: {pendingUpdate.safeTxHash.slice(0, 12)}
-                        ... Awaiting execution + indexing confirmation.
-                      </p>
+                      <span className="rounded-full bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-700">
+                        Proposed
+                      </span>
                     )}
                   </div>
-                )
-              })}
-            </div>
-          </div>
+
+                  {key === 'description' || key === 'notice' ? (
+                    <textarea
+                      id={`ens-trait-${key}`}
+                      value={value}
+                      onChange={(event) =>
+                        setFormValues((current) => ({
+                          ...current,
+                          [key]: event.target.value,
+                        }))
+                      }
+                      rows={3}
+                      className="border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
+                    />
+                  ) : (
+                    <Input
+                      id={`ens-trait-${key}`}
+                      value={value}
+                      onChange={(event) =>
+                        setFormValues((current) => ({
+                          ...current,
+                          [key]: event.target.value,
+                        }))
+                      }
+                    />
+                  )}
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-muted-foreground text-xs">
+                      Current: {traits[key] || 'not set'}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleProposeTraitUpdate(key)}
+                      disabled={disabled}
+                    >
+                      {isBusy && (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+                      )}
+                      Propose update
+                    </Button>
+                  </div>
+
+                  {pendingUpdate && (
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      Safe tx: {pendingUpdate.safeTxHash.slice(0, 12)}
+                      ... Awaiting execution + indexing confirmation.
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </Fragment>
         ))}
       </div>
     </section>

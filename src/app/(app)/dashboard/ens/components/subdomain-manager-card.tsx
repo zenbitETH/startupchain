@@ -1,24 +1,24 @@
 'use client'
 
 import { ExternalLink, Loader2, ShieldAlert } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { isAddress } from 'viem'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import {
+  type SubdomainRecord,
   buildCreateSubdomainTransaction,
   buildRevokeSubdomainTransaction,
   normalizeSubdomainLabel,
-  type SubdomainRecord,
 } from '@/lib/blockchain/ens-management'
+import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
 import {
   isSafeProposeClientError,
   proposeSafeTransactionFromWallet,
 } from '@/lib/blockchain/safe-proposal-client'
-import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
-import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { useWallets } from '@/lib/privy'
 import { shortenAddress } from '@/lib/utils'
 
@@ -29,17 +29,20 @@ type PendingSubdomainOperation = {
   safeTxHash: string
 }
 
-type BusySubdomainAction
-  = | { type: 'create' }
-    | { type: 'revoke'; label: string }
-    | null
+type BusySubdomainAction =
+  | { type: 'create' }
+  | { type: 'revoke'; label: string }
+  | null
 
 type PrivyWallet = {
   address?: string
   chainId?: number | string
   switchChain?: (chainId: number) => Promise<void>
   getEthereumProvider?: () => Promise<{
-    request: (args: { method: string, params?: unknown[] | object }) => Promise<unknown>
+    request: (args: {
+      method: string
+      params?: unknown[] | object
+    }) => Promise<unknown>
   }>
 }
 
@@ -76,7 +79,7 @@ export function SubdomainManagerCard({
   const walletsResult = useWallets()
   const wallets = useMemo(
     () => walletsResult?.wallets ?? [],
-    [walletsResult?.wallets],
+    [walletsResult?.wallets]
   )
   const walletsRef = useRef<PrivyWallet[]>(wallets as PrivyWallet[])
 
@@ -90,9 +93,11 @@ export function SubdomainManagerCard({
   const pendingOpsKey = useMemo(
     () =>
       pendingOps
-        .map(op => `${op.type}:${op.label}:${op.owner ?? ''}:${op.safeTxHash}`)
+        .map(
+          (op) => `${op.type}:${op.label}:${op.owner ?? ''}:${op.safeTxHash}`
+        )
         .join('|'),
-    [pendingOps],
+    [pendingOps]
   )
 
   useEffect(() => {
@@ -106,30 +111,29 @@ export function SubdomainManagerCard({
   }, [wallets])
 
   useEffect(() => {
-    if (!pendingOpsKey)
-      return
+    if (!pendingOpsKey) return
 
     setPendingOps((current) =>
       current.filter((op) => {
-        const currentItem = subdomains.find(sub => sub.name === op.label)
+        const currentItem = subdomains.find((sub) => sub.name === op.label)
         if (op.type === 'create') {
           return !(
-            currentItem
-            && currentItem.active
-            && (!op.owner || currentItem.owner.toLowerCase() === op.owner.toLowerCase())
+            currentItem &&
+            currentItem.active &&
+            (!op.owner ||
+              currentItem.owner.toLowerCase() === op.owner.toLowerCase())
           )
         }
 
         return !(currentItem && !currentItem.active)
-      }),
+      })
     )
   }, [subdomains, pendingOpsKey])
 
   const hasPending = pendingOps.length > 0
 
   useEffect(() => {
-    if (!hasPending)
-      return
+    if (!hasPending) return
     const intervalId = window.setInterval(() => {
       router.refresh()
     }, 15_000)
@@ -139,8 +143,8 @@ export function SubdomainManagerCard({
   }, [hasPending, router])
 
   const activeSubdomains = useMemo(
-    () => subdomains.filter(subdomain => subdomain.active),
-    [subdomains],
+    () => subdomains.filter((subdomain) => subdomain.active),
+    [subdomains]
   )
   const anyActionBusy = Boolean(busyAction)
   const createBusy = busyAction?.type === 'create'
@@ -151,7 +155,7 @@ export function SubdomainManagerCard({
       if (wallet) {
         return wallet
       }
-      await new Promise(resolve => window.setTimeout(resolve, 100))
+      await new Promise((resolve) => window.setTimeout(resolve, 100))
     }
 
     return walletsRef.current[0]
@@ -168,14 +172,14 @@ export function SubdomainManagerCard({
     }
 
     if (wallet.switchChain) {
-      const walletChain
-        = parseWalletChainId(wallet.chainId)
+      const walletChain = parseWalletChainId(wallet.chainId)
       if (walletChain === null || walletChain !== chainId) {
         try {
           await wallet.switchChain(chainId)
-        }
-        catch {
-          throw new Error('Failed to switch to required network. Please switch manually.')
+        } catch {
+          throw new Error(
+            'Failed to switch to required network. Please switch manually.'
+          )
         }
       }
     }
@@ -186,10 +190,12 @@ export function SubdomainManagerCard({
     }
 
     const providerChainId = parseWalletChainId(
-      await provider.request({ method: 'eth_chainId' }),
+      await provider.request({ method: 'eth_chainId' })
     )
     if (providerChainId !== null && providerChainId !== chainId) {
-      throw new Error('Wallet is on the wrong network. Please switch and try again.')
+      throw new Error(
+        'Wallet is on the wrong network. Please switch and try again.'
+      )
     }
 
     if (!wallet.address || !isAddress(wallet.address)) {
@@ -234,7 +240,7 @@ export function SubdomainManagerCard({
       })
 
       setSafeApiUnavailable(false)
-      setPendingOps(current => [
+      setPendingOps((current) => [
         ...current,
         {
           type: 'create',
@@ -245,21 +251,23 @@ export function SubdomainManagerCard({
       ])
       setLabelInput('')
       router.refresh()
-    }
-    catch (error) {
-      if (isSafeProposeClientError(error) && error.code === 'SAFE_API_KEY_MISSING') {
+    } catch (error) {
+      if (
+        isSafeProposeClientError(error) &&
+        error.code === 'SAFE_API_KEY_MISSING'
+      ) {
         setSafeApiUnavailable(true)
-        setErrorMessage('Safe proposal service is not configured. Add SAFE_API_KEY on server.')
-      }
-      else {
+        setErrorMessage(
+          'Safe proposal service is not configured. Add SAFE_API_KEY on server.'
+        )
+      } else {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : 'Failed to propose subdomain creation',
+            : 'Failed to propose subdomain creation'
         )
       }
-    }
-    finally {
+    } finally {
       setBusyAction(null)
     }
   }
@@ -290,7 +298,7 @@ export function SubdomainManagerCard({
       })
 
       setSafeApiUnavailable(false)
-      setPendingOps(current => [
+      setPendingOps((current) => [
         ...current,
         {
           type: 'revoke',
@@ -299,30 +307,34 @@ export function SubdomainManagerCard({
         },
       ])
       router.refresh()
-    }
-    catch (error) {
-      if (isSafeProposeClientError(error) && error.code === 'SAFE_API_KEY_MISSING') {
+    } catch (error) {
+      if (
+        isSafeProposeClientError(error) &&
+        error.code === 'SAFE_API_KEY_MISSING'
+      ) {
         setSafeApiUnavailable(true)
-        setErrorMessage('Safe proposal service is not configured. Add SAFE_API_KEY on server.')
-      }
-      else {
+        setErrorMessage(
+          'Safe proposal service is not configured. Add SAFE_API_KEY on server.'
+        )
+      } else {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : 'Failed to propose subdomain revoke',
+            : 'Failed to propose subdomain revoke'
         )
       }
-    }
-    finally {
+    } finally {
       setBusyAction(null)
     }
   }
 
   return (
-    <section className="bg-card border-border rounded-2xl border p-6 shadow-sm">
+    <section className="bg-card border-border hover-lift border-l-chart-3/30 rounded-2xl border border-l-2 p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-foreground text-lg font-semibold">Subdomain management</h3>
+          <h3 className="text-foreground text-lg font-semibold">
+            Subdomain management
+          </h3>
           <p className="text-muted-foreground mt-1 text-sm">
             List, create, and revoke member subdomains through Safe proposals.
           </p>
@@ -339,7 +351,7 @@ export function SubdomainManagerCard({
       </div>
 
       {!authenticated && (
-        <div className="bg-amber-500/10 text-amber-700 mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 px-3 py-2 text-sm">
+        <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700">
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <p>Wallet connection required to submit Safe proposals.</p>
         </div>
@@ -347,22 +359,25 @@ export function SubdomainManagerCard({
 
       {!subdomainsSupported && (
         <div className="mt-4 rounded-xl border border-dashed px-3 py-3 text-sm">
-          <p className="font-medium">Subdomain actions unavailable on current deployment.</p>
+          <p className="font-medium">
+            Subdomain actions unavailable on current deployment.
+          </p>
           <p className="text-muted-foreground mt-1">
-            This network contract does not expose subdomain methods yet. ENS trait edits remain available.
+            This network contract does not expose subdomain methods yet. ENS
+            trait edits remain available.
           </p>
         </div>
       )}
 
       {safeApiUnavailable && (
         <div className="mt-4 rounded-xl border border-dashed px-3 py-3 text-sm">
-          <p className="font-medium">Safe proposal service is not configured.</p>
+          <p className="font-medium">
+            Safe proposal service is not configured.
+          </p>
           <p className="text-muted-foreground mt-1">
-            Proposal actions are disabled until
-            {' '}
-            <code className="font-mono">SAFE_API_KEY</code>
-            {' '}
-            is configured on the server.
+            Proposal actions are disabled until{' '}
+            <code className="font-mono">SAFE_API_KEY</code> is configured on the
+            server.
           </p>
         </div>
       )}
@@ -378,19 +393,30 @@ export function SubdomainManagerCard({
           <p className="mb-3 text-sm font-medium">Create subdomain</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium" htmlFor="subdomain-label">
+              <label
+                className="mb-1 block text-xs font-medium"
+                htmlFor="subdomain-label"
+              >
                 Label
               </label>
               <Input
                 id="subdomain-label"
                 value={labelInput}
-                onChange={event => setLabelInput(event.target.value)}
+                onChange={(event) => setLabelInput(event.target.value)}
                 placeholder="alice"
-                disabled={anyActionBusy || !authenticated || !subdomainsSupported || safeApiUnavailable}
+                disabled={
+                  anyActionBusy ||
+                  !authenticated ||
+                  !subdomainsSupported ||
+                  safeApiUnavailable
+                }
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium" htmlFor="subdomain-owner">
+              <label
+                className="mb-1 block text-xs font-medium"
+                htmlFor="subdomain-owner"
+              >
                 Owner address
               </label>
               <Input
@@ -401,7 +427,12 @@ export function SubdomainManagerCard({
                   setOwnerInput(event.target.value)
                 }}
                 placeholder="0x..."
-                disabled={anyActionBusy || !authenticated || !subdomainsSupported || safeApiUnavailable}
+                disabled={
+                  anyActionBusy ||
+                  !authenticated ||
+                  !subdomainsSupported ||
+                  safeApiUnavailable
+                }
               />
             </div>
           </div>
@@ -411,15 +442,17 @@ export function SubdomainManagerCard({
               size="sm"
               onClick={handleCreateSubdomain}
               disabled={
-                anyActionBusy
-                || !authenticated
-                || !labelInput.trim()
-                || !ownerInput.trim()
-                || !subdomainsSupported
-                || safeApiUnavailable
+                anyActionBusy ||
+                !authenticated ||
+                !labelInput.trim() ||
+                !ownerInput.trim() ||
+                !subdomainsSupported ||
+                safeApiUnavailable
               }
             >
-              {createBusy && <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />}
+              {createBusy && (
+                <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+              )}
               Propose create
             </Button>
           </div>
@@ -429,47 +462,49 @@ export function SubdomainManagerCard({
           <div className="mb-3 flex items-center justify-between gap-2">
             <p className="text-sm font-medium">Active subdomains</p>
             <span className="text-muted-foreground text-xs">
-              {activeSubdomains.length}
-              {' '}
-              active
+              {activeSubdomains.length} active
             </span>
           </div>
 
-          {activeSubdomains.length === 0
-            ? (
-                <p className="text-muted-foreground text-sm">
-                  No active subdomains yet.
-                </p>
-              )
-            : (
-                <div className="space-y-2">
-                  {activeSubdomains.map((subdomain) => (
-                    <div
-                      key={`${subdomain.name}-${subdomain.owner}`}
-                      className="bg-muted/40 border-border/70 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{subdomain.name}</p>
-                        <p className="text-muted-foreground font-mono text-xs">
-                          {shortenAddress(subdomain.owner)}
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleRevokeSubdomain(subdomain.name)}
-                        disabled={anyActionBusy || !authenticated || !subdomainsSupported || safeApiUnavailable}
-                      >
-                        {busyAction?.type === 'revoke' && busyAction.label === subdomain.name && (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
-                        )}
-                        Propose revoke
-                      </Button>
-                    </div>
-                  ))}
+          {activeSubdomains.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No active subdomains yet.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {activeSubdomains.map((subdomain) => (
+                <div
+                  key={`${subdomain.name}-${subdomain.owner}`}
+                  className="bg-muted/40 border-border/70 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{subdomain.name}</p>
+                    <p className="text-muted-foreground font-mono text-xs">
+                      {shortenAddress(subdomain.owner)}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleRevokeSubdomain(subdomain.name)}
+                    disabled={
+                      anyActionBusy ||
+                      !authenticated ||
+                      !subdomainsSupported ||
+                      safeApiUnavailable
+                    }
+                  >
+                    {busyAction?.type === 'revoke' &&
+                      busyAction.label === subdomain.name && (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+                      )}
+                    Propose revoke
+                  </Button>
                 </div>
-              )}
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -479,12 +514,8 @@ export function SubdomainManagerCard({
           <div className="space-y-1">
             {pendingOps.map((op) => (
               <p key={`${op.safeTxHash}-${op.label}`}>
-                {op.type === 'create' ? 'Create' : 'Revoke'}
-                {' '}
-                <span className="font-mono">{op.label}</span>
-                {' '}
-                -
-                {' '}
+                {op.type === 'create' ? 'Create' : 'Revoke'}{' '}
+                <span className="font-mono">{op.label}</span> -{' '}
                 {op.safeTxHash.slice(0, 12)}
                 ...
               </p>

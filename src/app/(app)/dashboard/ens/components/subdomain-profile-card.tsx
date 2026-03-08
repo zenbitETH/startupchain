@@ -154,7 +154,7 @@ export function SubdomainProfileCard({
   if (activeSubdomains.length === 0) return null
 
   return (
-    <section className="bg-card border-border rounded-2xl border p-6 shadow-sm">
+    <section className="bg-card border-border hover-lift border-l-chart-5/30 rounded-2xl border border-l-2 p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-foreground text-lg font-semibold">
