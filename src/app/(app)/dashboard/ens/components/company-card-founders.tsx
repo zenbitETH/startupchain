@@ -1,23 +1,23 @@
 'use client'
 
 import { ExternalLink, Loader2, ShieldAlert } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useSafeWallet } from '@/hooks/use-safe-wallet'
 import {
-  buildBatchCreateSubdomainsTransactions,
   type SubdomainRecord,
+  buildBatchCreateSubdomainsTransactions,
 } from '@/lib/blockchain/ens-management'
+import type { Founder } from '@/lib/blockchain/get-company'
+import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
 import {
   isSafeProposeClientError,
   proposeBatchSafeTransactionFromWallet,
 } from '@/lib/blockchain/safe-proposal-client'
-import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
 import { shortenAddress } from '@/lib/utils'
-import type { Founder } from '@/lib/blockchain/get-company'
 
 type PendingBatchOperation = {
   labels: string[]
@@ -36,7 +36,7 @@ function buildSubdomainLookup(
   return map
 }
 
-export function FounderSubdomainCard({
+export function CompanyCardFounders({
   companyId,
   ensName,
   chainId,
@@ -78,6 +78,22 @@ export function FounderSubdomainCard({
 
   const hasPending = pendingOps.length > 0
 
+  // Sync labels when subdomains are confirmed on-chain
+  useEffect(() => {
+    setLabels((current) => {
+      let changed = false
+      const next = { ...current }
+      for (const founder of founders) {
+        const existing = subdomainByOwner.get(founder.wallet.toLowerCase())
+        if (existing && next[founder.wallet] !== existing.name) {
+          next[founder.wallet] = existing.name
+          changed = true
+        }
+      }
+      return changed ? next : current
+    })
+  }, [subdomainByOwner, founders])
+
   // Clear pending ops when subdomains appear on-chain
   useEffect(() => {
     if (!hasPending) return
@@ -113,12 +129,10 @@ export function FounderSubdomainCard({
     return entries
   }, [founders, labels, subdomainByOwner])
 
-  const canSubmit =
-    filledEntries.length > 0 &&
-    authenticated &&
-    !isBusy &&
-    subdomainsSupported &&
-    !safeApiUnavailable
+  const isFormDisabled =
+    !authenticated || isBusy || !subdomainsSupported || safeApiUnavailable
+
+  const canSubmit = filledEntries.length > 0 && !isFormDisabled
 
   async function handleBatchCreate() {
     if (!canSubmit) return
@@ -153,9 +167,14 @@ export function FounderSubdomainCard({
       ])
       router.refresh()
     } catch (error) {
-      if (isSafeProposeClientError(error) && error.code === 'SAFE_API_KEY_MISSING') {
+      if (
+        isSafeProposeClientError(error) &&
+        error.code === 'SAFE_API_KEY_MISSING'
+      ) {
         setSafeApiUnavailable(true)
-        setErrorMessage('Safe proposal service is not configured. Add SAFE_API_KEY on server.')
+        setErrorMessage(
+          'Safe proposal service is not configured. Add SAFE_API_KEY on server.'
+        )
       } else {
         setErrorMessage(
           error instanceof Error
@@ -171,35 +190,32 @@ export function FounderSubdomainCard({
   if (founders.length === 0) return null
 
   return (
-    <section className="bg-card border-border rounded-2xl border p-6 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-foreground text-lg font-semibold">Founder subdomains</h3>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Assign ENS subdomains to each founder via a single batch Safe proposal.
-          </p>
-        </div>
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-muted-foreground text-xs">Founder subdomains</p>
         <a
           href={getSafeQueueUrl(chainId, safeAddress)}
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary hover:text-primary/80 inline-flex items-center gap-1 text-xs font-semibold transition-colors motion-reduce:transition-none"
         >
-          Open Safe queue
+          Safe queue
           <ExternalLink className="h-3 w-3" />
         </a>
       </div>
 
       {!authenticated && (
-        <div className="bg-amber-500/10 text-amber-700 mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 px-3 py-2 text-sm">
+        <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700">
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <p>Wallet connection required to submit Safe proposals.</p>
         </div>
       )}
 
       {!subdomainsSupported && (
-        <div className="mt-4 rounded-xl border border-dashed px-3 py-3 text-sm">
-          <p className="font-medium">Subdomain actions unavailable on current deployment.</p>
+        <div className="mt-3 rounded-xl border border-dashed px-3 py-3 text-sm">
+          <p className="font-medium">
+            Subdomain actions unavailable on current deployment.
+          </p>
           <p className="text-muted-foreground mt-1">
             This network contract does not expose subdomain methods yet.
           </p>
@@ -207,23 +223,25 @@ export function FounderSubdomainCard({
       )}
 
       {safeApiUnavailable && (
-        <div className="mt-4 rounded-xl border border-dashed px-3 py-3 text-sm">
-          <p className="font-medium">Safe proposal service is not configured.</p>
+        <div className="mt-3 rounded-xl border border-dashed px-3 py-3 text-sm">
+          <p className="font-medium">
+            Safe proposal service is not configured.
+          </p>
           <p className="text-muted-foreground mt-1">
             Proposal actions are disabled until{' '}
-            <code className="font-mono">SAFE_API_KEY</code>{' '}
-            is configured on the server.
+            <code className="font-mono">SAFE_API_KEY</code> is configured on the
+            server.
           </p>
         </div>
       )}
 
       {errorMessage && (
-        <div className="bg-destructive/10 text-destructive mt-4 rounded-xl border border-current/20 px-3 py-2 text-sm">
+        <div className="bg-destructive/10 text-destructive mt-3 rounded-xl border border-current/20 px-3 py-2 text-sm">
           {errorMessage}
         </div>
       )}
 
-      <div className="mt-4 space-y-3">
+      <div className="mt-3 space-y-3">
         {founders.map((founder) => {
           const existing = subdomainByOwner.get(founder.wallet.toLowerCase())
           const hasActiveSubdomain = Boolean(existing)
@@ -240,9 +258,7 @@ export function FounderSubdomainCard({
                     {founder.role || 'Founder'}
                   </p>
                   <p className="text-muted-foreground font-mono text-xs">
-                    {shortenAddress(founder.wallet)}
-                    {' '}
-                    ({founder.equityPercent}%)
+                    {shortenAddress(founder.wallet)} ({founder.equityPercent}%)
                   </p>
                 </div>
                 {hasActiveSubdomain && (
@@ -252,7 +268,7 @@ export function FounderSubdomainCard({
                 )}
               </div>
               <Input
-                value={hasActiveSubdomain ? existing?.name ?? '' : label}
+                value={hasActiveSubdomain ? (existing?.name ?? '') : label}
                 onChange={(event) => {
                   if (hasActiveSubdomain) return
                   setLabels((current) => ({
@@ -261,7 +277,7 @@ export function FounderSubdomainCard({
                   }))
                 }}
                 placeholder={`label.${ensName}`}
-                disabled={hasActiveSubdomain || isBusy || !authenticated || !subdomainsSupported || safeApiUnavailable}
+                disabled={hasActiveSubdomain || isFormDisabled}
               />
               {!hasActiveSubdomain && label.trim() && (
                 <p className="text-muted-foreground mt-1 text-xs">
@@ -273,9 +289,10 @@ export function FounderSubdomainCard({
         })}
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div className="mt-3 flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-xs">
-          {filledEntries.length} subdomain{filledEntries.length !== 1 ? 's' : ''} to create
+          {filledEntries.length} subdomain
+          {filledEntries.length !== 1 ? 's' : ''} to create
         </p>
         <Button
           type="button"
@@ -283,13 +300,15 @@ export function FounderSubdomainCard({
           onClick={handleBatchCreate}
           disabled={!canSubmit}
         >
-          {isBusy && <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />}
+          {isBusy && (
+            <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+          )}
           Create subdomains
         </Button>
       </div>
 
       {pendingOps.length > 0 && (
-        <div className="mt-4 rounded-xl border px-3 py-3 text-xs">
+        <div className="mt-3 rounded-xl border px-3 py-3 text-xs">
           <p className="mb-2 font-semibold">Pending batch proposals</p>
           <div className="space-y-1">
             {pendingOps.map((op) => (
@@ -300,6 +319,6 @@ export function FounderSubdomainCard({
           </div>
         </div>
       )}
-    </section>
+    </div>
   )
 }

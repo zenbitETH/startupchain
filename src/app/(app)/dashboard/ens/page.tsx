@@ -29,9 +29,9 @@ import {
 import { finalizeEnsRegistrationAction } from '../setup/actions'
 import {
   CompanyCard,
+  CompanyCardFounders,
   EnsTraitsCard,
   ExpiryExtensionCard,
-  FounderSubdomainCard,
   RegistrationHistory,
   RegistrationStatusCard,
   SubdomainManagerCard,
@@ -186,6 +186,20 @@ export default async function EnsDashboardPage({ searchParams }: PageProps) {
             ensAppBase={ensAppBase}
             explorerBase={explorerBase}
             latestEventTxHash={latestEvent?.transactionHash}
+            foundersSlot={
+              company && ensManagement ? (
+                <CompanyCardFounders
+                  companyId={company.id}
+                  ensName={company.ensName}
+                  chainId={chainId}
+                  safeAddress={company.safeAddress}
+                  startupChainAddress={getStartupChainAddress(chainId)}
+                  founders={company.founders}
+                  subdomains={ensManagement.subdomains}
+                  subdomainsSupported={ensManagement.subdomainsSupported}
+                />
+              ) : undefined
+            }
           />
 
           <RegistrationStatusCard latestEvent={latestEvent} pending={pending} />
@@ -199,18 +213,6 @@ export default async function EnsDashboardPage({ searchParams }: PageProps) {
 
         {company && ensManagement && (
           <>
-            {company.founders.length > 0 && (
-              <FounderSubdomainCard
-                companyId={company.id}
-                ensName={company.ensName}
-                chainId={chainId}
-                safeAddress={company.safeAddress}
-                startupChainAddress={getStartupChainAddress(chainId)}
-                founders={company.founders}
-                subdomains={ensManagement.subdomains}
-                subdomainsSupported={ensManagement.subdomainsSupported}
-              />
-            )}
             <div className="grid gap-4 xl:grid-cols-2">
               <EnsTraitsCard
                 ensName={company.ensName}

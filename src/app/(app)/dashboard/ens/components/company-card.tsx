@@ -1,28 +1,18 @@
 import { BadgeCheck, ExternalLink, Info } from 'lucide-react'
 import Link from 'next/link'
 
+import type { Company } from '@/lib/blockchain/get-company'
 import { shortenAddress } from '@/lib/utils'
-
-interface Founder {
-  wallet: string
-}
-
-interface Company {
-  ensName: string
-  ownerAddress: `0x${string}`
-  creationDate?: Date
-  founders: Founder[]
-}
 
 interface CompanyCardProps {
   company: Company | null
   ensAppBase: string
   explorerBase: string
   latestEventTxHash?: string
+  foundersSlot?: React.ReactNode
 }
 
-function formatDate(value?: Date) {
-  if (!value) return 'Pending'
+function formatDate(value: Date) {
   return value.toLocaleString()
 }
 
@@ -31,6 +21,7 @@ export function CompanyCard({
   ensAppBase,
   explorerBase,
   latestEventTxHash,
+  foundersSlot,
 }: CompanyCardProps) {
   return (
     <section className="bg-card border-border rounded-2xl border p-6 shadow-sm lg:col-span-2">
@@ -61,17 +52,21 @@ export function CompanyCard({
             <p className="text-sm">{formatDate(company.creationDate)}</p>
           </div>
           <div className="bg-muted/40 border-border/70 rounded-xl border p-4 sm:col-span-2">
-            <p className="text-muted-foreground text-xs">Founders</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {company.founders.map((founder) => (
-                <span
-                  key={founder.wallet}
-                  className="bg-background border-border rounded-full border px-3 py-1 font-mono text-xs"
-                >
-                  {founder.wallet}
-                </span>
-              ))}
-            </div>
+            {foundersSlot ?? (
+              <>
+                <p className="text-muted-foreground text-xs">Founders</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {company.founders.map((founder) => (
+                    <span
+                      key={founder.wallet}
+                      className="bg-background border-border rounded-full border px-3 py-1 font-mono text-xs"
+                    >
+                      {founder.wallet}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
           <div className="bg-muted/40 border-border/70 flex flex-wrap gap-2 rounded-xl border p-4 sm:col-span-2">
             <Link
