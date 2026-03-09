@@ -76,6 +76,17 @@ export function ExpiryExtensionCard({
     quoteStatus: quoteState.status,
     valueState,
   })
+  const quoteSnapshot = quoteState.status === 'ready' ? quoteState.quote : null
+  const renewalValuePlaceholder = quoteSnapshot?.totalWei ?? 'Quoted wei value'
+  const isRenewalValueDisabled =
+    quoteState.status === 'loading' ||
+    (quoteState.status === 'error' && !valueState.manualOverrideEnabled)
+  const renewalValueHelperText =
+    quoteState.status === 'ready'
+      ? 'Auto-filled from ENS rentPrice. You can override it if needed.'
+      : quoteState.status === 'error'
+        ? 'Manual entry stays disabled until you explicitly enable an override.'
+        : 'Waiting for the latest ENS renewal quote.'
 
   useEffect(() => {
     if (!canQuote || !chainId) {
@@ -219,7 +230,7 @@ export function ExpiryExtensionCard({
             </div>
           )}
 
-          {quoteState.status === 'ready' && (
+          {quoteSnapshot && (
             <div className="rounded-xl border px-4 py-3 text-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -230,16 +241,16 @@ export function ExpiryExtensionCard({
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-semibold">
-                    {quoteState.quote.totalEth} ETH
+                    {quoteSnapshot.totalEth} ETH
                   </p>
                   <p className="text-muted-foreground font-mono text-xs">
-                    {quoteState.quote.totalWei} wei
+                    {quoteSnapshot.totalWei} wei
                   </p>
                 </div>
               </div>
               <div className="text-muted-foreground mt-3 grid gap-2 text-xs sm:grid-cols-2">
-                <p>Base: {quoteState.quote.baseEth} ETH</p>
-                <p>Premium: {quoteState.quote.premiumEth} ETH</p>
+                <p>Base: {quoteSnapshot.baseEth} ETH</p>
+                <p>Premium: {quoteSnapshot.premiumEth} ETH</p>
               </div>
             </div>
           )}
@@ -304,48 +315,35 @@ export function ExpiryExtensionCard({
                   updateRenewalValueInput(current, e.target.value)
                 )
               }
-              placeholder={
-                quoteState.status === 'ready'
-                  ? quoteState.quote.totalWei
-                  : 'Quoted wei value'
-              }
-              disabled={
-                quoteState.status === 'loading' ||
-                (quoteState.status === 'error' &&
-                  !valueState.manualOverrideEnabled)
-              }
+              placeholder={renewalValuePlaceholder}
+              disabled={isRenewalValueDisabled}
               className="border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
             />
             <p className="text-muted-foreground mt-1 text-xs">
-              {quoteState.status === 'ready'
-                ? 'Auto-filled from ENS rentPrice. You can override it if needed.'
-                : quoteState.status === 'error'
-                  ? 'Manual entry stays disabled until you explicitly enable an override.'
-                  : 'Waiting for the latest ENS renewal quote.'}
+              {renewalValueHelperText}
             </p>
-            {quoteState.status === 'ready' &&
-              valueState.manualOverrideActive && (
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="rounded-full bg-amber-500/10 px-2 py-1 font-medium text-amber-700">
-                    {valueState.staleManualOverride
-                      ? 'Manual override differs from latest quote'
-                      : 'Manual override active'}
-                  </span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-auto px-2 py-1 text-xs"
-                    onClick={() =>
-                      setValueState((current) =>
-                        resetRenewalValueToQuote(current)
-                      )
-                    }
-                  >
-                    Use quoted value
-                  </Button>
-                </div>
-              )}
+            {quoteSnapshot && valueState.manualOverrideActive && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                <span className="rounded-full bg-amber-500/10 px-2 py-1 font-medium text-amber-700">
+                  {valueState.staleManualOverride
+                    ? 'Manual override differs from latest quote'
+                    : 'Manual override active'}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-auto px-2 py-1 text-xs"
+                  onClick={() =>
+                    setValueState((current) =>
+                      resetRenewalValueToQuote(current)
+                    )
+                  }
+                >
+                  Use quoted value
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end">
