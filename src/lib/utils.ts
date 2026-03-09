@@ -1,6 +1,6 @@
-import { formatEther } from 'viem'
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { formatEther } from 'viem'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -36,7 +36,7 @@ export function formatEth(wei: string | bigint | number): string {
     }
 
     return `${formatted} ETH`
-  } catch (e) {
+  } catch {
     return '0.000 ETH'
   }
 }

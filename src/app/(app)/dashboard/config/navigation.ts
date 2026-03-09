@@ -3,7 +3,6 @@ import {
   Coins,
   LayoutDashboard,
   LineChart,
-  LogOut,
   Settings,
   ShieldCheck,
   WalletCards,
