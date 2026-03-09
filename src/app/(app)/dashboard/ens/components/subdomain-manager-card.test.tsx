@@ -27,7 +27,7 @@ describe('SubdomainManagerCard', () => {
     })
   })
 
-  it('renders the merged founder and custom subdomain surfaces', () => {
+  it('renders the custom subdomain and active subdomains sections', () => {
     const html = renderToStaticMarkup(
       <SubdomainManagerCard
         companyId="1"
@@ -35,29 +35,19 @@ describe('SubdomainManagerCard', () => {
         chainId={11155111}
         safeAddress="0x2222222222222222222222222222222222222222"
         startupChainAddress="0x3333333333333333333333333333333333333333"
-        founders={[
-          {
-            wallet: '0x4444444444444444444444444444444444444444',
-            equityBps: 5_000n,
-            equityPercent: 50,
-            role: 'Founder',
-          },
-        ]}
         subdomains={[]}
         subdomainsSupported
       />
     )
 
-    expect(html).toContain('Team subdomains')
-    expect(html).toContain('Founder subdomains')
-    expect(html).toContain('Create founder subdomains')
+    expect(html).toContain('Subdomains')
     expect(html).toContain('Custom subdomain')
     expect(html).toContain('Create custom subdomain')
     expect(html).toContain('Active subdomains')
-    expect(html).toContain('alice.acme.eth')
+    expect(html).not.toContain('Founder subdomains')
   })
 
-  it('shows the unsupported deployment message in the merged surface', () => {
+  it('shows the unsupported deployment message', () => {
     const html = renderToStaticMarkup(
       <SubdomainManagerCard
         companyId="1"
@@ -65,7 +55,6 @@ describe('SubdomainManagerCard', () => {
         chainId={11155111}
         safeAddress="0x2222222222222222222222222222222222222222"
         startupChainAddress="0x3333333333333333333333333333333333333333"
-        founders={[]}
         subdomains={[]}
         subdomainsSupported={false}
       />
@@ -73,9 +62,6 @@ describe('SubdomainManagerCard', () => {
 
     expect(html).toContain(
       'Subdomain actions unavailable on current deployment.'
-    )
-    expect(html).toContain(
-      'This deployment does not expose subdomain methods yet, so founder and custom subdomain proposals are disabled.'
     )
   })
 
@@ -87,7 +73,6 @@ describe('SubdomainManagerCard', () => {
         chainId={11155111}
         safeAddress="0x2222222222222222222222222222222222222222"
         startupChainAddress="0x3333333333333333333333333333333333333333"
-        founders={[]}
         subdomains={[]}
         subdomainsSupported
       />

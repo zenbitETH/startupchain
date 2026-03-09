@@ -31,6 +31,7 @@ import {
   CompanyCard,
   EnsTraitsCard,
   ExpiryExtensionCard,
+  FounderSubdomainList,
   ManagementTabs,
   RegistrationHistory,
   RegistrationStatusInline,
@@ -190,6 +191,20 @@ export default async function EnsDashboardPage({ searchParams }: PageProps) {
           ensAppBase={ensAppBase}
           explorerBase={explorerBase}
           latestEventTxHash={latestEvent?.transactionHash}
+          foundersSlot={
+            company && ensManagement ? (
+              <FounderSubdomainList
+                companyId={company.id}
+                ensName={company.ensName}
+                chainId={chainId}
+                safeAddress={company.safeAddress}
+                startupChainAddress={getStartupChainAddress(chainId)}
+                founders={company.founders}
+                subdomains={ensManagement.subdomains}
+                subdomainsSupported={ensManagement.subdomainsSupported}
+              />
+            ) : undefined
+          }
           statusSlot={
             latestEvent || pending?.status === 'completed' ? (
               <RegistrationStatusInline
@@ -230,7 +245,6 @@ export default async function EnsDashboardPage({ searchParams }: PageProps) {
                 chainId={chainId}
                 safeAddress={company.safeAddress}
                 startupChainAddress={getStartupChainAddress(chainId)}
-                founders={company.founders}
                 subdomains={ensManagement.subdomains}
                 subdomainsSupported={ensManagement.subdomainsSupported}
               />

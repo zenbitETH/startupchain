@@ -14,7 +14,7 @@ type TabDefinition = {
 
 const TABS: TabDefinition[] = [
   { id: 'identity', label: 'Identity', icon: Palette },
-  { id: 'team', label: 'Team', icon: Users },
+  { id: 'team', label: 'Subdomains', icon: Users },
   { id: 'history', label: 'History', icon: Clock },
   { id: 'renewal', label: 'Renewal', icon: CalendarClock },
 ]

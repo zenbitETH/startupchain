@@ -1,4 +1,5 @@
 export { CompanyCard } from './company-card'
+export { FounderSubdomainList } from './founder-subdomain-list'
 export { EnsTraitsCard } from './ens-traits-card'
 export { ExpiryExtensionCard } from './expiry-extension-card'
 export { RegistrationHistory } from './registration-history'
