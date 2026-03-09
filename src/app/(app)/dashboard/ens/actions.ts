@@ -12,8 +12,43 @@ import {
   isSupportedChain,
 } from '@/lib/blockchain/startupchain-config'
 
+type UsdEstimate =
+  | { estimatedTotalUsd: string; usdEstimateSource: 'coinbase-spot' }
+  | { estimatedTotalUsd: null; usdEstimateSource: null }
+
+const NULL_USD_ESTIMATE: UsdEstimate = {
+  estimatedTotalUsd: null,
+  usdEstimateSource: null,
+}
+
+async function fetchEthSpotPriceUsd(): Promise<number | null> {
+  try {
+    const response = await fetch(
+      'https://api.coinbase.com/v2/prices/ETH-USD/spot',
+      { signal: AbortSignal.timeout(2000) }
+    )
+
+    if (!response.ok) {
+      return null
+    }
+
+    const json = (await response.json()) as {
+      data?: { amount?: string }
+    }
+    const spotPrice = json.data?.amount
+
+    if (!spotPrice || isNaN(Number(spotPrice))) {
+      return null
+    }
+
+    return Number(spotPrice)
+  } catch {
+    return null
+  }
+}
+
 export type EnsRenewalQuoteResult =
-  | {
+  | ({
       ok: true
       ensName: string
       durationSeconds: string
@@ -24,7 +59,7 @@ export type EnsRenewalQuoteResult =
       baseEth: string
       premiumEth: string
       totalEth: string
-    }
+    } & UsdEstimate)
   | {
       ok: false
       error: string
@@ -59,14 +94,26 @@ export async function getEnsRenewalQuoteAction({
     const controllerAddress = getEnsControllerAddress(chainId)
     const client = getPublicClient(chainId)
 
-    const price = await client.readContract({
-      address: controllerAddress,
-      abi: ensControllerAbi,
-      functionName: 'rentPrice',
-      args: [label, durationSeconds],
-    })
+    const [price, spotPriceUsd] = await Promise.all([
+      client.readContract({
+        address: controllerAddress,
+        abi: ensControllerAbi,
+        functionName: 'rentPrice',
+        args: [label, durationSeconds],
+      }),
+      fetchEthSpotPriceUsd(),
+    ])
 
     const total = price.base + price.premium
+    const totalEth = formatEther(total)
+
+    const usdEstimate: UsdEstimate =
+      spotPriceUsd !== null
+        ? {
+            estimatedTotalUsd: (Number(totalEth) * spotPriceUsd).toFixed(2),
+            usdEstimateSource: 'coinbase-spot',
+          }
+        : NULL_USD_ESTIMATE
 
     return {
       ok: true,
@@ -78,7 +125,8 @@ export async function getEnsRenewalQuoteAction({
       totalWei: total.toString(),
       baseEth: formatEther(price.base),
       premiumEth: formatEther(price.premium),
-      totalEth: formatEther(total),
+      totalEth,
+      ...usdEstimate,
     }
   } catch (error) {
     return {

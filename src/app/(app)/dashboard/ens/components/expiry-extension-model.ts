@@ -1,11 +1,18 @@
-export type RenewalQuoteSnapshot = {
-  baseWei: string
-  premiumWei: string
-  totalWei: string
-  baseEth: string
-  premiumEth: string
-  totalEth: string
-}
+import type { EnsRenewalQuoteResult } from '../actions'
+
+type EnsRenewalQuoteSuccess = Extract<EnsRenewalQuoteResult, { ok: true }>
+
+export type RenewalQuoteSnapshot = Pick<
+  EnsRenewalQuoteSuccess,
+  | 'baseWei'
+  | 'premiumWei'
+  | 'totalWei'
+  | 'baseEth'
+  | 'premiumEth'
+  | 'totalEth'
+  | 'estimatedTotalUsd'
+  | 'usdEstimateSource'
+>
 
 export type RenewalValueState = {
   renewalValue: string

@@ -18,6 +18,8 @@ describe('expiry-extension-model', () => {
     baseEth: '0.00000000000000001',
     premiumEth: '0.000000000000000002',
     totalEth: '0.000000000000000012',
+    estimatedTotalUsd: '0.03',
+    usdEstimateSource: 'coinbase-spot' as const,
   }
 
   it('prefills the renewal value from the fetched quote', () => {

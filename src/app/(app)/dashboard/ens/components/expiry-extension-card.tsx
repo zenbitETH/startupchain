@@ -16,6 +16,7 @@ import {
 import { getEnsRenewalQuoteAction } from '../actions'
 import {
   type RenewalQuoteSnapshot,
+  type RenewalValueState,
   applyRenewalQuoteToValue,
   canSubmitRenewalProposal,
   createRenewalValueState,
@@ -24,6 +25,64 @@ import {
   resetRenewalValueToQuote,
   updateRenewalValueInput,
 } from './expiry-extension-model'
+
+function RenewalValueInput({
+  valueState,
+  setValueState,
+  placeholder,
+  disabled,
+  helperText,
+  showOverrideControls,
+}: {
+  valueState: RenewalValueState
+  setValueState: React.Dispatch<React.SetStateAction<RenewalValueState>>
+  placeholder: string
+  disabled: boolean
+  helperText: string
+  showOverrideControls: boolean
+}) {
+  return (
+    <div className="mt-3">
+      <label className="mb-1 block text-xs font-medium" htmlFor="renewal-value">
+        Renewal value (wei)
+      </label>
+      <input
+        id="renewal-value"
+        type="text"
+        value={valueState.renewalValue}
+        onChange={(e) =>
+          setValueState((current) =>
+            updateRenewalValueInput(current, e.target.value)
+          )
+        }
+        placeholder={placeholder}
+        disabled={disabled}
+        className="border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
+      />
+      <p className="text-muted-foreground mt-1 text-xs">{helperText}</p>
+      {showOverrideControls && valueState.manualOverrideActive && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-full bg-amber-500/10 px-2 py-1 font-medium text-amber-700">
+            {valueState.staleManualOverride
+              ? 'Manual override differs from latest quote'
+              : 'Manual override active'}
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-auto px-2 py-1 text-xs"
+            onClick={() =>
+              setValueState((current) => resetRenewalValueToQuote(current))
+            }
+          >
+            Use quoted value
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const DURATION_OPTIONS = [
   { label: '1 year', seconds: 31536000n },
@@ -121,13 +180,15 @@ export function ExpiryExtensionCard({
           return
         }
 
-        const nextQuote = {
+        const nextQuote: RenewalQuoteSnapshot = {
           baseWei: result.baseWei,
           premiumWei: result.premiumWei,
           totalWei: result.totalWei,
           baseEth: result.baseEth,
           premiumEth: result.premiumEth,
           totalEth: result.totalEth,
+          estimatedTotalUsd: result.estimatedTotalUsd,
+          usdEstimateSource: result.usdEstimateSource,
         }
 
         setQuoteState({ status: 'ready', quote: nextQuote })
@@ -221,6 +282,27 @@ export function ExpiryExtensionCard({
 
       {chainId && safeAddress && controllerAddress && (
         <div className="mt-4 space-y-3">
+          <div>
+            <label
+              className="mb-1 block text-xs font-medium"
+              htmlFor="renewal-duration"
+            >
+              Duration
+            </label>
+            <select
+              id="renewal-duration"
+              value={selectedDuration}
+              onChange={(e) => setSelectedDuration(Number(e.target.value))}
+              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
+            >
+              {DURATION_OPTIONS.map((opt, idx) => (
+                <option key={opt.label} value={idx}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {quoteState.status === 'loading' && (
             <div className="rounded-xl border border-dashed px-3 py-3 text-sm">
               <div className="flex items-center gap-2">
@@ -240,18 +322,50 @@ export function ExpiryExtensionCard({
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-semibold">
-                    {quoteSnapshot.totalEth} ETH
-                  </p>
-                  <p className="text-muted-foreground font-mono text-xs">
-                    {quoteSnapshot.totalWei} wei
-                  </p>
+                  {quoteSnapshot.estimatedTotalUsd ? (
+                    <>
+                      <p className="text-foreground text-xl font-bold">
+                        ${quoteSnapshot.estimatedTotalUsd}
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        Estimated total
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-sm font-medium">
+                        {quoteSnapshot.totalEth} ETH
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-foreground text-xl font-bold">
+                        {quoteSnapshot.totalEth} ETH
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        USD estimate unavailable
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
-              <div className="text-muted-foreground mt-3 grid gap-2 text-xs sm:grid-cols-2">
-                <p>Base: {quoteSnapshot.baseEth} ETH</p>
-                <p>Premium: {quoteSnapshot.premiumEth} ETH</p>
-              </div>
+              <details className="mt-3">
+                <summary className="text-muted-foreground cursor-pointer text-xs font-medium select-none">
+                  Advanced quote details
+                </summary>
+                <div className="text-muted-foreground mt-2 space-y-1 text-xs">
+                  <p>Base: {quoteSnapshot.baseEth} ETH</p>
+                  {quoteSnapshot.premiumWei !== '0' && (
+                    <p>Premium: {quoteSnapshot.premiumEth} ETH</p>
+                  )}
+                  <p>Raw value: {quoteSnapshot.totalWei} wei</p>
+                </div>
+                <RenewalValueInput
+                  valueState={valueState}
+                  setValueState={setValueState}
+                  placeholder={renewalValuePlaceholder}
+                  disabled={isRenewalValueDisabled}
+                  helperText={renewalValueHelperText}
+                  showOverrideControls={Boolean(quoteSnapshot)}
+                />
+              </details>
             </div>
           )}
 
@@ -275,76 +389,21 @@ export function ExpiryExtensionCard({
                   </Button>
                 </div>
               )}
+              <details className="mt-3" open>
+                <summary className="text-muted-foreground cursor-pointer text-xs font-medium select-none">
+                  Advanced quote details
+                </summary>
+                <RenewalValueInput
+                  valueState={valueState}
+                  setValueState={setValueState}
+                  placeholder={renewalValuePlaceholder}
+                  disabled={isRenewalValueDisabled}
+                  helperText={renewalValueHelperText}
+                  showOverrideControls={false}
+                />
+              </details>
             </div>
           )}
-
-          <div>
-            <label
-              className="mb-1 block text-xs font-medium"
-              htmlFor="renewal-duration"
-            >
-              Duration
-            </label>
-            <select
-              id="renewal-duration"
-              value={selectedDuration}
-              onChange={(e) => setSelectedDuration(Number(e.target.value))}
-              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
-            >
-              {DURATION_OPTIONS.map((opt, idx) => (
-                <option key={opt.label} value={idx}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              className="mb-1 block text-xs font-medium"
-              htmlFor="renewal-value"
-            >
-              Renewal value (wei)
-            </label>
-            <input
-              id="renewal-value"
-              type="text"
-              value={valueState.renewalValue}
-              onChange={(e) =>
-                setValueState((current) =>
-                  updateRenewalValueInput(current, e.target.value)
-                )
-              }
-              placeholder={renewalValuePlaceholder}
-              disabled={isRenewalValueDisabled}
-              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
-            />
-            <p className="text-muted-foreground mt-1 text-xs">
-              {renewalValueHelperText}
-            </p>
-            {quoteSnapshot && valueState.manualOverrideActive && (
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                <span className="rounded-full bg-amber-500/10 px-2 py-1 font-medium text-amber-700">
-                  {valueState.staleManualOverride
-                    ? 'Manual override differs from latest quote'
-                    : 'Manual override active'}
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-auto px-2 py-1 text-xs"
-                  onClick={() =>
-                    setValueState((current) =>
-                      resetRenewalValueToQuote(current)
-                    )
-                  }
-                >
-                  Use quoted value
-                </Button>
-              </div>
-            )}
-          </div>
 
           <div className="flex justify-end">
             <Button
