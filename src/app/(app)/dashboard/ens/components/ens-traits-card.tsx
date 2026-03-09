@@ -1,11 +1,13 @@
 'use client'
 
-import { ExternalLink, Loader2, ShieldAlert } from 'lucide-react'
+import { ExternalLink, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { usePollingRefresh } from '@/hooks/use-polling-refresh'
+import { useSafeProposalError } from '@/hooks/use-safe-proposal-error'
 import { useSafeWallet } from '@/hooks/use-safe-wallet'
 import {
   ENS_TRAIT_LABELS,
@@ -14,13 +16,11 @@ import {
   buildSetEnsTraitTransaction,
 } from '@/lib/blockchain/ens-management'
 import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
-import {
-  handleSafeProposalError,
-  proposeSafeTransactionFromWallet,
-} from '@/lib/blockchain/safe-proposal-client'
+import { proposeSafeTransactionFromWallet } from '@/lib/blockchain/safe-proposal-client'
 import { shortenAddress } from '@/lib/utils'
 
 import { SafeProposalServiceNotice } from './safe-proposal-service-notice'
+import { WalletConnectionWarning } from './wallet-connection-warning'
 
 type PendingTraitUpdate = {
   value: string
@@ -54,10 +54,16 @@ export function EnsTraitsCard({
   const router = useRouter()
   const { authenticated, ensureWalletReady } = useSafeWallet({ chainId })
 
+  const {
+    errorMessage,
+    safeApiUnavailable,
+    handleError,
+    clearError,
+    markApiAvailable,
+  } = useSafeProposalError()
+
   const [formValues, setFormValues] = useState<EnsTraits>(traits)
   const [busyKey, setBusyKey] = useState<EnsTraitKey | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [safeApiUnavailable, setSafeApiUnavailable] = useState(false)
   const [pending, setPending] = useState<
     Record<EnsTraitKey, PendingTraitUpdate | null>
   >({
@@ -97,15 +103,7 @@ export function EnsTraitsCard({
     [pending]
   )
 
-  useEffect(() => {
-    if (!hasPending) return
-    const intervalId = window.setInterval(() => {
-      router.refresh()
-    }, 15_000)
-    return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [hasPending, router])
+  usePollingRefresh(hasPending)
 
   async function handleProposeTraitUpdate(key: EnsTraitKey) {
     const value = formValues[key].trim()
@@ -116,7 +114,7 @@ export function EnsTraitsCard({
     }
 
     try {
-      setErrorMessage(null)
+      clearError()
       setBusyKey(key)
 
       const { walletAddress, provider } = await ensureWalletReady()
@@ -136,20 +134,14 @@ export function EnsTraitsCard({
         origin: `startupchain:ens-trait:${key}`,
       })
 
-      setSafeApiUnavailable(false)
+      markApiAvailable()
       setPending((current) => ({
         ...current,
         [key]: { value, safeTxHash },
       }))
       router.refresh()
     } catch (error) {
-      handleSafeProposalError(error, 'Failed to propose ENS trait update', {
-        onApiUnavailable: (msg) => {
-          setSafeApiUnavailable(true)
-          setErrorMessage(msg)
-        },
-        onError: (msg) => setErrorMessage(msg),
-      })
+      handleError(error, 'Failed to propose ENS trait update')
     } finally {
       setBusyKey(null)
     }
@@ -189,12 +181,7 @@ export function EnsTraitsCard({
         </div>
       </div>
 
-      {!authenticated && (
-        <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700">
-          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>Wallet connection required to submit Safe proposals.</p>
-        </div>
-      )}
+      {!authenticated && <WalletConnectionWarning />}
 
       {errorMessage && (
         <div className="bg-destructive/10 text-destructive mt-4 rounded-xl border border-current/20 px-3 py-2 text-sm">

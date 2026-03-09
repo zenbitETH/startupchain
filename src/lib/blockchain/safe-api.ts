@@ -4,6 +4,7 @@
  */
 import pLimit from 'p-limit'
 
+import { getSafeApiKey } from './safe-api-config'
 import {
   getSafeApiBaseUrl,
   getSafeWalletUrl as getSafeWalletUrlFromLinks,
@@ -102,10 +103,6 @@ export type SafeOwnershipVerificationResult =
       status: 'unavailable'
       statusCode?: number
     }
-
-function getSafeApiKey(): string | undefined {
-  return process.env.SAFE_API_KEY?.trim() || undefined
-}
 
 async function safeFetchDetailed<T>(url: string): Promise<SafeFetchResult<T>> {
   return limit(async () => {

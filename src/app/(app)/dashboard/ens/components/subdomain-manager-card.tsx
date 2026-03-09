@@ -1,12 +1,14 @@
 'use client'
 
-import { ExternalLink, Loader2, ShieldAlert } from 'lucide-react'
+import { ExternalLink, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { isAddress } from 'viem'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { usePollingRefresh } from '@/hooks/use-polling-refresh'
+import { useSafeProposalError } from '@/hooks/use-safe-proposal-error'
 import { useSafeWallet } from '@/hooks/use-safe-wallet'
 import {
   type SubdomainRecord,
@@ -14,13 +16,11 @@ import {
   buildRevokeSubdomainTransaction,
 } from '@/lib/blockchain/ens-management'
 import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
-import {
-  handleSafeProposalError,
-  proposeSafeTransactionFromWallet,
-} from '@/lib/blockchain/safe-proposal-client'
+import { proposeSafeTransactionFromWallet } from '@/lib/blockchain/safe-proposal-client'
 import { shortenAddress } from '@/lib/utils'
 
 import { SafeProposalServiceNotice } from './safe-proposal-service-notice'
+import { WalletConnectionWarning } from './wallet-connection-warning'
 
 type PendingSubdomainOperation =
   | {
@@ -61,12 +61,18 @@ export function SubdomainManagerCard({
   const { authenticated, ensureWalletReady, expectedWalletAddress } =
     useSafeWallet({ chainId })
 
+  const {
+    errorMessage,
+    safeApiUnavailable,
+    handleError,
+    clearError,
+    markApiAvailable,
+  } = useSafeProposalError()
+
   const [customLabelInput, setCustomLabelInput] = useState('')
   const [ownerInput, setOwnerInput] = useState(expectedWalletAddress ?? '')
   const [ownerTouched, setOwnerTouched] = useState(false)
   const [busyAction, setBusyAction] = useState<BusySubdomainAction>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [safeApiUnavailable, setSafeApiUnavailable] = useState(false)
   const [pendingOps, setPendingOps] = useState<PendingSubdomainOperation[]>([])
 
   const hasPending = pendingOps.length > 0
@@ -101,15 +107,7 @@ export function SubdomainManagerCard({
     )
   }, [hasPending, subdomains])
 
-  useEffect(() => {
-    if (!hasPending) return
-    const intervalId = window.setInterval(() => {
-      router.refresh()
-    }, 15_000)
-    return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [hasPending, router])
+  usePollingRefresh(hasPending)
 
   const anyActionBusy = Boolean(busyAction)
   const isActionDisabled =
@@ -117,20 +115,13 @@ export function SubdomainManagerCard({
     anyActionBusy ||
     !subdomainsSupported ||
     safeApiUnavailable
-  const proposalErrorCallbacks = {
-    onApiUnavailable: (msg: string) => {
-      setSafeApiUnavailable(true)
-      setErrorMessage(msg)
-    },
-    onError: (msg: string) => setErrorMessage(msg),
-  }
 
   async function handleCreateSubdomain() {
     if (isActionDisabled) return
 
     try {
       setBusyAction({ type: 'create' })
-      setErrorMessage(null)
+      clearError()
 
       if (!customLabelInput.trim()) {
         throw new Error('Subdomain label is required')
@@ -156,7 +147,7 @@ export function SubdomainManagerCard({
         origin: 'startupchain:subdomain:create',
       })
 
-      setSafeApiUnavailable(false)
+      markApiAvailable()
       setPendingOps((current) => [
         ...current,
         {
@@ -169,11 +160,7 @@ export function SubdomainManagerCard({
       setCustomLabelInput('')
       router.refresh()
     } catch (error) {
-      handleSafeProposalError(
-        error,
-        'Failed to propose subdomain creation',
-        proposalErrorCallbacks
-      )
+      handleError(error, 'Failed to propose subdomain creation')
     } finally {
       setBusyAction(null)
     }
@@ -184,7 +171,7 @@ export function SubdomainManagerCard({
 
     try {
       setBusyAction({ type: 'revoke', label })
-      setErrorMessage(null)
+      clearError()
 
       const { walletAddress, provider } = await ensureWalletReady()
       const transaction = buildRevokeSubdomainTransaction({
@@ -202,7 +189,7 @@ export function SubdomainManagerCard({
         origin: 'startupchain:subdomain:revoke',
       })
 
-      setSafeApiUnavailable(false)
+      markApiAvailable()
       setPendingOps((current) => [
         ...current,
         {
@@ -213,11 +200,7 @@ export function SubdomainManagerCard({
       ])
       router.refresh()
     } catch (error) {
-      handleSafeProposalError(
-        error,
-        'Failed to propose subdomain revoke',
-        proposalErrorCallbacks
-      )
+      handleError(error, 'Failed to propose subdomain revoke')
     } finally {
       setBusyAction(null)
     }
@@ -243,12 +226,7 @@ export function SubdomainManagerCard({
         </a>
       </div>
 
-      {!authenticated && (
-        <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700">
-          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>Wallet connection required to submit Safe proposals.</p>
-        </div>
-      )}
+      {!authenticated && <WalletConnectionWarning />}
 
       {expectedWalletAddress && (
         <div className="text-muted-foreground mt-4 rounded-xl border border-dashed px-3 py-3 text-sm">

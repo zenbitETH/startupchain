@@ -8,6 +8,12 @@ import {
 import { privateKeyToAccount } from 'viem/accounts'
 import { mainnet, sepolia } from 'viem/chains'
 
+import {
+  getEnsControllerAddress,
+  getEnsResolverAddress,
+  getEnsReverseRegistrarAddress,
+} from './startupchain-config'
+
 function normalizePrivateKey(value?: string): `0x${string}` {
   if (!value) {
     throw new Error('STARTUPCHAIN_SIGNER_KEY is not set')
@@ -41,16 +47,13 @@ const CHAIN_DEFINITIONS = {
       contracts: {
         ...sepoliaEnsContracts.contracts,
         ensEthRegistrarController: {
-          address:
-            '0xfb3cE5D01e0f33f41DbB39035dB9745962F1f968' as `0x${string}`,
+          address: getEnsControllerAddress(sepolia.id),
         },
         ensPublicResolver: {
-          address:
-            '0x8FADE66B79cC9f707aB26799354482EB93a5B7dD' as `0x${string}`,
+          address: getEnsResolverAddress(sepolia.id),
         },
         ensReverseRegistrar: {
-          address:
-            '0xA0a1AbcDAe1a2a4A2EF8e9113Ff0e02DD81DC0C6' as `0x${string}`,
+          address: getEnsReverseRegistrarAddress(sepolia.id),
         },
       },
     },
@@ -84,7 +87,9 @@ function getRpcUrl(chainKey: SupportedChainKey): string {
   return rpcUrl
 }
 
-function getChainConfigByKey(chainKey: SupportedChainKey): SupportedChainConfig {
+function getChainConfigByKey(
+  chainKey: SupportedChainKey
+): SupportedChainConfig {
   return {
     chain: CHAIN_DEFINITIONS[chainKey].chain,
     rpcUrl: getRpcUrl(chainKey),
@@ -262,9 +267,7 @@ export const startupChainAccount = createLazyProxy<
 
 export const startupChainChain = createLazyProxy<
   ReturnType<typeof getStartupChainChain>
->(() =>
-  getStartupChainChain()
-)
+>(() => getStartupChainChain())
 
 export const startupChainClient = async () => ({
   publicClient: getDefaultPublicClient(),

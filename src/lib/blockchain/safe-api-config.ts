@@ -16,9 +16,13 @@ export class SafeApiConfigurationError extends Error {
 }
 
 export function isSafeApiConfigurationError(
-  error: unknown,
+  error: unknown
 ): error is SafeApiConfigurationError {
   return error instanceof SafeApiConfigurationError
+}
+
+export function getSafeApiKey(): string | undefined {
+  return process.env.SAFE_API_KEY?.trim() || undefined
 }
 
 export function getSafeApiKitConfig(chainId: number): SafeApiKitConfigResolved {
@@ -26,11 +30,11 @@ export function getSafeApiKitConfig(chainId: number): SafeApiKitConfigResolved {
     throw new Error('Safe chain ID is invalid')
   }
 
-  const apiKey = process.env.SAFE_API_KEY?.trim()
+  const apiKey = getSafeApiKey()
   if (!apiKey) {
     throw new SafeApiConfigurationError(
       'SAFE_API_KEY_MISSING',
-      'Safe proposal service is not configured',
+      'Safe proposal service is not configured'
     )
   }
 

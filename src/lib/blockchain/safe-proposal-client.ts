@@ -2,6 +2,8 @@
 
 import Safe from '@safe-global/protocol-kit'
 
+import type { SafeWalletProvider } from '@/hooks/safe-wallet-utils'
+
 import type { SafeTransactionRequest } from './ens-management'
 
 export type SafeProposeErrorCode =
@@ -12,13 +14,6 @@ export type SafeProposeErrorCode =
 export type SafeProposeError = {
   error: string
   code?: SafeProposeErrorCode
-}
-
-type Eip1193Provider = {
-  request: (args: {
-    method: string
-    params?: unknown[] | object
-  }) => Promise<unknown>
 }
 
 type ProposeResponse = {
@@ -114,7 +109,7 @@ export async function proposeSafeTransactionFromWallet({
   transaction,
   origin,
 }: {
-  provider: Eip1193Provider
+  provider: SafeWalletProvider
   chainId: number
   safeAddress: `0x${string}`
   senderAddress: `0x${string}`
@@ -139,7 +134,7 @@ export async function proposeBatchSafeTransactionFromWallet({
   transactions,
   origin,
 }: {
-  provider: Eip1193Provider
+  provider: SafeWalletProvider
   chainId: number
   safeAddress: `0x${string}`
   senderAddress: `0x${string}`

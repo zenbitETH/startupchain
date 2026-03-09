@@ -12,6 +12,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { usePollingRefresh } from '@/hooks/use-polling-refresh'
+import { useSafeProposalError } from '@/hooks/use-safe-proposal-error'
 import { useSafeWallet } from '@/hooks/use-safe-wallet'
 import {
   type SubdomainRecord,
@@ -19,10 +21,7 @@ import {
 } from '@/lib/blockchain/ens-management'
 import type { Founder } from '@/lib/blockchain/get-company'
 import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
-import {
-  handleSafeProposalError,
-  proposeBatchSafeTransactionFromWallet,
-} from '@/lib/blockchain/safe-proposal-client'
+import { proposeBatchSafeTransactionFromWallet } from '@/lib/blockchain/safe-proposal-client'
 import { shortenAddress } from '@/lib/utils'
 
 import { SafeProposalServiceNotice } from './safe-proposal-service-notice'
@@ -73,10 +72,16 @@ export function FounderSubdomainList({
     [subdomains]
   )
 
+  const {
+    errorMessage,
+    safeApiUnavailable,
+    handleError,
+    clearError,
+    markApiAvailable,
+  } = useSafeProposalError()
+
   const [labelInputs, setLabelInputs] = useState<Record<string, string>>({})
   const [isBusy, setIsBusy] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [safeApiUnavailable, setSafeApiUnavailable] = useState(false)
   const [pendingBatch, setPendingBatch] = useState<PendingBatch | null>(null)
 
   const filledEntries = useMemo(() => {
@@ -102,16 +107,7 @@ export function FounderSubdomainList({
     }
   }, [pendingBatch, subdomains])
 
-  // Poll for updates while a batch is pending
-  useEffect(() => {
-    if (!pendingBatch) return
-    const intervalId = window.setInterval(() => {
-      router.refresh()
-    }, 15_000)
-    return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [pendingBatch, router])
+  usePollingRefresh(Boolean(pendingBatch))
 
   const isDisabled =
     !authenticated ||
@@ -126,7 +122,7 @@ export function FounderSubdomainList({
 
     try {
       setIsBusy(true)
-      setErrorMessage(null)
+      clearError()
 
       const { walletAddress, provider } = await ensureWalletReady()
       const transactions = buildBatchCreateSubdomainsTransactions({
@@ -148,17 +144,11 @@ export function FounderSubdomainList({
         labels: filledEntries.map((e) => e.label),
         safeTxHash,
       })
-      setSafeApiUnavailable(false)
+      markApiAvailable()
       setLabelInputs({})
       router.refresh()
     } catch (error) {
-      handleSafeProposalError(error, 'Failed to assign subdomains', {
-        onApiUnavailable: (msg: string) => {
-          setSafeApiUnavailable(true)
-          setErrorMessage(msg)
-        },
-        onError: (msg: string) => setErrorMessage(msg),
-      })
+      handleError(error, 'Failed to assign subdomains')
     } finally {
       setIsBusy(false)
     }

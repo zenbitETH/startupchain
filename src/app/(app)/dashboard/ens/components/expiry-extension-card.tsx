@@ -1,17 +1,15 @@
 'use client'
 
-import { ExternalLink, Loader2, ShieldAlert } from 'lucide-react'
+import { ExternalLink, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { useSafeProposalError } from '@/hooks/use-safe-proposal-error'
 import { useSafeWallet } from '@/hooks/use-safe-wallet'
 import { buildRenewEnsTransaction } from '@/lib/blockchain/ens-management'
 import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
-import {
-  handleSafeProposalError,
-  proposeSafeTransactionFromWallet,
-} from '@/lib/blockchain/safe-proposal-client'
+import { proposeSafeTransactionFromWallet } from '@/lib/blockchain/safe-proposal-client'
 
 import { getEnsRenewalQuoteAction } from '../actions'
 import {
@@ -26,6 +24,7 @@ import {
   updateRenewalValueInput,
 } from './expiry-extension-model'
 import { SafeProposalServiceNotice } from './safe-proposal-service-notice'
+import { WalletConnectionWarning } from './wallet-connection-warning'
 
 function RenewalValueInput({
   valueState,
@@ -113,10 +112,17 @@ export function ExpiryExtensionCard({
     chainId: chainId ?? 0,
   })
 
+  const {
+    errorMessage,
+    safeApiUnavailable,
+    handleError,
+    setError,
+    clearError,
+    markApiAvailable,
+  } = useSafeProposalError()
+
   const [selectedDuration, setSelectedDuration] = useState(0)
   const [isBusy, setIsBusy] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [safeApiUnavailable, setSafeApiUnavailable] = useState(false)
   const [quoteState, setQuoteState] = useState<
     | { status: 'idle' }
     | { status: 'loading' }
@@ -224,13 +230,13 @@ export function ExpiryExtensionCard({
 
     const value = parseRenewalValue(valueState.renewalValue)
     if (value === null) {
-      setErrorMessage('Invalid value: enter a valid number in wei.')
+      setError('Invalid value: enter a valid number in wei.')
       return
     }
 
     try {
       setIsBusy(true)
-      setErrorMessage(null)
+      clearError()
 
       const { walletAddress, provider } = await ensureWalletReady()
       const transaction = buildRenewEnsTransaction({
@@ -249,16 +255,10 @@ export function ExpiryExtensionCard({
         origin: 'startupchain:ens:renew',
       })
 
-      setSafeApiUnavailable(false)
+      markApiAvailable()
       router.refresh()
     } catch (error) {
-      handleSafeProposalError(error, 'Failed to propose renewal', {
-        onApiUnavailable: (msg) => {
-          setSafeApiUnavailable(true)
-          setErrorMessage(msg)
-        },
-        onError: (msg) => setErrorMessage(msg),
-      })
+      handleError(error, 'Failed to propose renewal')
     } finally {
       setIsBusy(false)
     }
@@ -275,12 +275,7 @@ export function ExpiryExtensionCard({
           : 'Extend your ENS registration from the ENS app or Safe queue.'}
       </p>
 
-      {!authenticated && chainId && safeAddress && (
-        <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700">
-          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>Wallet connection required to submit Safe proposals.</p>
-        </div>
-      )}
+      {!authenticated && chainId && safeAddress && <WalletConnectionWarning />}
 
       {errorMessage && (
         <div className="bg-destructive/10 text-destructive mt-4 rounded-xl border border-current/20 px-3 py-2 text-sm">

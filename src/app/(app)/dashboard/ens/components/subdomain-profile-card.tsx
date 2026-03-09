@@ -1,11 +1,12 @@
 'use client'
 
-import { ExternalLink, Loader2, ShieldAlert } from 'lucide-react'
+import { ExternalLink, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useSafeProposalError } from '@/hooks/use-safe-proposal-error'
 import { useSafeWallet } from '@/hooks/use-safe-wallet'
 import {
   ENS_TRAIT_KEYS,
@@ -17,12 +18,10 @@ import {
   buildSetPrimaryNameTransaction,
 } from '@/lib/blockchain/ens-management'
 import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
-import {
-  handleSafeProposalError,
-  proposeSafeTransactionFromWallet,
-} from '@/lib/blockchain/safe-proposal-client'
+import { proposeSafeTransactionFromWallet } from '@/lib/blockchain/safe-proposal-client'
 
 import { SafeProposalServiceNotice } from './safe-proposal-service-notice'
+import { WalletConnectionWarning } from './wallet-connection-warning'
 
 export function SubdomainProfileCard({
   ensName,
@@ -57,9 +56,14 @@ export function SubdomainProfileCard({
     }
     return empty as EnsTraits
   })
+  const {
+    errorMessage,
+    safeApiUnavailable,
+    handleError,
+    clearError,
+    markApiAvailable,
+  } = useSafeProposalError()
   const [busyKey, setBusyKey] = useState<EnsTraitKey | 'primary' | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [safeApiUnavailable, setSafeApiUnavailable] = useState(false)
 
   const fullSubdomainName = selectedSubdomain
     ? `${selectedSubdomain}.${ensName}`
@@ -70,7 +74,7 @@ export function SubdomainProfileCard({
     if (!value || !fullSubdomainName) return
 
     try {
-      setErrorMessage(null)
+      clearError()
       setBusyKey(key)
 
       const { walletAddress, provider } = await ensureWalletReady()
@@ -90,16 +94,10 @@ export function SubdomainProfileCard({
         origin: `startupchain:subdomain-trait:${key}`,
       })
 
-      setSafeApiUnavailable(false)
+      markApiAvailable()
       router.refresh()
     } catch (error) {
-      handleSafeProposalError(error, 'Failed to propose trait update', {
-        onApiUnavailable: (msg) => {
-          setSafeApiUnavailable(true)
-          setErrorMessage(msg)
-        },
-        onError: (msg) => setErrorMessage(msg),
-      })
+      handleError(error, 'Failed to propose trait update')
     } finally {
       setBusyKey(null)
     }
@@ -109,7 +107,7 @@ export function SubdomainProfileCard({
     if (!fullSubdomainName) return
 
     try {
-      setErrorMessage(null)
+      clearError()
       setBusyKey('primary')
 
       const { walletAddress, provider } = await ensureWalletReady()
@@ -127,16 +125,10 @@ export function SubdomainProfileCard({
         origin: 'startupchain:subdomain:set-primary',
       })
 
-      setSafeApiUnavailable(false)
+      markApiAvailable()
       router.refresh()
     } catch (error) {
-      handleSafeProposalError(error, 'Failed to propose primary name', {
-        onApiUnavailable: (msg) => {
-          setSafeApiUnavailable(true)
-          setErrorMessage(msg)
-        },
-        onError: (msg) => setErrorMessage(msg),
-      })
+      handleError(error, 'Failed to propose primary name')
     } finally {
       setBusyKey(null)
     }
@@ -166,12 +158,7 @@ export function SubdomainProfileCard({
         </a>
       </div>
 
-      {!authenticated && (
-        <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700">
-          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>Wallet connection required to submit Safe proposals.</p>
-        </div>
-      )}
+      {!authenticated && <WalletConnectionWarning />}
 
       {errorMessage && (
         <div className="bg-destructive/10 text-destructive mt-4 rounded-xl border border-current/20 px-3 py-2 text-sm">
