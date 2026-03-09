@@ -65,8 +65,8 @@ export function getEnsReverseRegistrarAddress(chainId: number): `0x${string}` {
 
 // ENS Controller (ETHRegistrarController) addresses per chain
 const ENS_CONTROLLER_ADDRESSES: Record<SupportedChainId, `0x${string}`> = {
-  [sepolia.id]: '0xFED6a969AaA60E4961FCD3EBF1A2e8913BAeDe47' as `0x${string}`,
-  [mainnet.id]: '0x253553366Da8546fC250F225fe3d25d0C782303b' as `0x${string}`,
+  [sepolia.id]: '0xfb3cE5D01e0f33f41DbB39035dB9745962F1f968' as `0x${string}`,
+  [mainnet.id]: '0x59E16fcCd424Cc24e280Be16E11Bcd56fb0CE547' as `0x${string}`,
 }
 
 export function getEnsControllerAddress(chainId: number): `0x${string}` {

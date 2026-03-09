@@ -151,7 +151,10 @@ export async function POST(request: Request) {
     const message =
       error instanceof Error ? error.message : 'Unknown Safe proposal error'
 
-    if (message.includes('not an owner or delegate')) {
+    // Safe Transaction Service SDK error for non-owner signers
+    // (observed in @safe-global/api-kit proposeTransaction)
+    const SAFE_SDK_NOT_OWNER_ERROR = 'not an owner or delegate'
+    if (message.includes(SAFE_SDK_NOT_OWNER_ERROR)) {
       return NextResponse.json(
         {
           error: 'Only Safe owners can submit ENS proposals for this company.',

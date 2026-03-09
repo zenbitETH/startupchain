@@ -15,7 +15,7 @@ import {
 } from '@/lib/blockchain/ens-management'
 import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
 import {
-  isSafeProposeClientError,
+  handleSafeProposalError,
   proposeSafeTransactionFromWallet,
 } from '@/lib/blockchain/safe-proposal-client'
 import { shortenAddress } from '@/lib/utils'
@@ -141,21 +141,13 @@ export function EnsTraitsCard({
       }))
       router.refresh()
     } catch (error) {
-      if (
-        isSafeProposeClientError(error) &&
-        error.code === 'SAFE_API_KEY_MISSING'
-      ) {
-        setSafeApiUnavailable(true)
-        setErrorMessage(
-          'Safe proposal service is not configured. Add SAFE_API_KEY on server.'
-        )
-      } else {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : 'Failed to propose ENS trait update'
-        )
-      }
+      handleSafeProposalError(error, 'Failed to propose ENS trait update', {
+        onApiUnavailable: (msg) => {
+          setSafeApiUnavailable(true)
+          setErrorMessage(msg)
+        },
+        onError: (msg) => setErrorMessage(msg),
+      })
     } finally {
       setBusyKey(null)
     }

@@ -2,16 +2,28 @@
 
 import { ExternalLink, Loader2, ShieldAlert } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { useSafeWallet } from '@/hooks/use-safe-wallet'
 import { buildRenewEnsTransaction } from '@/lib/blockchain/ens-management'
 import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
 import {
-  isSafeProposeClientError,
+  handleSafeProposalError,
   proposeSafeTransactionFromWallet,
 } from '@/lib/blockchain/safe-proposal-client'
+
+import { getEnsRenewalQuoteAction } from '../actions'
+import {
+  type RenewalQuoteSnapshot,
+  applyRenewalQuoteToValue,
+  canSubmitRenewalProposal,
+  createRenewalValueState,
+  enableManualRenewalOverride,
+  parseRenewalValue,
+  resetRenewalValueToQuote,
+  updateRenewalValueInput,
+} from './expiry-extension-model'
 
 const DURATION_OPTIONS = [
   { label: '1 year', seconds: 31536000n },
@@ -26,16 +38,6 @@ interface ExpiryExtensionCardProps {
   chainId?: number
   safeAddress?: `0x${string}`
   controllerAddress?: `0x${string}`
-}
-
-function parseRenewalValue(input: string): bigint | null {
-  const trimmed = input.trim()
-  if (!trimmed) return 0n
-  try {
-    return BigInt(trimmed)
-  } catch {
-    return null
-  }
 }
 
 export function ExpiryExtensionCard({
@@ -54,17 +56,97 @@ export function ExpiryExtensionCard({
   const [selectedDuration, setSelectedDuration] = useState(0)
   const [isBusy, setIsBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [renewalValue, setRenewalValue] = useState('')
+  const [quoteState, setQuoteState] = useState<
+    | { status: 'idle' }
+    | { status: 'loading' }
+    | { status: 'ready'; quote: RenewalQuoteSnapshot }
+    | { status: 'error'; error: string }
+  >({ status: 'idle' })
+  const [valueState, setValueState] = useState(createRenewalValueState())
+  const latestQuoteRequest = useRef(0)
 
-  const canPropose = Boolean(
-    chainId && safeAddress && controllerAddress && authenticated && !isBusy
-  )
+  const duration = DURATION_OPTIONS[selectedDuration].seconds
+  const canQuote = Boolean(chainId && controllerAddress)
+  const canPropose = canSubmitRenewalProposal({
+    authenticated,
+    chainId,
+    safeAddress,
+    controllerAddress,
+    isBusy,
+    quoteStatus: quoteState.status,
+    valueState,
+  })
+
+  useEffect(() => {
+    if (!canQuote || !chainId) {
+      setQuoteState({ status: 'idle' })
+      setValueState(createRenewalValueState())
+      return
+    }
+
+    const requestId = latestQuoteRequest.current + 1
+    latestQuoteRequest.current = requestId
+
+    setQuoteState({ status: 'loading' })
+
+    void getEnsRenewalQuoteAction({
+      ensName,
+      durationSeconds: duration,
+      chainId,
+    })
+      .then((result) => {
+        if (latestQuoteRequest.current !== requestId) {
+          return
+        }
+
+        if (!result.ok) {
+          setQuoteState({ status: 'error', error: result.error })
+          setValueState((current) => ({
+            ...current,
+            quotedValue: null,
+            manualOverrideActive: current.manualOverrideEnabled,
+            staleManualOverride: false,
+          }))
+          return
+        }
+
+        const nextQuote = {
+          baseWei: result.baseWei,
+          premiumWei: result.premiumWei,
+          totalWei: result.totalWei,
+          baseEth: result.baseEth,
+          premiumEth: result.premiumEth,
+          totalEth: result.totalEth,
+        }
+
+        setQuoteState({ status: 'ready', quote: nextQuote })
+        setValueState((current) => applyRenewalQuoteToValue(current, nextQuote))
+      })
+      .catch((transportError: unknown) => {
+        if (latestQuoteRequest.current !== requestId) {
+          return
+        }
+
+        setQuoteState({
+          status: 'error',
+          error:
+            transportError instanceof Error
+              ? transportError.message
+              : 'Network error while fetching renewal quote.',
+        })
+        setValueState((current) => ({
+          ...current,
+          quotedValue: null,
+          manualOverrideActive: current.manualOverrideEnabled,
+          staleManualOverride: false,
+        }))
+      })
+  }, [canQuote, chainId, duration, ensName])
 
   async function handleProposeRenewal() {
     if (!canPropose || !controllerAddress || !safeAddress || !chainId) return
 
-    const duration = DURATION_OPTIONS[selectedDuration].seconds
-    const value = parseRenewalValue(renewalValue)
+    const value = parseRenewalValue(valueState.renewalValue)
     if (value === null) {
       setErrorMessage('Invalid value: enter a valid number in wei.')
       return
@@ -93,18 +175,10 @@ export function ExpiryExtensionCard({
 
       router.refresh()
     } catch (error) {
-      if (
-        isSafeProposeClientError(error) &&
-        error.code === 'SAFE_API_KEY_MISSING'
-      ) {
-        setErrorMessage(
-          'Safe proposal service is not configured. Add SAFE_API_KEY on server.'
-        )
-      } else {
-        setErrorMessage(
-          error instanceof Error ? error.message : 'Failed to propose renewal'
-        )
-      }
+      handleSafeProposalError(error, 'Failed to propose renewal', {
+        onApiUnavailable: (msg) => setErrorMessage(msg),
+        onError: (msg) => setErrorMessage(msg),
+      })
     } finally {
       setIsBusy(false)
     }
@@ -117,7 +191,7 @@ export function ExpiryExtensionCard({
       </h3>
       <p className="text-muted-foreground mt-1 text-sm">
         {canPropose
-          ? 'Propose a renewal via Safe to extend your ENS registration.'
+          ? 'Propose a renewal via Safe using the latest ENS quote or an explicit manual override.'
           : 'Extend your ENS registration from the ENS app or Safe queue.'}
       </p>
 
@@ -136,6 +210,63 @@ export function ExpiryExtensionCard({
 
       {chainId && safeAddress && controllerAddress && (
         <div className="mt-4 space-y-3">
+          {quoteState.status === 'loading' && (
+            <div className="rounded-xl border border-dashed px-3 py-3 text-sm">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                <p>Loading ENS renewal quote...</p>
+              </div>
+            </div>
+          )}
+
+          {quoteState.status === 'ready' && (
+            <div className="rounded-xl border px-4 py-3 text-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium">Quoted renewal price</p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Latest quote from the ENS controller for {ensName}.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-semibold">
+                    {quoteState.quote.totalEth} ETH
+                  </p>
+                  <p className="text-muted-foreground font-mono text-xs">
+                    {quoteState.quote.totalWei} wei
+                  </p>
+                </div>
+              </div>
+              <div className="text-muted-foreground mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                <p>Base: {quoteState.quote.baseEth} ETH</p>
+                <p>Premium: {quoteState.quote.premiumEth} ETH</p>
+              </div>
+            </div>
+          )}
+
+          {quoteState.status === 'error' && (
+            <div className="rounded-xl border border-dashed px-4 py-3 text-sm">
+              <p className="font-medium">Quote unavailable</p>
+              <p className="text-muted-foreground mt-1">{quoteState.error}</p>
+              {!valueState.manualOverrideEnabled && (
+                <div className="mt-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setValueState((current) =>
+                        enableManualRenewalOverride(current)
+                      )
+                    }
+                  >
+                    Enter manual override
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <label
               className="mb-1 block text-xs font-medium"
@@ -162,20 +293,59 @@ export function ExpiryExtensionCard({
               className="mb-1 block text-xs font-medium"
               htmlFor="renewal-value"
             >
-              Value (wei) - leave empty for 0
+              Renewal value (wei)
             </label>
             <input
               id="renewal-value"
               type="text"
-              value={renewalValue}
-              onChange={(e) => setRenewalValue(e.target.value)}
-              placeholder="0"
+              value={valueState.renewalValue}
+              onChange={(e) =>
+                setValueState((current) =>
+                  updateRenewalValueInput(current, e.target.value)
+                )
+              }
+              placeholder={
+                quoteState.status === 'ready'
+                  ? quoteState.quote.totalWei
+                  : 'Quoted wei value'
+              }
+              disabled={
+                quoteState.status === 'loading' ||
+                (quoteState.status === 'error' &&
+                  !valueState.manualOverrideEnabled)
+              }
               className="border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
             />
             <p className="text-muted-foreground mt-1 text-xs">
-              ENS renewal requires ETH. Query rentPrice on the controller for
-              exact cost.
+              {quoteState.status === 'ready'
+                ? 'Auto-filled from ENS rentPrice. You can override it if needed.'
+                : quoteState.status === 'error'
+                  ? 'Manual entry stays disabled until you explicitly enable an override.'
+                  : 'Waiting for the latest ENS renewal quote.'}
             </p>
+            {quoteState.status === 'ready' &&
+              valueState.manualOverrideActive && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="rounded-full bg-amber-500/10 px-2 py-1 font-medium text-amber-700">
+                    {valueState.staleManualOverride
+                      ? 'Manual override differs from latest quote'
+                      : 'Manual override active'}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-auto px-2 py-1 text-xs"
+                    onClick={() =>
+                      setValueState((current) =>
+                        resetRenewalValueToQuote(current)
+                      )
+                    }
+                  >
+                    Use quoted value
+                  </Button>
+                </div>
+              )}
           </div>
 
           <div className="flex justify-end">

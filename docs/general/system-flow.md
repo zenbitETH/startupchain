@@ -297,6 +297,7 @@ StartupChain is an onchain company OS that allows founders to:
 │    │  │  • Identity tab handles ENS traits + subdomain profile/primary-name actions  │  │   │
 │    │  │  • Team tab handles founder batch subdomains + custom create/revoke actions  │  │   │
 │    │  │  • Pending proposal badges + periodic refresh until onchain confirmation     │  │   │
+│    │  │  • Renewal tab auto-quotes rentPrice and prefills payable renewal value      │  │   │
 │    │  │  • Links to Safe queue + explorer traces for registration/proposal txs       │  │   │
 │    │  └──────────────────────────────────────────────────────────────────────────────┘  │   │
 │    └────────────────────────────────────────────────────────────────────────────────────┘   │

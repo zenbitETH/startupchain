@@ -44,7 +44,7 @@ export function useSafeWallet({ chainId }: { chainId: number }) {
       await new Promise((resolve) => window.setTimeout(resolve, 100))
     }
 
-    return findMatchingPrivyWallet(walletsRef.current, expectedWalletAddress)
+    return undefined
   }
 
   async function ensureWalletReady(): Promise<SafeWalletReady> {

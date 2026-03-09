@@ -43,6 +43,26 @@ export function isSafeProposeClientError(
   return error instanceof SafeProposeClientError
 }
 
+export function handleSafeProposalError(
+  error: unknown,
+  fallbackMessage: string,
+  callbacks: {
+    onApiUnavailable: (msg: string) => void
+    onError: (msg: string) => void
+  }
+): void {
+  if (
+    isSafeProposeClientError(error) &&
+    error.code === 'SAFE_API_KEY_MISSING'
+  ) {
+    callbacks.onApiUnavailable(
+      'Safe proposal service is not configured. Add SAFE_API_KEY on the server.'
+    )
+  } else {
+    callbacks.onError(error instanceof Error ? error.message : fallbackMessage)
+  }
+}
+
 function parseSafeProposeError(data: unknown): SafeProposeError | null {
   if (!data || typeof data !== 'object') {
     return null

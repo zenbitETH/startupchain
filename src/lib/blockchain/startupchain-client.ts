@@ -51,7 +51,7 @@ const CHAINS = {
         ...sepoliaEnsContracts.contracts,
         ensEthRegistrarController: {
           address:
-            '0xFED6a969AaA60E4961FCD3EBF1A2e8913ac65B72' as `0x${string}`,
+            '0xfb3cE5D01e0f33f41DbB39035dB9745962F1f968' as `0x${string}`,
         },
         ensPublicResolver: {
           address:

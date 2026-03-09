@@ -17,7 +17,7 @@ import {
 import type { Founder } from '@/lib/blockchain/get-company'
 import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
 import {
-  isSafeProposeClientError,
+  handleSafeProposalError,
   proposeBatchSafeTransactionFromWallet,
   proposeSafeTransactionFromWallet,
 } from '@/lib/blockchain/safe-proposal-client'
@@ -105,7 +105,6 @@ export function SubdomainManagerCard({
   const [safeApiUnavailable, setSafeApiUnavailable] = useState(false)
   const [pendingOps, setPendingOps] = useState<PendingSubdomainOperation[]>([])
 
-  const pendingOpsKey = useMemo(() => JSON.stringify(pendingOps), [pendingOps])
   const hasPending = pendingOps.length > 0
   const activeSubdomains = useMemo(
     () => subdomains.filter((subdomain) => subdomain.active),
@@ -147,7 +146,7 @@ export function SubdomainManagerCard({
   }, [founders, subdomainByOwner])
 
   useEffect(() => {
-    if (!pendingOpsKey) return
+    if (!hasPending) return
 
     setPendingOps((current) =>
       current.filter((op) => {
@@ -170,7 +169,7 @@ export function SubdomainManagerCard({
         return !(currentItem && !currentItem.active)
       })
     )
-  }, [pendingOpsKey, subdomains])
+  }, [hasPending, subdomains])
 
   useEffect(() => {
     if (!hasPending) return
@@ -190,6 +189,13 @@ export function SubdomainManagerCard({
     safeApiUnavailable
   const canSubmitFounderBatch =
     filledFounderEntries.length > 0 && !isActionDisabled
+  const proposalErrorCallbacks = {
+    onApiUnavailable: (msg: string) => {
+      setSafeApiUnavailable(true)
+      setErrorMessage(msg)
+    },
+    onError: (msg: string) => setErrorMessage(msg),
+  }
 
   async function handleFounderBatchCreate() {
     if (!canSubmitFounderBatch) return
@@ -225,21 +231,11 @@ export function SubdomainManagerCard({
       ])
       router.refresh()
     } catch (error) {
-      if (
-        isSafeProposeClientError(error) &&
-        error.code === 'SAFE_API_KEY_MISSING'
-      ) {
-        setSafeApiUnavailable(true)
-        setErrorMessage(
-          'Safe proposal service is not configured. Add SAFE_API_KEY on the server.'
-        )
-      } else {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : 'Failed to propose founder subdomains'
-        )
-      }
+      handleSafeProposalError(
+        error,
+        'Failed to propose founder subdomains',
+        proposalErrorCallbacks
+      )
     } finally {
       setBusyAction(null)
     }
@@ -289,21 +285,11 @@ export function SubdomainManagerCard({
       setCustomLabelInput('')
       router.refresh()
     } catch (error) {
-      if (
-        isSafeProposeClientError(error) &&
-        error.code === 'SAFE_API_KEY_MISSING'
-      ) {
-        setSafeApiUnavailable(true)
-        setErrorMessage(
-          'Safe proposal service is not configured. Add SAFE_API_KEY on the server.'
-        )
-      } else {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : 'Failed to propose subdomain creation'
-        )
-      }
+      handleSafeProposalError(
+        error,
+        'Failed to propose subdomain creation',
+        proposalErrorCallbacks
+      )
     } finally {
       setBusyAction(null)
     }
@@ -343,21 +329,11 @@ export function SubdomainManagerCard({
       ])
       router.refresh()
     } catch (error) {
-      if (
-        isSafeProposeClientError(error) &&
-        error.code === 'SAFE_API_KEY_MISSING'
-      ) {
-        setSafeApiUnavailable(true)
-        setErrorMessage(
-          'Safe proposal service is not configured. Add SAFE_API_KEY on the server.'
-        )
-      } else {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : 'Failed to propose subdomain revoke'
-        )
-      }
+      handleSafeProposalError(
+        error,
+        'Failed to propose subdomain revoke',
+        proposalErrorCallbacks
+      )
     } finally {
       setBusyAction(null)
     }
