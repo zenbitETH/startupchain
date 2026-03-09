@@ -4,10 +4,11 @@
  */
 import pLimit from 'p-limit'
 
-import { getSafeApiBaseUrl, getSafeWalletUrl as getSafeWalletUrlFromLinks } from './safe-links'
+import {
+  getSafeApiBaseUrl,
+  getSafeWalletUrl as getSafeWalletUrlFromLinks,
+} from './safe-links'
 import { STARTUPCHAIN_CHAIN_ID } from './startupchain-config'
-
-const SAFE_API_KEY = process.env.SAFE_API_KEY
 
 // Rate limiting config
 const MAX_RETRIES = 3
@@ -84,17 +85,41 @@ export type SafeTransactionHistoryItem = {
   isSuccessful?: boolean
 }
 
-async function safeFetch<T>(url: string): Promise<T | null> {
+type SafeFetchResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; reason: 'auth_error' | 'unavailable'; statusCode?: number }
+
+export type SafeOwnershipVerificationResult =
+  | {
+      status: 'ok'
+      safeInfo: SafeInfo
+    }
+  | {
+      status: 'auth_error'
+      statusCode: 401 | 403
+    }
+  | {
+      status: 'unavailable'
+      statusCode?: number
+    }
+
+function getSafeApiKey(): string | undefined {
+  return process.env.SAFE_API_KEY?.trim() || undefined
+}
+
+async function safeFetchDetailed<T>(url: string): Promise<SafeFetchResult<T>> {
   return limit(async () => {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     }
 
-    if (SAFE_API_KEY) {
-      headers['Authorization'] = `Bearer ${SAFE_API_KEY}`
+    const safeApiKey = getSafeApiKey()
+    if (safeApiKey) {
+      headers['Authorization'] = `Bearer ${safeApiKey}`
     }
 
     let lastError: Error | null = null
+    let lastRetryStatus: number | undefined
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
@@ -104,27 +129,44 @@ async function safeFetch<T>(url: string): Promise<T | null> {
         })
 
         if (response.ok) {
-          return response.json()
+          return {
+            ok: true,
+            data: (await response.json()) as T,
+          }
         }
 
-        // Handle rate limiting with exponential backoff
-        if (response.status === 429) {
+        if (response.status === 401 || response.status === 403) {
+          console.error(
+            `Safe API authorization error: ${response.status} ${response.statusText}`
+          )
+          return {
+            ok: false,
+            reason: 'auth_error',
+            statusCode: response.status as 401 | 403,
+          }
+        }
+
+        // Retry rate limits and server-side failures with exponential backoff.
+        if (response.status === 429 || response.status >= 500) {
+          lastRetryStatus = response.status
           const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt)
           console.warn(
-            `Safe API rate limited (429), retrying in ${backoffMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`
+            `Safe API error ${response.status}, retrying in ${backoffMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`
           )
           await delay(backoffMs)
           continue
         }
 
-        // For other errors, don't retry
         console.error(
           `Safe API error: ${response.status} ${response.statusText}`
         )
-        return null
+        return {
+          ok: false,
+          reason: 'unavailable',
+          statusCode: response.status,
+        }
       } catch (error) {
         lastError = error as Error
-        // Network errors - retry with backoff
         const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt)
         console.warn(
           `Safe API network error, retrying in ${backoffMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`
@@ -134,8 +176,17 @@ async function safeFetch<T>(url: string): Promise<T | null> {
     }
 
     console.error('Safe API fetch error after retries:', lastError)
-    return null
+    return {
+      ok: false,
+      reason: 'unavailable',
+      statusCode: lastRetryStatus,
+    }
   })
+}
+
+async function safeFetch<T>(url: string): Promise<T | null> {
+  const result = await safeFetchDetailed<T>(url)
+  return result.ok ? result.data : null
 }
 
 /**
@@ -147,6 +198,38 @@ export async function getSafeInfo(
 ): Promise<SafeInfo | null> {
   const baseUrl = getSafeApiBaseUrl(chainId)
   return safeFetch<SafeInfo>(`${baseUrl}/v1/safes/${safeAddress}/`)
+}
+
+/**
+ * Get Safe info while preserving auth vs availability failures for proposal flows.
+ */
+export async function getSafeInfoForVerification(
+  safeAddress: string,
+  chainId: number = STARTUPCHAIN_CHAIN_ID
+): Promise<SafeOwnershipVerificationResult> {
+  const baseUrl = getSafeApiBaseUrl(chainId)
+  const result = await safeFetchDetailed<SafeInfo>(
+    `${baseUrl}/v1/safes/${safeAddress}/`
+  )
+
+  if (result.ok) {
+    return {
+      status: 'ok',
+      safeInfo: result.data,
+    }
+  }
+
+  if (result.reason === 'auth_error') {
+    return {
+      status: 'auth_error',
+      statusCode: result.statusCode as 401 | 403,
+    }
+  }
+
+  return {
+    status: 'unavailable',
+    statusCode: result.statusCode,
+  }
 }
 
 /**

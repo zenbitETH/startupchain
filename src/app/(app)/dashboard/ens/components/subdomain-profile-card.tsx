@@ -22,6 +22,8 @@ import {
   proposeSafeTransactionFromWallet,
 } from '@/lib/blockchain/safe-proposal-client'
 
+import { SafeProposalServiceNotice } from './safe-proposal-service-notice'
+
 export function SubdomainProfileCard({
   ensName,
   chainId,
@@ -57,6 +59,7 @@ export function SubdomainProfileCard({
   })
   const [busyKey, setBusyKey] = useState<EnsTraitKey | 'primary' | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [safeApiUnavailable, setSafeApiUnavailable] = useState(false)
 
   const fullSubdomainName = selectedSubdomain
     ? `${selectedSubdomain}.${ensName}`
@@ -87,10 +90,14 @@ export function SubdomainProfileCard({
         origin: `startupchain:subdomain-trait:${key}`,
       })
 
+      setSafeApiUnavailable(false)
       router.refresh()
     } catch (error) {
       handleSafeProposalError(error, 'Failed to propose trait update', {
-        onApiUnavailable: (msg) => setErrorMessage(msg),
+        onApiUnavailable: (msg) => {
+          setSafeApiUnavailable(true)
+          setErrorMessage(msg)
+        },
         onError: (msg) => setErrorMessage(msg),
       })
     } finally {
@@ -120,10 +127,14 @@ export function SubdomainProfileCard({
         origin: 'startupchain:subdomain:set-primary',
       })
 
+      setSafeApiUnavailable(false)
       router.refresh()
     } catch (error) {
       handleSafeProposalError(error, 'Failed to propose primary name', {
-        onApiUnavailable: (msg) => setErrorMessage(msg),
+        onApiUnavailable: (msg) => {
+          setSafeApiUnavailable(true)
+          setErrorMessage(msg)
+        },
         onError: (msg) => setErrorMessage(msg),
       })
     } finally {
@@ -168,6 +179,8 @@ export function SubdomainProfileCard({
         </div>
       )}
 
+      {safeApiUnavailable && <SafeProposalServiceNotice />}
+
       <div className="mt-4">
         <label
           className="mb-1 block text-xs font-medium"
@@ -198,7 +211,9 @@ export function SubdomainProfileCard({
               size="sm"
               variant="secondary"
               onClick={handleSetPrimaryName}
-              disabled={!authenticated || busyKey !== null}
+              disabled={
+                !authenticated || busyKey !== null || safeApiUnavailable
+              }
             >
               {busyKey === 'primary' && (
                 <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
@@ -245,7 +260,8 @@ export function SubdomainProfileCard({
                         !value.trim() ||
                         isBusy ||
                         !authenticated ||
-                        busyKey !== null
+                        busyKey !== null ||
+                        safeApiUnavailable
                       }
                     >
                       {isBusy && (

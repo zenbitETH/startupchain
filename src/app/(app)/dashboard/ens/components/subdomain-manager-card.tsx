@@ -20,6 +20,8 @@ import {
 } from '@/lib/blockchain/safe-proposal-client'
 import { shortenAddress } from '@/lib/utils'
 
+import { SafeProposalServiceNotice } from './safe-proposal-service-notice'
+
 type PendingSubdomainOperation =
   | {
       type: 'create'
@@ -225,9 +227,7 @@ export function SubdomainManagerCard({
     <section className="bg-card border-border hover-lift border-l-chart-3/30 rounded-2xl border border-l-2 p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-foreground text-lg font-semibold">
-            Subdomains
-          </h3>
+          <h3 className="text-foreground text-lg font-semibold">Subdomains</h3>
           <p className="text-muted-foreground mt-1 text-sm">
             Create and manage custom subdomains through Safe proposals.
           </p>
@@ -272,18 +272,7 @@ export function SubdomainManagerCard({
         </div>
       )}
 
-      {safeApiUnavailable && (
-        <div className="mt-4 rounded-xl border border-dashed px-3 py-3 text-sm">
-          <p className="font-medium">
-            Safe proposal service is not configured.
-          </p>
-          <p className="text-muted-foreground mt-1">
-            Proposal actions are disabled until{' '}
-            <code className="font-mono">SAFE_API_KEY</code> is configured on the
-            server.
-          </p>
-        </div>
-      )}
+      {safeApiUnavailable && <SafeProposalServiceNotice />}
 
       {errorMessage && (
         <div className="bg-destructive/10 text-destructive mt-4 rounded-xl border border-current/20 px-3 py-2 text-sm">

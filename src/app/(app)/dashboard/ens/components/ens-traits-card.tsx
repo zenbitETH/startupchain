@@ -20,6 +20,8 @@ import {
 } from '@/lib/blockchain/safe-proposal-client'
 import { shortenAddress } from '@/lib/utils'
 
+import { SafeProposalServiceNotice } from './safe-proposal-service-notice'
+
 type PendingTraitUpdate = {
   value: string
   safeTxHash: string
@@ -200,18 +202,7 @@ export function EnsTraitsCard({
         </div>
       )}
 
-      {safeApiUnavailable && (
-        <div className="mt-4 rounded-xl border border-dashed px-3 py-3 text-sm">
-          <p className="font-medium">
-            Safe proposal service is not configured.
-          </p>
-          <p className="text-muted-foreground mt-1">
-            Proposal actions are disabled until{' '}
-            <code className="font-mono">SAFE_API_KEY</code> is configured on the
-            server.
-          </p>
-        </div>
-      )}
+      {safeApiUnavailable && <SafeProposalServiceNotice />}
 
       <div className="mt-4 grid gap-x-6 gap-y-3 md:grid-cols-2 xl:grid-cols-3">
         {traitSections.map((section, sectionIndex) => (

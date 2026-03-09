@@ -25,6 +25,8 @@ import {
 } from '@/lib/blockchain/safe-proposal-client'
 import { shortenAddress } from '@/lib/utils'
 
+import { SafeProposalServiceNotice } from './safe-proposal-service-notice'
+
 function buildSubdomainLookup(
   subdomains: SubdomainRecord[]
 ): Map<string, SubdomainRecord> {
@@ -74,6 +76,7 @@ export function FounderSubdomainList({
   const [labelInputs, setLabelInputs] = useState<Record<string, string>>({})
   const [isBusy, setIsBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [safeApiUnavailable, setSafeApiUnavailable] = useState(false)
   const [pendingBatch, setPendingBatch] = useState<PendingBatch | null>(null)
 
   const filledEntries = useMemo(() => {
@@ -111,7 +114,11 @@ export function FounderSubdomainList({
   }, [pendingBatch, router])
 
   const isDisabled =
-    !authenticated || !subdomainsSupported || isBusy || Boolean(pendingBatch)
+    !authenticated ||
+    !subdomainsSupported ||
+    isBusy ||
+    Boolean(pendingBatch) ||
+    safeApiUnavailable
   const canSubmit = filledEntries.length > 0 && !isDisabled
 
   async function handleBatchAssign() {
@@ -141,11 +148,15 @@ export function FounderSubdomainList({
         labels: filledEntries.map((e) => e.label),
         safeTxHash,
       })
+      setSafeApiUnavailable(false)
       setLabelInputs({})
       router.refresh()
     } catch (error) {
       handleSafeProposalError(error, 'Failed to assign subdomains', {
-        onApiUnavailable: (msg: string) => setErrorMessage(msg),
+        onApiUnavailable: (msg: string) => {
+          setSafeApiUnavailable(true)
+          setErrorMessage(msg)
+        },
         onError: (msg: string) => setErrorMessage(msg),
       })
     } finally {
@@ -166,6 +177,8 @@ export function FounderSubdomainList({
           {errorMessage}
         </div>
       )}
+
+      {safeApiUnavailable && <SafeProposalServiceNotice />}
 
       <div className="mt-3 space-y-3">
         {founders.map((founder) => {

@@ -25,6 +25,7 @@ import {
   resetRenewalValueToQuote,
   updateRenewalValueInput,
 } from './expiry-extension-model'
+import { SafeProposalServiceNotice } from './safe-proposal-service-notice'
 
 function RenewalValueInput({
   valueState,
@@ -115,6 +116,7 @@ export function ExpiryExtensionCard({
   const [selectedDuration, setSelectedDuration] = useState(0)
   const [isBusy, setIsBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [safeApiUnavailable, setSafeApiUnavailable] = useState(false)
   const [quoteState, setQuoteState] = useState<
     | { status: 'idle' }
     | { status: 'loading' }
@@ -126,15 +128,17 @@ export function ExpiryExtensionCard({
 
   const duration = DURATION_OPTIONS[selectedDuration].seconds
   const canQuote = Boolean(chainId && controllerAddress)
-  const canPropose = canSubmitRenewalProposal({
-    authenticated,
-    chainId,
-    safeAddress,
-    controllerAddress,
-    isBusy,
-    quoteStatus: quoteState.status,
-    valueState,
-  })
+  const canPropose =
+    !safeApiUnavailable &&
+    canSubmitRenewalProposal({
+      authenticated,
+      chainId,
+      safeAddress,
+      controllerAddress,
+      isBusy,
+      quoteStatus: quoteState.status,
+      valueState,
+    })
   const quoteSnapshot = quoteState.status === 'ready' ? quoteState.quote : null
   const renewalValuePlaceholder = quoteSnapshot?.totalWei ?? 'Quoted wei value'
   const isRenewalValueDisabled =
@@ -245,10 +249,14 @@ export function ExpiryExtensionCard({
         origin: 'startupchain:ens:renew',
       })
 
+      setSafeApiUnavailable(false)
       router.refresh()
     } catch (error) {
       handleSafeProposalError(error, 'Failed to propose renewal', {
-        onApiUnavailable: (msg) => setErrorMessage(msg),
+        onApiUnavailable: (msg) => {
+          setSafeApiUnavailable(true)
+          setErrorMessage(msg)
+        },
         onError: (msg) => setErrorMessage(msg),
       })
     } finally {
@@ -279,6 +287,8 @@ export function ExpiryExtensionCard({
           {errorMessage}
         </div>
       )}
+
+      {safeApiUnavailable && <SafeProposalServiceNotice />}
 
       {chainId && safeAddress && controllerAddress && (
         <div className="mt-4 space-y-3">

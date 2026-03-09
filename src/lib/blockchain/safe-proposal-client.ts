@@ -4,7 +4,10 @@ import Safe from '@safe-global/protocol-kit'
 
 import type { SafeTransactionRequest } from './ens-management'
 
-export type SafeProposeErrorCode = 'SAFE_API_KEY_MISSING'
+export type SafeProposeErrorCode =
+  | 'SAFE_API_KEY_MISSING'
+  | 'SAFE_API_AUTH_ERROR'
+  | 'SAFE_API_UNAVAILABLE'
 
 export type SafeProposeError = {
   error: string
@@ -51,16 +54,20 @@ export function handleSafeProposalError(
     onError: (msg: string) => void
   }
 ): void {
-  if (
-    isSafeProposeClientError(error) &&
-    error.code === 'SAFE_API_KEY_MISSING'
-  ) {
-    callbacks.onApiUnavailable(
-      'Safe proposal service is not configured. Add SAFE_API_KEY on the server.'
-    )
-  } else {
-    callbacks.onError(error instanceof Error ? error.message : fallbackMessage)
+  if (isSafeProposeClientError(error)) {
+    if (
+      error.code === 'SAFE_API_KEY_MISSING' ||
+      error.code === 'SAFE_API_AUTH_ERROR'
+    ) {
+      callbacks.onApiUnavailable(error.message)
+      return
+    }
+
+    callbacks.onError(error.message)
+    return
   }
+
+  callbacks.onError(error instanceof Error ? error.message : fallbackMessage)
 }
 
 function parseSafeProposeError(data: unknown): SafeProposeError | null {
@@ -74,7 +81,11 @@ function parseSafeProposeError(data: unknown): SafeProposeError | null {
   }
 
   const maybeCode =
-    payload.code === 'SAFE_API_KEY_MISSING' ? payload.code : undefined
+    payload.code === 'SAFE_API_KEY_MISSING' ||
+    payload.code === 'SAFE_API_AUTH_ERROR' ||
+    payload.code === 'SAFE_API_UNAVAILABLE'
+      ? payload.code
+      : undefined
 
   return {
     error: payload.error,

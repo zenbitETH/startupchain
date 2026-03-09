@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 import { getServerSession } from '../../../../lib/auth/server-session'
 import { getCompanyByAddress } from '../../../../lib/blockchain/get-company'
-import { getSafeInfo } from '../../../../lib/blockchain/safe-api'
+import { getSafeInfoForVerification } from '../../../../lib/blockchain/safe-api'
 import {
   getSafeApiKitConfig,
   isSafeApiConfigurationError,
@@ -109,8 +109,35 @@ export async function POST(request: Request) {
       )
     }
 
-    const safeInfo = await getSafeInfo(parsed.safeAddress, parsed.chainId)
-    const isSafeOwner = safeInfo?.owners.some(
+    const apiKitConfig = getSafeApiKitConfig(parsed.chainId)
+    const safeVerification = await getSafeInfoForVerification(
+      parsed.safeAddress,
+      parsed.chainId
+    )
+
+    if (safeVerification.status === 'auth_error') {
+      return NextResponse.json(
+        {
+          error:
+            'Could not verify Safe ownership because server access to the Safe Transaction Service was rejected.',
+          code: 'SAFE_API_AUTH_ERROR',
+        },
+        { status: 503 }
+      )
+    }
+
+    if (safeVerification.status === 'unavailable') {
+      return NextResponse.json(
+        {
+          error:
+            'Could not verify Safe ownership right now because the Safe Transaction Service is unavailable.',
+          code: 'SAFE_API_UNAVAILABLE',
+        },
+        { status: 503 }
+      )
+    }
+
+    const isSafeOwner = safeVerification.safeInfo.owners.some(
       (owner) => owner.toLowerCase() === senderWallet
     )
     if (!isSafeOwner) {
@@ -122,7 +149,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const apiKit = new SafeApiKit(getSafeApiKitConfig(parsed.chainId))
+    const apiKit = new SafeApiKit(apiKitConfig)
 
     await apiKit.proposeTransaction({
       safeAddress: parsed.safeAddress,
