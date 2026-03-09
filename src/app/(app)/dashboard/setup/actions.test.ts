@@ -89,7 +89,20 @@ vi.mock('../../../../lib/blockchain/startupchain-client', () => ({
   },
   startupChainAccount: '0xserver',
   startupChainChain: { id: 11155111 },
-  getPublicClient: () => ({}),
+  getPublicClient: () => ({
+    waitForTransactionReceipt: (...args: unknown[]) =>
+      mockWaitForTransactionReceipt(...args),
+    readContract: (...args: unknown[]) => mockReadContract(...args),
+    getCode: (...args: unknown[]) => mockGetCode(...args),
+  }),
+  getWalletClient: () => ({
+    sendTransaction: (...args: unknown[]) => mockSendTransaction(...args),
+    writeContract: (...args: unknown[]) => mockWriteContract(...args),
+    chain: { id: 11155111 },
+  }),
+  getStartupChainAccount: () => '0xserver',
+  getStartupChainChain: () => ({ id: 11155111 }),
+  getTreasuryAddress: () => '0x00000000000000000000000000000000000000aa',
 }))
 
 vi.mock('../../../../lib/blockchain/safe-factory', () => ({

@@ -6,6 +6,9 @@ import { ExpiryExtensionCard } from './expiry-extension-card'
 const { mockUseSafeWallet } = vi.hoisted(() => ({
   mockUseSafeWallet: vi.fn(),
 }))
+const { mockGetEnsRenewalQuoteAction } = vi.hoisted(() => ({
+  mockGetEnsRenewalQuoteAction: vi.fn(),
+}))
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -15,6 +18,11 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/hooks/use-safe-wallet', () => ({
   useSafeWallet: mockUseSafeWallet,
+}))
+
+vi.mock('../actions', () => ({
+  getEnsRenewalQuoteAction: (...args: unknown[]) =>
+    mockGetEnsRenewalQuoteAction(...args),
 }))
 
 const defaultProps = {
@@ -31,9 +39,21 @@ const defaultProps = {
 describe('ExpiryExtensionCard', () => {
   beforeEach(() => {
     mockUseSafeWallet.mockReset()
+    mockGetEnsRenewalQuoteAction.mockReset()
     mockUseSafeWallet.mockReturnValue({
       authenticated: true,
       ensureWalletReady: vi.fn(),
+    })
+    mockGetEnsRenewalQuoteAction.mockResolvedValue({
+      ok: true,
+      baseWei: '100',
+      premiumWei: '0',
+      totalWei: '100',
+      baseEth: '0.0000000000000001',
+      premiumEth: '0',
+      totalEth: '0.0000000000000001',
+      estimatedTotalUsd: null,
+      usdEstimateSource: null,
     })
   })
 

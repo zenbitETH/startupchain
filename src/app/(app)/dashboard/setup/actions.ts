@@ -22,10 +22,10 @@ import {
 } from '../../../../lib/blockchain/safe-factory'
 import { startupChainAbi } from '../../../../lib/blockchain/startupchain-abi'
 import {
-  startupChainAccount,
-  startupChainChain,
-  publicClient as startupChainPublicClient,
-  walletClient as startupChainWalletClient,
+  getPublicClient as getStartupChainPublicClient,
+  getStartupChainAccount,
+  getStartupChainChain,
+  getWalletClient as getStartupChainWalletClient,
 } from '../../../../lib/blockchain/startupchain-client'
 import {
   STARTUPCHAIN_CHAIN_ID,
@@ -263,6 +263,14 @@ export async function commitEnsRegistrationAction({
   console.log(LOG_PREFIX, 'Normalized:', { label, fullName })
   const founderStructs = toFounderStructs(founders)
   validateThreshold(threshold, founderStructs.length)
+  const startupChainWalletClient = getStartupChainWalletClient(
+    STARTUPCHAIN_CHAIN_ID
+  )
+  const startupChainPublicClient = getStartupChainPublicClient(
+    STARTUPCHAIN_CHAIN_ID
+  )
+  const startupChainAccount = getStartupChainAccount()
+  const startupChainChain = getStartupChainChain()
 
   // SECURITY: Verify payment was actually sent to treasury
   console.log(LOG_PREFIX, 'Verifying payment transaction:', paymentTxHash)
@@ -428,6 +436,14 @@ export async function finalizeEnsRegistrationAction({
   console.log(LOG_PREFIX, '=== finalizeEnsRegistrationAction START ===')
   console.log(LOG_PREFIX, 'Input ensName:', ensName)
   const { label, fullName } = normalizeEnsInput(ensName)
+  const startupChainWalletClient = getStartupChainWalletClient(
+    STARTUPCHAIN_CHAIN_ID
+  )
+  const startupChainPublicClient = getStartupChainPublicClient(
+    STARTUPCHAIN_CHAIN_ID
+  )
+  const startupChainAccount = getStartupChainAccount()
+  const startupChainChain = getStartupChainChain()
   console.log(LOG_PREFIX, 'Normalized:', { label, fullName })
   const pending = await getPendingRegistration()
   console.log(LOG_PREFIX, 'Pending registration:', pending)

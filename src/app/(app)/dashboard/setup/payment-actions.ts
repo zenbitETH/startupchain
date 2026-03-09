@@ -3,8 +3,8 @@
 import { isAddress } from "viem"
 
 import {
+  getTreasuryAddress,
   publicClient as startupChainPublicClient,
-  TREASURY_ADDRESS,
 } from "../../../../lib/blockchain/startupchain-client"
 import { STARTUPCHAIN_CHAIN_ID } from "../../../../lib/blockchain/startupchain-config"
 
@@ -13,7 +13,7 @@ import { STARTUPCHAIN_CHAIN_ID } from "../../../../lib/blockchain/startupchain-c
  */
 export async function getTreasuryAddressAction() {
   return {
-    address: TREASURY_ADDRESS,
+    address: getTreasuryAddress(),
     chainId: STARTUPCHAIN_CHAIN_ID,
   }
 }
@@ -34,10 +34,11 @@ export async function verifyPrepaymentAction({
   }
 
   const required = BigInt(requiredAmountWei)
+  const treasuryAddress = getTreasuryAddress()
 
   // Get treasury balance
   const treasuryBalance = await startupChainPublicClient.getBalance({
-    address: TREASURY_ADDRESS,
+    address: treasuryAddress,
   })
 
   // For simplicity, we check if treasury has enough to cover the registration
@@ -45,7 +46,7 @@ export async function verifyPrepaymentAction({
   const hasSufficientFunds = treasuryBalance >= required
 
   return {
-    treasuryAddress: TREASURY_ADDRESS,
+    treasuryAddress,
     treasuryBalance: treasuryBalance.toString(),
     requiredAmount: required.toString(),
     hasSufficientFunds,
@@ -73,6 +74,7 @@ export async function checkPaymentStatusAction({
   }
 
   try {
+    const treasuryAddress = getTreasuryAddress()
     const receipt = await startupChainPublicClient.getTransactionReceipt({
       hash: paymentTxHash as `0x${string}`,
     })
@@ -86,7 +88,7 @@ export async function checkPaymentStatusAction({
       hash: paymentTxHash as `0x${string}`,
     })
 
-    const isToTreasury = tx.to?.toLowerCase() === TREASURY_ADDRESS.toLowerCase()
+    const isToTreasury = tx.to?.toLowerCase() === treasuryAddress.toLowerCase()
     const isSuccessful = receipt.status === "success"
 
     // SECURITY: Verify minimum payment amount if specified
