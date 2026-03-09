@@ -1,10 +1,11 @@
-import type { SafeTransactionData } from '@safe-global/types-kit'
 import SafeApiKit from '@safe-global/api-kit'
+import type { SafeTransactionData } from '@safe-global/types-kit'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { getServerSession } from '../../../../lib/auth/server-session'
 import { getCompanyByAddress } from '../../../../lib/blockchain/get-company'
+import { getSafeInfo } from '../../../../lib/blockchain/safe-api'
 import {
   getSafeApiKitConfig,
   isSafeApiConfigurationError,
@@ -34,7 +35,7 @@ const proposeSchema = z.object({
 
 function readCookieFromRequestHeader(
   request: Request,
-  key: string,
+  key: string
 ): { value?: string } | undefined {
   const rawCookie = request.headers.get('cookie')
   if (!rawCookie) {
@@ -58,13 +59,13 @@ export async function POST(request: Request) {
     const session = await getServerSession({
       headers: request.headers,
       cookies: {
-        get: key => readCookieFromRequestHeader(request, key),
+        get: (key) => readCookieFromRequestHeader(request, key),
       },
     })
     if (!session?.walletAddress) {
       return NextResponse.json(
         { error: 'Authentication required' },
-        { status: 401 },
+        { status: 401 }
       )
     }
 
@@ -74,19 +75,50 @@ export async function POST(request: Request) {
     if (!isSupportedChain(parsed.chainId)) {
       return NextResponse.json(
         { error: `Unsupported chain ${parsed.chainId}` },
-        { status: 400 },
+        { status: 400 }
       )
     }
 
-    const company = await getCompanyByAddress(parsed.safeAddress, parsed.chainId)
+    const company = await getCompanyByAddress(
+      parsed.safeAddress,
+      parsed.chainId
+    )
     const sessionWallet = session.walletAddress.toLowerCase()
+    const senderWallet = parsed.senderAddress.toLowerCase()
+
+    if (sessionWallet !== senderWallet) {
+      return NextResponse.json(
+        {
+          error:
+            'Connect the same founder wallet used for your authenticated session before submitting a Safe proposal.',
+        },
+        { status: 403 }
+      )
+    }
+
     const isFounder = company?.founders.some(
-      founder => founder.wallet.toLowerCase() === sessionWallet,
+      (founder) => founder.wallet.toLowerCase() === sessionWallet
     )
     if (!company || !isFounder) {
       return NextResponse.json(
-        { error: 'You are not authorized to propose for this Safe' },
-        { status: 403 },
+        {
+          error:
+            'Your authenticated wallet is not authorized for this company Safe.',
+        },
+        { status: 403 }
+      )
+    }
+
+    const safeInfo = await getSafeInfo(parsed.safeAddress, parsed.chainId)
+    const isSafeOwner = safeInfo?.owners.some(
+      (owner) => owner.toLowerCase() === senderWallet
+    )
+    if (!isSafeOwner) {
+      return NextResponse.json(
+        {
+          error: 'Only Safe owners can submit ENS proposals for this company.',
+        },
+        { status: 403 }
       )
     }
 
@@ -94,7 +126,8 @@ export async function POST(request: Request) {
 
     await apiKit.proposeTransaction({
       safeAddress: parsed.safeAddress,
-      safeTransactionData: parsed.safeTransactionData as unknown as SafeTransactionData,
+      safeTransactionData:
+        parsed.safeTransactionData as unknown as SafeTransactionData,
       safeTxHash: parsed.safeTxHash,
       senderAddress: parsed.senderAddress,
       senderSignature: parsed.senderSignature,
@@ -104,20 +137,29 @@ export async function POST(request: Request) {
     return NextResponse.json({
       safeTxHash: parsed.safeTxHash,
     })
-  }
-  catch (error) {
+  } catch (error) {
     if (isSafeApiConfigurationError(error)) {
       return NextResponse.json(
         {
           error: 'Safe proposal service is not configured',
           code: 'SAFE_API_KEY_MISSING',
         },
-        { status: 503 },
+        { status: 503 }
       )
     }
 
-    const message
-      = error instanceof Error ? error.message : 'Unknown Safe proposal error'
+    const message =
+      error instanceof Error ? error.message : 'Unknown Safe proposal error'
+
+    if (message.includes('not an owner or delegate')) {
+      return NextResponse.json(
+        {
+          error: 'Only Safe owners can submit ENS proposals for this company.',
+        },
+        { status: 403 }
+      )
+    }
+
     return NextResponse.json({ error: message }, { status: 400 })
   }
 }

@@ -2,119 +2,161 @@
 
 import { ExternalLink, Loader2, ShieldAlert } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { isAddress } from 'viem'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useWalletAuth } from '@/hooks/use-wallet-auth'
+import { useSafeWallet } from '@/hooks/use-safe-wallet'
 import {
   type SubdomainRecord,
+  buildBatchCreateSubdomainsTransactions,
   buildCreateSubdomainTransaction,
   buildRevokeSubdomainTransaction,
-  normalizeSubdomainLabel,
 } from '@/lib/blockchain/ens-management'
+import type { Founder } from '@/lib/blockchain/get-company'
 import { getSafeQueueUrl } from '@/lib/blockchain/safe-links'
 import {
   isSafeProposeClientError,
+  proposeBatchSafeTransactionFromWallet,
   proposeSafeTransactionFromWallet,
 } from '@/lib/blockchain/safe-proposal-client'
-import { useWallets } from '@/lib/privy'
 import { shortenAddress } from '@/lib/utils'
 
-type PendingSubdomainOperation = {
-  type: 'create' | 'revoke'
-  label: string
-  owner?: string
-  safeTxHash: string
-}
+type PendingSubdomainOperation =
+  | {
+      type: 'create'
+      label: string
+      owner?: string
+      safeTxHash: string
+    }
+  | {
+      type: 'revoke'
+      label: string
+      safeTxHash: string
+    }
+  | {
+      type: 'batch-create'
+      labels: string[]
+      safeTxHash: string
+    }
 
 type BusySubdomainAction =
   | { type: 'create' }
   | { type: 'revoke'; label: string }
+  | { type: 'batch-create' }
   | null
 
-type PrivyWallet = {
-  address?: string
-  chainId?: number | string
-  switchChain?: (chainId: number) => Promise<void>
-  getEthereumProvider?: () => Promise<{
-    request: (args: {
-      method: string
-      params?: unknown[] | object
-    }) => Promise<unknown>
-  }>
-}
-
-function parseWalletChainId(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isInteger(value)) {
-    return value
-  }
-  if (typeof value === 'string') {
-    const parsed = Number(value)
-    if (Number.isInteger(parsed)) {
-      return parsed
+function buildSubdomainLookup(
+  subdomains: SubdomainRecord[]
+): Map<string, SubdomainRecord> {
+  const map = new Map<string, SubdomainRecord>()
+  for (const sub of subdomains) {
+    if (sub.active) {
+      map.set(sub.owner.toLowerCase(), sub)
     }
   }
-  return null
+  return map
 }
 
 export function SubdomainManagerCard({
   companyId,
+  ensName,
   chainId,
   safeAddress,
   startupChainAddress,
+  founders,
   subdomains,
   subdomainsSupported,
 }: {
   companyId: string
+  ensName: string
   chainId: number
   safeAddress: `0x${string}`
   startupChainAddress: `0x${string}`
+  founders: Founder[]
   subdomains: SubdomainRecord[]
   subdomainsSupported: boolean
 }) {
   const router = useRouter()
-  const { authenticated, connect, primaryAddress } = useWalletAuth()
-  const walletsResult = useWallets()
-  const wallets = useMemo(
-    () => walletsResult?.wallets ?? [],
-    [walletsResult?.wallets]
-  )
-  const walletsRef = useRef<PrivyWallet[]>(wallets as PrivyWallet[])
+  const { authenticated, ensureWalletReady, expectedWalletAddress } =
+    useSafeWallet({ chainId })
 
-  const [labelInput, setLabelInput] = useState('')
-  const [ownerInput, setOwnerInput] = useState(primaryAddress ?? '')
+  const subdomainByOwner = useMemo(
+    () => buildSubdomainLookup(subdomains),
+    [subdomains]
+  )
+
+  const [founderLabels, setFounderLabels] = useState<Record<string, string>>(
+    () => {
+      const initial: Record<string, string> = {}
+      for (const founder of founders) {
+        const existing = subdomainByOwner.get(founder.wallet.toLowerCase())
+        initial[founder.wallet] = existing?.name ?? ''
+      }
+      return initial
+    }
+  )
+  const [customLabelInput, setCustomLabelInput] = useState('')
+  const [ownerInput, setOwnerInput] = useState(expectedWalletAddress ?? '')
   const [ownerTouched, setOwnerTouched] = useState(false)
   const [busyAction, setBusyAction] = useState<BusySubdomainAction>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [safeApiUnavailable, setSafeApiUnavailable] = useState(false)
   const [pendingOps, setPendingOps] = useState<PendingSubdomainOperation[]>([])
-  const pendingOpsKey = useMemo(
-    () =>
-      pendingOps
-        .map(
-          (op) => `${op.type}:${op.label}:${op.owner ?? ''}:${op.safeTxHash}`
-        )
-        .join('|'),
-    [pendingOps]
+
+  const pendingOpsKey = useMemo(() => JSON.stringify(pendingOps), [pendingOps])
+  const hasPending = pendingOps.length > 0
+  const activeSubdomains = useMemo(
+    () => subdomains.filter((subdomain) => subdomain.active),
+    [subdomains]
   )
-
-  useEffect(() => {
-    if (!ownerTouched && !ownerInput && primaryAddress) {
-      setOwnerInput(primaryAddress)
+  const filledFounderEntries = useMemo(() => {
+    const entries: { label: string; owner: string }[] = []
+    for (const founder of founders) {
+      const label = founderLabels[founder.wallet]?.trim()
+      const existing = subdomainByOwner.get(founder.wallet.toLowerCase())
+      if (label && !existing) {
+        entries.push({ label, owner: founder.wallet })
+      }
     }
-  }, [ownerInput, ownerTouched, primaryAddress])
+    return entries
+  }, [founderLabels, founders, subdomainByOwner])
 
   useEffect(() => {
-    walletsRef.current = wallets as PrivyWallet[]
-  }, [wallets])
+    if (!ownerTouched && !ownerInput && expectedWalletAddress) {
+      setOwnerInput(expectedWalletAddress)
+    }
+  }, [expectedWalletAddress, ownerInput, ownerTouched])
+
+  useEffect(() => {
+    setFounderLabels((current) => {
+      let changed = false
+      const next = { ...current }
+
+      for (const founder of founders) {
+        const existing = subdomainByOwner.get(founder.wallet.toLowerCase())
+        if (existing && next[founder.wallet] !== existing.name) {
+          next[founder.wallet] = existing.name
+          changed = true
+        }
+      }
+
+      return changed ? next : current
+    })
+  }, [founders, subdomainByOwner])
 
   useEffect(() => {
     if (!pendingOpsKey) return
 
     setPendingOps((current) =>
       current.filter((op) => {
+        if (op.type === 'batch-create') {
+          return !op.labels.every((label) =>
+            subdomains.some((sub) => sub.active && sub.name === label)
+          )
+        }
+
         const currentItem = subdomains.find((sub) => sub.name === op.label)
         if (op.type === 'create') {
           return !(
@@ -128,9 +170,7 @@ export function SubdomainManagerCard({
         return !(currentItem && !currentItem.active)
       })
     )
-  }, [subdomains, pendingOpsKey])
-
-  const hasPending = pendingOps.length > 0
+  }, [pendingOpsKey, subdomains])
 
   useEffect(() => {
     if (!hasPending) return
@@ -142,82 +182,79 @@ export function SubdomainManagerCard({
     }
   }, [hasPending, router])
 
-  const activeSubdomains = useMemo(
-    () => subdomains.filter((subdomain) => subdomain.active),
-    [subdomains]
-  )
   const anyActionBusy = Boolean(busyAction)
-  const createBusy = busyAction?.type === 'create'
+  const isActionDisabled =
+    !authenticated ||
+    anyActionBusy ||
+    !subdomainsSupported ||
+    safeApiUnavailable
+  const canSubmitFounderBatch =
+    filledFounderEntries.length > 0 && !isActionDisabled
 
-  async function waitForPrimaryWallet(): Promise<PrivyWallet | undefined> {
-    for (let attempt = 0; attempt < 10; attempt += 1) {
-      const wallet = walletsRef.current[0]
-      if (wallet) {
-        return wallet
+  async function handleFounderBatchCreate() {
+    if (!canSubmitFounderBatch) return
+
+    try {
+      setBusyAction({ type: 'batch-create' })
+      setErrorMessage(null)
+
+      const { walletAddress, provider } = await ensureWalletReady()
+      const transactions = buildBatchCreateSubdomainsTransactions({
+        startupChainAddress,
+        companyId: BigInt(companyId),
+        entries: filledFounderEntries,
+      })
+
+      const { safeTxHash } = await proposeBatchSafeTransactionFromWallet({
+        provider,
+        chainId,
+        safeAddress,
+        senderAddress: walletAddress,
+        transactions,
+        origin: 'startupchain:subdomain:batch-create',
+      })
+
+      setSafeApiUnavailable(false)
+      setPendingOps((current) => [
+        ...current,
+        {
+          type: 'batch-create',
+          labels: filledFounderEntries.map((entry) => entry.label),
+          safeTxHash,
+        },
+      ])
+      router.refresh()
+    } catch (error) {
+      if (
+        isSafeProposeClientError(error) &&
+        error.code === 'SAFE_API_KEY_MISSING'
+      ) {
+        setSafeApiUnavailable(true)
+        setErrorMessage(
+          'Safe proposal service is not configured. Add SAFE_API_KEY on the server.'
+        )
+      } else {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Failed to propose founder subdomains'
+        )
       }
-      await new Promise((resolve) => window.setTimeout(resolve, 100))
-    }
-
-    return walletsRef.current[0]
-  }
-
-  async function ensureWalletReady() {
-    if (!authenticated) {
-      await connect()
-    }
-
-    const wallet = await waitForPrimaryWallet()
-    if (!wallet) {
-      throw new Error('Connect a founder wallet to submit Safe proposals')
-    }
-
-    if (wallet.switchChain) {
-      const walletChain = parseWalletChainId(wallet.chainId)
-      if (walletChain === null || walletChain !== chainId) {
-        try {
-          await wallet.switchChain(chainId)
-        } catch {
-          throw new Error(
-            'Failed to switch to required network. Please switch manually.'
-          )
-        }
-      }
-    }
-
-    const provider = await wallet.getEthereumProvider?.()
-    if (!provider) {
-      throw new Error('Wallet provider is unavailable')
-    }
-
-    const providerChainId = parseWalletChainId(
-      await provider.request({ method: 'eth_chainId' })
-    )
-    if (providerChainId !== null && providerChainId !== chainId) {
-      throw new Error(
-        'Wallet is on the wrong network. Please switch and try again.'
-      )
-    }
-
-    if (!wallet.address || !isAddress(wallet.address)) {
-      throw new Error('Wallet address is unavailable')
-    }
-
-    return {
-      walletAddress: wallet.address as `0x${string}`,
-      provider,
+    } finally {
+      setBusyAction(null)
     }
   }
 
   async function handleCreateSubdomain() {
-    if (!subdomainsSupported) {
-      return
-    }
+    if (isActionDisabled) return
 
     try {
       setBusyAction({ type: 'create' })
       setErrorMessage(null)
 
-      const normalizedLabel = normalizeSubdomainLabel(labelInput)
+      if (!customLabelInput.trim()) {
+        throw new Error('Subdomain label is required')
+      }
       if (!isAddress(ownerInput)) {
         throw new Error('Owner address is invalid')
       }
@@ -226,7 +263,7 @@ export function SubdomainManagerCard({
       const transaction = buildCreateSubdomainTransaction({
         startupChainAddress,
         companyId: BigInt(companyId),
-        label: normalizedLabel,
+        label: customLabelInput,
         owner: ownerInput,
       })
 
@@ -244,12 +281,12 @@ export function SubdomainManagerCard({
         ...current,
         {
           type: 'create',
-          label: normalizedLabel,
+          label: customLabelInput.trim().toLowerCase(),
           owner: ownerInput,
           safeTxHash,
         },
       ])
-      setLabelInput('')
+      setCustomLabelInput('')
       router.refresh()
     } catch (error) {
       if (
@@ -258,7 +295,7 @@ export function SubdomainManagerCard({
       ) {
         setSafeApiUnavailable(true)
         setErrorMessage(
-          'Safe proposal service is not configured. Add SAFE_API_KEY on server.'
+          'Safe proposal service is not configured. Add SAFE_API_KEY on the server.'
         )
       } else {
         setErrorMessage(
@@ -273,9 +310,7 @@ export function SubdomainManagerCard({
   }
 
   async function handleRevokeSubdomain(label: string) {
-    if (!subdomainsSupported) {
-      return
-    }
+    if (isActionDisabled) return
 
     try {
       setBusyAction({ type: 'revoke', label })
@@ -314,7 +349,7 @@ export function SubdomainManagerCard({
       ) {
         setSafeApiUnavailable(true)
         setErrorMessage(
-          'Safe proposal service is not configured. Add SAFE_API_KEY on server.'
+          'Safe proposal service is not configured. Add SAFE_API_KEY on the server.'
         )
       } else {
         setErrorMessage(
@@ -333,10 +368,11 @@ export function SubdomainManagerCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-foreground text-lg font-semibold">
-            Subdomain management
+            Team subdomains
           </h3>
           <p className="text-muted-foreground mt-1 text-sm">
-            List, create, and revoke member subdomains through Safe proposals.
+            Create and manage company and member subdomains through Safe
+            proposals.
           </p>
         </div>
         <a
@@ -357,14 +393,24 @@ export function SubdomainManagerCard({
         </div>
       )}
 
+      {expectedWalletAddress && (
+        <div className="text-muted-foreground mt-4 rounded-xl border border-dashed px-3 py-3 text-sm">
+          Proposals must be signed by founder wallet{' '}
+          <span className="font-mono">
+            {shortenAddress(expectedWalletAddress)}
+          </span>
+          .
+        </div>
+      )}
+
       {!subdomainsSupported && (
         <div className="mt-4 rounded-xl border border-dashed px-3 py-3 text-sm">
           <p className="font-medium">
             Subdomain actions unavailable on current deployment.
           </p>
           <p className="text-muted-foreground mt-1">
-            This network contract does not expose subdomain methods yet. ENS
-            trait edits remain available.
+            This deployment does not expose subdomain methods yet, so founder
+            and custom subdomain proposals are disabled.
           </p>
         </div>
       )}
@@ -388,29 +434,122 @@ export function SubdomainManagerCard({
         </div>
       )}
 
-      <div className="mt-4 space-y-3">
-        <div className="border-border/70 rounded-xl border p-4">
-          <p className="mb-3 text-sm font-medium">Create subdomain</p>
-          <div className="grid gap-3 sm:grid-cols-2">
+      {founders.length > 0 && (
+        <div className="mt-4 rounded-xl border p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">Founder subdomains</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Each founder can get a subdomain label like{' '}
+                <span className="font-mono">alice</span>, which becomes{' '}
+                <span className="font-mono">alice.{ensName}</span>.
+              </p>
+            </div>
+            <span className="text-muted-foreground text-xs">
+              {filledFounderEntries.length} ready
+            </span>
+          </div>
+
+          <div className="mt-3 space-y-3">
+            {founders.map((founder) => {
+              const existing = subdomainByOwner.get(
+                founder.wallet.toLowerCase()
+              )
+              const hasActiveSubdomain = Boolean(existing)
+              const label = founderLabels[founder.wallet] ?? ''
+
+              return (
+                <div
+                  key={founder.wallet}
+                  className="border-border/70 rounded-xl border p-4"
+                >
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {founder.role || 'Founder'}
+                      </p>
+                      <p className="text-muted-foreground font-mono text-xs">
+                        {shortenAddress(founder.wallet)} (
+                        {founder.equityPercent}
+                        %)
+                      </p>
+                    </div>
+                    {hasActiveSubdomain && (
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-700">
+                        {existing?.name}.{ensName}
+                      </span>
+                    )}
+                  </div>
+                  <Input
+                    value={hasActiveSubdomain ? (existing?.name ?? '') : label}
+                    onChange={(event) => {
+                      if (hasActiveSubdomain) return
+                      setFounderLabels((current) => ({
+                        ...current,
+                        [founder.wallet]: event.target.value,
+                      }))
+                    }}
+                    placeholder={`subdomain label (e.g. alice)`}
+                    disabled={hasActiveSubdomain || isActionDisabled}
+                  />
+                  {!hasActiveSubdomain && label.trim() && (
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      Preview: {label.trim().toLowerCase()}.{ensName}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <p className="text-muted-foreground text-xs">
+              Batch creates only the founder rows that do not already have an
+              active subdomain.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleFounderBatchCreate}
+              disabled={!canSubmitFounderBatch}
+            >
+              {busyAction?.type === 'batch-create' && (
+                <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+              )}
+              Create founder subdomains
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="rounded-xl border p-4">
+          <p className="text-sm font-medium">Custom subdomain</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Use this for teammates or service addresses that are not in the
+            founder list.
+          </p>
+
+          <div className="mt-3 grid gap-3">
             <div>
               <label
                 className="mb-1 block text-xs font-medium"
                 htmlFor="subdomain-label"
               >
-                Label
+                Subdomain label
               </label>
               <Input
                 id="subdomain-label"
-                value={labelInput}
-                onChange={(event) => setLabelInput(event.target.value)}
-                placeholder="alice"
-                disabled={
-                  anyActionBusy ||
-                  !authenticated ||
-                  !subdomainsSupported ||
-                  safeApiUnavailable
-                }
+                value={customLabelInput}
+                onChange={(event) => setCustomLabelInput(event.target.value)}
+                placeholder="e.g. ops"
+                disabled={isActionDisabled}
               />
+              {customLabelInput.trim() && (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Preview: {customLabelInput.trim().toLowerCase()}.{ensName}
+                </p>
+              )}
             </div>
             <div>
               <label
@@ -427,38 +566,31 @@ export function SubdomainManagerCard({
                   setOwnerInput(event.target.value)
                 }}
                 placeholder="0x..."
-                disabled={
-                  anyActionBusy ||
-                  !authenticated ||
-                  !subdomainsSupported ||
-                  safeApiUnavailable
-                }
+                disabled={isActionDisabled}
               />
             </div>
           </div>
+
           <div className="mt-3 flex justify-end">
             <Button
               type="button"
               size="sm"
               onClick={handleCreateSubdomain}
               disabled={
-                anyActionBusy ||
-                !authenticated ||
-                !labelInput.trim() ||
-                !ownerInput.trim() ||
-                !subdomainsSupported ||
-                safeApiUnavailable
+                isActionDisabled ||
+                !customLabelInput.trim() ||
+                !ownerInput.trim()
               }
             >
-              {createBusy && (
+              {busyAction?.type === 'create' && (
                 <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
               )}
-              Propose create
+              Create custom subdomain
             </Button>
           </div>
         </div>
 
-        <div className="border-border/70 rounded-xl border p-4">
+        <div className="rounded-xl border p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
             <p className="text-sm font-medium">Active subdomains</p>
             <span className="text-muted-foreground text-xs">
@@ -478,7 +610,9 @@ export function SubdomainManagerCard({
                   className="bg-muted/40 border-border/70 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2"
                 >
                   <div>
-                    <p className="text-sm font-medium">{subdomain.name}</p>
+                    <p className="text-sm font-medium">
+                      {subdomain.name}.{ensName}
+                    </p>
                     <p className="text-muted-foreground font-mono text-xs">
                       {shortenAddress(subdomain.owner)}
                     </p>
@@ -488,18 +622,13 @@ export function SubdomainManagerCard({
                     size="sm"
                     variant="destructive"
                     onClick={() => handleRevokeSubdomain(subdomain.name)}
-                    disabled={
-                      anyActionBusy ||
-                      !authenticated ||
-                      !subdomainsSupported ||
-                      safeApiUnavailable
-                    }
+                    disabled={isActionDisabled}
                   >
                     {busyAction?.type === 'revoke' &&
                       busyAction.label === subdomain.name && (
                         <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
                       )}
-                    Propose revoke
+                    Revoke
                   </Button>
                 </div>
               ))}
@@ -513,11 +642,17 @@ export function SubdomainManagerCard({
           <p className="mb-2 font-semibold">Pending Safe proposals</p>
           <div className="space-y-1">
             {pendingOps.map((op) => (
-              <p key={`${op.safeTxHash}-${op.label}`}>
-                {op.type === 'create' ? 'Create' : 'Revoke'}{' '}
-                <span className="font-mono">{op.label}</span> -{' '}
-                {op.safeTxHash.slice(0, 12)}
-                ...
+              <p
+                key={
+                  op.type === 'batch-create'
+                    ? `${op.safeTxHash}-${op.labels.join(',')}`
+                    : `${op.safeTxHash}-${op.label}`
+                }
+              >
+                {op.type === 'batch-create'
+                  ? `Create founders: ${op.labels.join(', ')}`
+                  : `${op.type === 'create' ? 'Create' : 'Revoke'} ${op.label}`}{' '}
+                - {op.safeTxHash.slice(0, 12)}...
               </p>
             ))}
           </div>

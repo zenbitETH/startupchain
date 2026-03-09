@@ -3,35 +3,16 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { isAddress } from 'viem'
 
+import { useProvidersReady } from '@/components/providers/providers-shell'
 import { useWalletAuth } from '@/hooks/use-wallet-auth'
 import { useWallets } from '@/lib/privy'
 
-export type SafeWalletProvider = {
-  request: (args: {
-    method: string
-    params?: unknown[] | object
-  }) => Promise<unknown>
-}
-
-type PrivyWallet = {
-  address?: string
-  chainId?: number | string
-  switchChain?: (chainId: number) => Promise<void>
-  getEthereumProvider?: () => Promise<SafeWalletProvider>
-}
-
-function parseWalletChainId(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isInteger(value)) {
-    return value
-  }
-  if (typeof value === 'string') {
-    const parsed = Number(value)
-    if (Number.isInteger(parsed)) {
-      return parsed
-    }
-  }
-  return null
-}
+import {
+  type PrivyWalletLike,
+  type SafeWalletProvider,
+  findMatchingPrivyWallet,
+  parseWalletChainId,
+} from './safe-wallet-utils'
 
 type SafeWalletReady = {
   walletAddress: `0x${string}`
@@ -39,25 +20,31 @@ type SafeWalletReady = {
 }
 
 export function useSafeWallet({ chainId }: { chainId: number }) {
-  const { authenticated, connect } = useWalletAuth()
+  const { authenticated, connect, primaryAddress } = useWalletAuth()
+  const { initialSession } = useProvidersReady()
   const walletsResult = useWallets()
   const wallets = useMemo(
     () => walletsResult?.wallets ?? [],
     [walletsResult?.wallets]
   )
-  const walletsRef = useRef<PrivyWallet[]>(wallets as PrivyWallet[])
+  const walletsRef = useRef<PrivyWalletLike[]>(wallets as PrivyWalletLike[])
+  const expectedWalletAddress = initialSession?.walletAddress ?? primaryAddress
 
   useEffect(() => {
-    walletsRef.current = wallets as PrivyWallet[]
+    walletsRef.current = wallets as PrivyWalletLike[]
   }, [wallets])
 
-  async function waitForPrimaryWallet(): Promise<PrivyWallet | undefined> {
+  async function waitForMatchingWallet(): Promise<PrivyWalletLike | undefined> {
     for (let attempt = 0; attempt < 10; attempt += 1) {
-      const wallet = walletsRef.current[0]
+      const wallet = findMatchingPrivyWallet(
+        walletsRef.current,
+        expectedWalletAddress
+      )
       if (wallet) return wallet
       await new Promise((resolve) => window.setTimeout(resolve, 100))
     }
-    return walletsRef.current[0]
+
+    return findMatchingPrivyWallet(walletsRef.current, expectedWalletAddress)
   }
 
   async function ensureWalletReady(): Promise<SafeWalletReady> {
@@ -65,9 +52,9 @@ export function useSafeWallet({ chainId }: { chainId: number }) {
       await connect()
     }
 
-    const wallet = await waitForPrimaryWallet()
+    const wallet = await waitForMatchingWallet()
     if (!wallet) {
-      throw new Error('Connect a founder wallet to submit Safe proposals')
+      throw new Error('Connect the founder wallet that owns this Safe.')
     }
 
     if (wallet.switchChain) {
@@ -107,5 +94,5 @@ export function useSafeWallet({ chainId }: { chainId: number }) {
     }
   }
 
-  return { authenticated, ensureWalletReady }
+  return { authenticated, ensureWalletReady, expectedWalletAddress }
 }

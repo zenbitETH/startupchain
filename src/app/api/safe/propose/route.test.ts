@@ -1,13 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { POST } from './route'
+
 const {
   mockProposeTransaction,
   mockGetServerSession,
   mockGetCompanyByAddress,
+  mockGetSafeInfo,
 } = vi.hoisted(() => ({
   mockProposeTransaction: vi.fn(),
   mockGetServerSession: vi.fn(),
   mockGetCompanyByAddress: vi.fn(),
+  mockGetSafeInfo: vi.fn(),
 }))
 
 vi.mock('@safe-global/api-kit', () => {
@@ -32,15 +36,21 @@ vi.mock('../../../../lib/blockchain/get-company', () => {
   }
 })
 
-import { POST } from './route'
+vi.mock('../../../../lib/blockchain/safe-api', () => {
+  return {
+    getSafeInfo: mockGetSafeInfo,
+  }
+})
 
 function makeValidBody() {
   return {
     chainId: 11155111,
     safeAddress: '0x1234567890abcdef1234567890abcdef12345678',
-    safeTxHash: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    safeTxHash:
+      '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     senderAddress: '0x1234567890abcdef1234567890abcdef12345678',
-    senderSignature: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    senderSignature:
+      '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
     safeTransactionData: {
       to: '0x1234567890abcdef1234567890abcdef12345678',
       value: '0',
@@ -61,6 +71,7 @@ describe('/api/safe/propose', () => {
     mockProposeTransaction.mockReset()
     mockGetServerSession.mockReset()
     mockGetCompanyByAddress.mockReset()
+    mockGetSafeInfo.mockReset()
     vi.stubEnv('SAFE_API_KEY', 'test-safe-api-key')
 
     mockGetServerSession.mockResolvedValue({
@@ -74,6 +85,9 @@ describe('/api/safe/propose', () => {
           wallet: '0x1234567890abcdef1234567890abcdef12345678',
         },
       ],
+    })
+    mockGetSafeInfo.mockResolvedValue({
+      owners: ['0x1234567890abcdef1234567890abcdef12345678'],
     })
   })
 
@@ -146,7 +160,52 @@ describe('/api/safe/propose', () => {
 
     expect(response.status).toBe(403)
     expect(body).toEqual({
-      error: 'You are not authorized to propose for this Safe',
+      error:
+        'Your authenticated wallet is not authorized for this company Safe.',
+    })
+    expect(mockProposeTransaction).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 when senderAddress differs from the authenticated session wallet', async () => {
+    const payload = {
+      ...makeValidBody(),
+      senderAddress: '0x9999999999999999999999999999999999999999',
+    }
+    const request = new Request('http://localhost/api/safe/propose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    const response = await POST(request)
+    const body = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(body).toEqual({
+      error:
+        'Connect the same founder wallet used for your authenticated session before submitting a Safe proposal.',
+    })
+    expect(mockGetSafeInfo).not.toHaveBeenCalled()
+    expect(mockProposeTransaction).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 when sender/session wallet is not a Safe owner', async () => {
+    mockGetSafeInfo.mockResolvedValueOnce({
+      owners: ['0x0000000000000000000000000000000000000001'],
+    })
+    const payload = makeValidBody()
+    const request = new Request('http://localhost/api/safe/propose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    const response = await POST(request)
+    const body = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(body).toEqual({
+      error: 'Only Safe owners can submit ENS proposals for this company.',
     })
     expect(mockProposeTransaction).not.toHaveBeenCalled()
   })
@@ -167,7 +226,11 @@ describe('/api/safe/propose', () => {
     expect(body).toEqual({ safeTxHash: payload.safeTxHash })
     expect(mockGetCompanyByAddress).toHaveBeenCalledWith(
       payload.safeAddress,
-      payload.chainId,
+      payload.chainId
+    )
+    expect(mockGetSafeInfo).toHaveBeenCalledWith(
+      payload.safeAddress,
+      payload.chainId
     )
     expect(mockProposeTransaction).toHaveBeenCalledTimes(1)
   })
