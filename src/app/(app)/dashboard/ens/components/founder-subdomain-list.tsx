@@ -141,7 +141,7 @@ export function FounderSubdomainList({
       })
 
       setPendingBatch({
-        labels: filledEntries.map((e) => e.label),
+        labels: filledEntries.map((e) => e.label.toLowerCase()),
         safeTxHash,
       })
       markApiAvailable()

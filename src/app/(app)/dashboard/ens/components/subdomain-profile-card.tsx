@@ -2,7 +2,7 @@
 
 import { ExternalLink, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -56,6 +56,14 @@ export function SubdomainProfileCard({
     }
     return empty as EnsTraits
   })
+  useEffect(() => {
+    const empty: Record<string, string> = {}
+    for (const key of ENS_TRAIT_KEYS) {
+      empty[key] = ''
+    }
+    setFormValues(empty as EnsTraits)
+  }, [selectedSubdomain])
+
   const {
     errorMessage,
     safeApiUnavailable,
