@@ -8,11 +8,11 @@ import {
 import { privateKeyToAccount } from 'viem/accounts'
 import { mainnet, sepolia } from 'viem/chains'
 
-const mainnetRpcUrl = process.env.MAINNET_RPC_URL
-if (!mainnetRpcUrl) throw new Error('MAINNET_RPC_URL is not set')
-
-const sepoliaRpcUrl = process.env.SEPOLIA_RPC_URL
-if (!sepoliaRpcUrl) throw new Error('SEPOLIA_RPC_URL is not set')
+import {
+  getEnsControllerAddress,
+  getEnsResolverAddress,
+  getEnsReverseRegistrarAddress,
+} from './startupchain-config'
 
 function normalizePrivateKey(value?: string): `0x${string}` {
   if (!value) {
@@ -36,13 +36,10 @@ function normalizePrivateKey(value?: string): `0x${string}` {
   return withPrefix as `0x${string}`
 }
 
-const signerKey = normalizePrivateKey(process.env.STARTUPCHAIN_SIGNER_KEY)
-
 const sepoliaEnsContracts = addEnsContracts(sepolia)
-const CHAINS = {
+const CHAIN_DEFINITIONS = {
   '1': {
     chain: addEnsContracts(mainnet),
-    rpcUrl: mainnetRpcUrl,
   },
   '11155111': {
     chain: {
@@ -50,35 +47,97 @@ const CHAINS = {
       contracts: {
         ...sepoliaEnsContracts.contracts,
         ensEthRegistrarController: {
-          address:
-            '0xFED6a969AaA60E4961FCD3EBF1A2e8913ac65B72' as `0x${string}`,
+          address: getEnsControllerAddress(sepolia.id),
         },
         ensPublicResolver: {
-          address:
-            '0x8FADE66B79cC9f707aB26799354482EB93a5B7dD' as `0x${string}`,
+          address: getEnsResolverAddress(sepolia.id),
         },
         ensReverseRegistrar: {
-          address:
-            '0xA0a1AbcDAe1a2a4A2EF8e9113Ff0e02DD81DC0C6' as `0x${string}`,
+          address: getEnsReverseRegistrarAddress(sepolia.id),
         },
       },
     },
-    rpcUrl: sepoliaRpcUrl,
   },
 } as const
 
-type SupportedChainKey = keyof typeof CHAINS
+type SupportedChainKey = keyof typeof CHAIN_DEFINITIONS
+type SupportedChain = (typeof CHAIN_DEFINITIONS)[SupportedChainKey]['chain']
+type SupportedChainConfig = {
+  chain: SupportedChain
+  rpcUrl: string
+}
 
-const defaultChainId = (process.env.NEXT_PUBLIC_CHAIN_ID ??
-  '11155111') as SupportedChainKey
-const target = CHAINS[defaultChainId]
-if (!target) throw new Error(`Unsupported chain id: ${defaultChainId}`)
+function getDefaultChainKey(): SupportedChainKey {
+  const defaultChainId = process.env.NEXT_PUBLIC_CHAIN_ID ?? '11155111'
+  if (defaultChainId in CHAIN_DEFINITIONS) {
+    return defaultChainId as SupportedChainKey
+  }
 
-const account = privateKeyToAccount(signerKey)
-const transport = http(target.rpcUrl)
+  throw new Error(`Unsupported chain id: ${defaultChainId}`)
+}
 
-// Cache for chain-specific public clients
-const publicClientCache: Record<string, PublicClient> = {}
+function getRpcUrl(chainKey: SupportedChainKey): string {
+  const envVarName = chainKey === '1' ? 'MAINNET_RPC_URL' : 'SEPOLIA_RPC_URL'
+  const rpcUrl = process.env[envVarName]?.trim()
+
+  if (!rpcUrl) {
+    throw new Error(`${envVarName} is not set`)
+  }
+
+  return rpcUrl
+}
+
+function getChainConfigByKey(
+  chainKey: SupportedChainKey
+): SupportedChainConfig {
+  return {
+    chain: CHAIN_DEFINITIONS[chainKey].chain,
+    rpcUrl: getRpcUrl(chainKey),
+  }
+}
+
+function getDefaultChainConfig(): SupportedChainConfig {
+  return getChainConfigByKey(getDefaultChainKey())
+}
+
+let accountCache: ReturnType<typeof privateKeyToAccount> | null = null
+
+function getStartupChainAccountValue() {
+  if (accountCache) {
+    return accountCache
+  }
+
+  accountCache = privateKeyToAccount(
+    normalizePrivateKey(process.env.STARTUPCHAIN_SIGNER_KEY)
+  )
+  return accountCache
+}
+
+export function getStartupChainAccount() {
+  return getStartupChainAccountValue()
+}
+
+function getDefaultChainNumber(): number {
+  return Number(getDefaultChainKey())
+}
+
+const publicClientCache: Partial<Record<SupportedChainKey, PublicClient>> = {}
+
+function createConfiguredWalletClient(chainKey: SupportedChainKey) {
+  const chainConfig = getChainConfigByKey(chainKey)
+
+  return createWalletClient({
+    chain: chainConfig.chain,
+    transport: http(chainConfig.rpcUrl),
+    account: getStartupChainAccountValue(),
+  })
+}
+
+type StartupChainWalletClient = ReturnType<typeof createConfiguredWalletClient>
+
+const walletClientCache: Partial<
+  Record<SupportedChainKey, StartupChainWalletClient>
+> = {}
 
 /**
  * Get a public client for a specific chain ID.
@@ -91,19 +150,20 @@ export function getPublicClient(chainId: number): PublicClient {
     return publicClientCache[chainKey]
   }
 
-  const chainConfig = CHAINS[chainKey]
-  if (!chainConfig) {
-    // Fall back to default chain if unsupported
+  const chainConfigKey =
+    chainKey in CHAIN_DEFINITIONS ? chainKey : getDefaultChainKey()
+
+  if (!(chainKey in CHAIN_DEFINITIONS)) {
     console.warn(`Unsupported chain id: ${chainId}, falling back to default`)
-    return getPublicClient(Number(defaultChainId))
   }
 
+  const chainConfig = getChainConfigByKey(chainConfigKey)
   const client = createPublicClient({
     chain: chainConfig.chain,
     transport: http(chainConfig.rpcUrl),
   })
 
-  publicClientCache[chainKey] = client
+  publicClientCache[chainConfigKey] = client
   return client
 }
 
@@ -111,20 +171,22 @@ export function getPublicClient(chainId: number): PublicClient {
  * Get a wallet client for a specific chain ID.
  * Used for server-side transactions.
  */
-export function getWalletClient(chainId: number) {
+export function getWalletClient(chainId: number): StartupChainWalletClient {
   const chainKey = String(chainId) as SupportedChainKey
-  const chainConfig = CHAINS[chainKey]
 
-  if (!chainConfig) {
-    console.warn(`Unsupported chain id: ${chainId}, falling back to default`)
-    return getWalletClient(Number(defaultChainId))
+  if (walletClientCache[chainKey]) {
+    return walletClientCache[chainKey]
   }
 
-  return createWalletClient({
-    chain: chainConfig.chain,
-    transport: http(chainConfig.rpcUrl),
-    account,
-  })
+  if (!(chainKey in CHAIN_DEFINITIONS)) {
+    console.warn(`Unsupported chain id: ${chainId}, falling back to default`)
+    return getWalletClient(getDefaultChainNumber())
+  }
+
+  const client = createConfiguredWalletClient(chainKey)
+
+  walletClientCache[chainKey] = client
+  return client
 }
 
 /**
@@ -132,36 +194,84 @@ export function getWalletClient(chainId: number) {
  */
 export function getChainConfig(chainId: number) {
   const chainKey = String(chainId) as SupportedChainKey
-  const chainConfig = CHAINS[chainKey]
-
-  if (!chainConfig) {
-    return CHAINS[defaultChainId]
+  if (!(chainKey in CHAIN_DEFINITIONS)) {
+    return getDefaultChainConfig()
   }
 
-  return chainConfig
+  return getChainConfigByKey(chainKey)
+}
+
+function createLazyProxy<T extends object>(getValue: () => T): T {
+  return new Proxy({} as T, {
+    get(_target, prop, _receiver) {
+      const resolved = getValue()
+      const value = Reflect.get(resolved as object, prop)
+      return typeof value === 'function' ? value.bind(resolved) : value
+    },
+    has(_target, prop) {
+      return prop in getValue()
+    },
+    ownKeys() {
+      return Reflect.ownKeys(getValue() as object)
+    },
+    getOwnPropertyDescriptor(_target, prop) {
+      const descriptor = Object.getOwnPropertyDescriptor(
+        getValue() as object,
+        prop
+      )
+
+      if (!descriptor) {
+        return undefined
+      }
+
+      return {
+        ...descriptor,
+        configurable: true,
+      }
+    },
+  })
+}
+
+function getDefaultPublicClient() {
+  return getPublicClient(getDefaultChainNumber())
+}
+
+function getDefaultWalletClient() {
+  return getWalletClient(getDefaultChainNumber())
+}
+
+function getStartupChainChainValue() {
+  return getDefaultChainConfig().chain
+}
+
+export function getStartupChainChain() {
+  return getStartupChainChainValue()
+}
+
+export function getTreasuryAddress(): `0x${string}` {
+  return getStartupChainAccountValue().address as `0x${string}`
 }
 
 // Legacy exports for backward compatibility - use chain-aware functions above
-export const publicClient = createPublicClient({
-  chain: target.chain,
-  transport,
-})
+export const publicClient = createLazyProxy<PublicClient>(() =>
+  getDefaultPublicClient()
+)
 
-export const walletClient = createWalletClient({
-  chain: target.chain,
-  transport,
-  account,
-})
+export const walletClient = createLazyProxy<StartupChainWalletClient>(() =>
+  getDefaultWalletClient()
+)
 
-export const startupChainAccount = account
-export const startupChainChain = target.chain
+export const startupChainAccount = createLazyProxy<
+  ReturnType<typeof getStartupChainAccount>
+>(() => getStartupChainAccount())
 
-// Treasury address where users send prepayments - uses the signer's address
-export const TREASURY_ADDRESS = account.address
+export const startupChainChain = createLazyProxy<
+  ReturnType<typeof getStartupChainChain>
+>(() => getStartupChainChain())
 
 export const startupChainClient = async () => ({
-  publicClient,
-  walletClient,
-  account,
-  chain: target.chain,
+  publicClient: getDefaultPublicClient(),
+  walletClient: getDefaultWalletClient(),
+  account: getStartupChainAccountValue(),
+  chain: getStartupChainChainValue(),
 })

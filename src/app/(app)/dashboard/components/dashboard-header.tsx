@@ -6,7 +6,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-import { appNavItems, footerItems } from '@/app/(app)/dashboard/config/navigation'
+import {
+  appNavItems,
+  footerItems,
+} from '@/app/(app)/dashboard/config/navigation'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -25,7 +28,7 @@ type DashboardHeaderProps = {
 }
 
 export function DashboardHeader({ title }: DashboardHeaderProps) {
-  const { primaryAddress, disconnect, user } = useWalletAuth()
+  const { primaryAddress, disconnect } = useWalletAuth()
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
@@ -42,11 +45,6 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
     }
   }
 
-  const avatarFallback =
-    user?.email?.address?.[0]?.toUpperCase() ??
-    user?.id?.[0]?.toUpperCase() ??
-    'U'
-
   return (
     <div className="border-border bg-background/90 sticky top-0 z-10 border-b px-4 py-3 backdrop-blur md:px-6">
       <div className="flex flex-col gap-3">
@@ -61,7 +59,7 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
               priority
             />
             <div className="leading-tight">
-              <p className="text-foreground text-lg font-semibold transition-colors duration-200 group-hover:text-primary">
+              <p className="text-foreground group-hover:text-primary text-lg font-semibold transition-colors duration-200">
                 StartUpChain
               </p>
               <p className="text-muted-foreground text-xs">Onchain OS</p>
@@ -86,7 +84,7 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
                 <DropdownMenuItem
                   key={item.url}
                   asChild
-                  className="focus:bg-primary/10 focus:text-primary focus:translate-x-1 cursor-pointer transition-all duration-200"
+                  className="focus:bg-primary/10 focus:text-primary cursor-pointer transition-all duration-200 focus:translate-x-1"
                 >
                   <Link href={item.url}>
                     <item.icon className="mr-2 h-4 w-4" />
@@ -99,7 +97,7 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
                 <DropdownMenuItem
                   key={item.url}
                   asChild
-                  className="focus:bg-primary/10 focus:text-primary focus:translate-x-1 cursor-pointer transition-all duration-200"
+                  className="focus:bg-primary/10 focus:text-primary cursor-pointer transition-all duration-200 focus:translate-x-1"
                 >
                   <Link href={item.url}>
                     <item.icon className="mr-2 h-4 w-4" />
@@ -163,7 +161,6 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
             </Button>
           </div>
         </div>
-
       </div>
     </div>
   )

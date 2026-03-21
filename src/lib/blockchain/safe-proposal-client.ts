@@ -2,17 +2,18 @@
 
 import Safe from '@safe-global/protocol-kit'
 
+import type { SafeWalletProvider } from '@/hooks/safe-wallet-utils'
+
 import type { SafeTransactionRequest } from './ens-management'
 
-export type SafeProposeErrorCode = 'SAFE_API_KEY_MISSING'
+export type SafeProposeErrorCode =
+  | 'SAFE_API_KEY_MISSING'
+  | 'SAFE_API_AUTH_ERROR'
+  | 'SAFE_API_UNAVAILABLE'
 
 export type SafeProposeError = {
   error: string
   code?: SafeProposeErrorCode
-}
-
-type Eip1193Provider = {
-  request: (args: { method: string, params?: unknown[] | object }) => Promise<unknown>
 }
 
 type ProposeResponse = {
@@ -23,7 +24,10 @@ export class SafeProposeClientError extends Error {
   code?: SafeProposeErrorCode
   status?: number
 
-  constructor(message: string, options?: { code?: SafeProposeErrorCode, status?: number }) {
+  constructor(
+    message: string,
+    options?: { code?: SafeProposeErrorCode; status?: number }
+  ) {
     super(message)
     this.name = 'SafeProposeClientError'
     this.code = options?.code
@@ -31,8 +35,34 @@ export class SafeProposeClientError extends Error {
   }
 }
 
-export function isSafeProposeClientError(error: unknown): error is SafeProposeClientError {
+export function isSafeProposeClientError(
+  error: unknown
+): error is SafeProposeClientError {
   return error instanceof SafeProposeClientError
+}
+
+export function handleSafeProposalError(
+  error: unknown,
+  fallbackMessage: string,
+  callbacks: {
+    onApiUnavailable: (msg: string) => void
+    onError: (msg: string) => void
+  }
+): void {
+  if (isSafeProposeClientError(error)) {
+    if (
+      error.code === 'SAFE_API_KEY_MISSING' ||
+      error.code === 'SAFE_API_AUTH_ERROR'
+    ) {
+      callbacks.onApiUnavailable(error.message)
+      return
+    }
+
+    callbacks.onError(error.message)
+    return
+  }
+
+  callbacks.onError(error instanceof Error ? error.message : fallbackMessage)
 }
 
 function parseSafeProposeError(data: unknown): SafeProposeError | null {
@@ -40,13 +70,15 @@ function parseSafeProposeError(data: unknown): SafeProposeError | null {
     return null
   }
 
-  const payload = data as { error?: unknown, code?: unknown }
+  const payload = data as { error?: unknown; code?: unknown }
   if (typeof payload.error !== 'string') {
     return null
   }
 
-  const maybeCode
-    = payload.code === 'SAFE_API_KEY_MISSING'
+  const maybeCode =
+    payload.code === 'SAFE_API_KEY_MISSING' ||
+    payload.code === 'SAFE_API_AUTH_ERROR' ||
+    payload.code === 'SAFE_API_UNAVAILABLE'
       ? payload.code
       : undefined
 
@@ -56,14 +88,16 @@ function parseSafeProposeError(data: unknown): SafeProposeError | null {
   }
 }
 
-function toSerializableSafeTransactionData(input: unknown): Record<string, unknown> {
+function toSerializableSafeTransactionData(
+  input: unknown
+): Record<string, unknown> {
   return JSON.parse(
     JSON.stringify(input, (_, value) => {
       if (typeof value === 'bigint') {
         return value.toString()
       }
       return value
-    }),
+    })
   ) as Record<string, unknown>
 }
 
@@ -75,13 +109,42 @@ export async function proposeSafeTransactionFromWallet({
   transaction,
   origin,
 }: {
-  provider: Eip1193Provider
+  provider: SafeWalletProvider
   chainId: number
   safeAddress: `0x${string}`
   senderAddress: `0x${string}`
   transaction: SafeTransactionRequest
   origin?: string
 }): Promise<ProposeResponse> {
+  return proposeBatchSafeTransactionFromWallet({
+    provider,
+    chainId,
+    safeAddress,
+    senderAddress,
+    transactions: [transaction],
+    origin,
+  })
+}
+
+export async function proposeBatchSafeTransactionFromWallet({
+  provider,
+  chainId,
+  safeAddress,
+  senderAddress,
+  transactions,
+  origin,
+}: {
+  provider: SafeWalletProvider
+  chainId: number
+  safeAddress: `0x${string}`
+  senderAddress: `0x${string}`
+  transactions: SafeTransactionRequest[]
+  origin?: string
+}): Promise<ProposeResponse> {
+  if (transactions.length === 0) {
+    throw new Error('At least one transaction is required')
+  }
+
   const protocolKit = await Safe.init({
     provider,
     signer: senderAddress,
@@ -89,7 +152,7 @@ export async function proposeSafeTransactionFromWallet({
   })
 
   const safeTransaction = await protocolKit.createTransaction({
-    transactions: [transaction],
+    transactions,
   })
   const safeTxHash = await protocolKit.getTransactionHash(safeTransaction)
   const signature = await protocolKit.signHash(safeTxHash)
@@ -105,7 +168,9 @@ export async function proposeSafeTransactionFromWallet({
       safeTxHash,
       senderAddress,
       senderSignature: signature.data,
-      safeTransactionData: toSerializableSafeTransactionData(safeTransaction.data),
+      safeTransactionData: toSerializableSafeTransactionData(
+        safeTransaction.data
+      ),
       origin,
     }),
   })

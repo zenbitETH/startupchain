@@ -49,6 +49,33 @@ export function getEnsResolverAddress(chainId: number): `0x${string}` {
 
 export const DEFAULT_ENS_RESOLVER = getEnsResolverAddress(STARTUPCHAIN_CHAIN_ID)
 
+// ENS Reverse Registrar addresses per chain
+const ENS_REVERSE_REGISTRAR_ADDRESSES: Record<SupportedChainId, `0x${string}`> =
+  {
+    [sepolia.id]: '0xA0a1AbcDAe1a2a4A2EF8e9113Ff0e02DD81DC0C6' as `0x${string}`,
+    [mainnet.id]: '0xa58E81fe9b61B5c3fE2AFD33CF304c454AbFc7Cb' as `0x${string}`,
+  }
+
+export function getEnsReverseRegistrarAddress(chainId: number): `0x${string}` {
+  if (isSupportedChain(chainId)) {
+    return ENS_REVERSE_REGISTRAR_ADDRESSES[chainId]
+  }
+  return ENS_REVERSE_REGISTRAR_ADDRESSES[sepolia.id]
+}
+
+// ENS Controller (ETHRegistrarController) addresses per chain
+const ENS_CONTROLLER_ADDRESSES: Record<SupportedChainId, `0x${string}`> = {
+  [sepolia.id]: '0xfb3cE5D01e0f33f41DbB39035dB9745962F1f968' as `0x${string}`,
+  [mainnet.id]: '0x59E16fcCd424Cc24e280Be16E11Bcd56fb0CE547' as `0x${string}`,
+}
+
+export function getEnsControllerAddress(chainId: number): `0x${string}` {
+  if (isSupportedChain(chainId)) {
+    return ENS_CONTROLLER_ADDRESSES[chainId]
+  }
+  return ENS_CONTROLLER_ADDRESSES[sepolia.id]
+}
+
 export function isSupportedChain(chainId: number): chainId is SupportedChainId {
   return SUPPORTED_CHAINS.includes(chainId as SupportedChainId)
 }

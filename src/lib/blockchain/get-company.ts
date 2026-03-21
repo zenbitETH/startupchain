@@ -97,7 +97,7 @@ export async function getCompanyByENS(
       args: [normalizedName],
     })
 
-    const [id, ownerAddress, name, creationDate, safeAddress, threshold] = data
+    const [id, ownerAddress, , creationDate, safeAddress, threshold] = data
 
     // Get founders with equity
     const foundersData = await client.readContract({

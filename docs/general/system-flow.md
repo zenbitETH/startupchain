@@ -1,6 +1,6 @@
 # StartupChain System Flow
 
-> **Last Updated:** February 23, 2026
+> **Last Updated:** March 8, 2026
 > **Status:** Early Production
 > **Important:** Keep this diagram updated when making architectural changes.
 
@@ -14,6 +14,7 @@ StartupChain is an onchain company OS that allows founders to:
 - **Hybrid registration:** Server handles ENS commit/register/Safe deploy → **User signs** final `recordCompany()` tx
 - Manage from a unified dashboard
 - **ENS management (proposal-first):** founders propose ENS trait/subdomain updates via Safe queue, UI reflects onchain confirmation
+- **Safe proposal auth:** ENS proposals require the authenticated founder wallet to match the submitted signer and that signer must be a Safe owner
 - **Session persistence:** Registration state saved in cookie for page refresh resilience
 
 **Core Flow:** `ENS Check → Auth → Setup Wizard → Prepay to Treasury → (Auto) Commit → Wait 60s → Deploy Safe → Register ENS (to Safe) → **User Signs recordCompany()** → Dashboard`
@@ -293,17 +294,16 @@ StartupChain is an onchain company OS that allows founders to:
 │    ┌────────────────────────────────────────────────────────────────────────────────────┐   │
 │    │  /dashboard/ens - ENS Management Page                                              │   │
 │    │  ┌──────────────────────────────────────────────────────────────────────────────┐  │   │
-│    │  │  • ENS profile traits (avatar/description/url) with proposal-first updates   │  │   │
-│    │  │  • Subdomain create/revoke proposals submitted to Safe queue                 │  │   │
+│    │  │  • Identity tab handles ENS traits + subdomain profile/primary-name actions  │  │   │
+│    │  │  • Team tab handles founder batch subdomains + custom create/revoke actions  │  │   │
 │    │  │  • Pending proposal badges + periodic refresh until onchain confirmation     │  │   │
+│    │  │  • Renewal tab auto-quotes rentPrice and prefills payable renewal value      │  │   │
 │    │  │  • Links to Safe queue + explorer traces for registration/proposal txs       │  │   │
 │    │  └──────────────────────────────────────────────────────────────────────────────┘  │   │
 │    └────────────────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                              │
 └─────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
-
-
 
 ---
 
@@ -369,6 +369,11 @@ StartupChain is an onchain company OS that allows founders to:
 │   ├── getPendingTransactions(address) → queued txs needing signatures                       │
 │   └── getTransactionHistory(address) → executed transactions                                │
 │                                                                                              │
+│   ENS Proposal Rules:                                                                        │
+│   ├── Session wallet must match senderAddress                                                │
+│   ├── Sender must be listed in Safe owners                                                   │
+│   └── Non-owner/delegate proposals are rejected before Safe proposal submission              │
+│                                                                                              │
 │   Rate limits: 5 requests/second (free tier)                                                │
 │   Networks: Mainnet + Sepolia supported                                                      │
 │   File: src/lib/blockchain/safe-api.ts                                                      │
@@ -396,21 +401,21 @@ StartupChain is an onchain company OS that allows founders to:
 
 ### State Management
 
-
-| Layer  | Mechanism                              | Purpose                                 |
-| -------- | ---------------------------------------- | ----------------------------------------- |
-| Server | Cookies (`pending-ens`, `privy-token`) | Session & registration state            |
-| Server | `getServerSession()`                   | Auth verification                       |
-| Server | `TREASURY_ADDRESS`                     | Address for receiving user prepayments  |
-| Server | `SAFE_API_KEY`                         | Safe Transaction Service authentication |
-| Client | `useDraftStore`                        | Setup wizard form state (chain-aware)   |
-| Client | `useWalletAuth` context                | Auth state, chainId & methods           |
-| Client | `useCompanyRegistration`               | Full registration flow (hybrid mode)    |
-| Client | `useSendTransaction`                   | User payment to treasury                |
-| Client | `useWriteContract`                     | User signs recordCompany() tx           |
-| Client | `resumeRegistrationAction()`           | Session resume on page refresh          |
-| Client | React Query                            | Async data fetching (chainId in keys)   |
-| URL    | `?chain=<chainId>` search param        | Chain selection for server components   |
+| Layer  | Mechanism                              | Purpose                                                              |
+| ------ | -------------------------------------- | -------------------------------------------------------------------- |
+| Server | Cookies (`pending-ens`, `privy-token`) | Session & registration state                                         |
+| Server | `getServerSession()`                   | Auth verification                                                    |
+| Server | `TREASURY_ADDRESS`                     | Address for receiving user prepayments                               |
+| Server | `SAFE_API_KEY`                         | Safe Transaction Service authentication                              |
+| Client | `useDraftStore`                        | Setup wizard form state (chain-aware)                                |
+| Client | `useWalletAuth` context                | Auth state, chainId & methods                                        |
+| Client | `useSafeWallet`                        | Match the authenticated founder wallet before signing Safe proposals |
+| Client | `useCompanyRegistration`               | Full registration flow (hybrid mode)                                 |
+| Client | `useSendTransaction`                   | User payment to treasury                                             |
+| Client | `useWriteContract`                     | User signs recordCompany() tx                                        |
+| Client | `resumeRegistrationAction()`           | Session resume on page refresh                                       |
+| Client | React Query                            | Async data fetching (chainId in keys)                                |
+| URL    | `?chain=<chainId>` search param        | Chain selection for server components                                |
 
 **Registration States (PendingStatus):**
 
@@ -449,9 +454,8 @@ The app supports multiple chains (Sepolia, Mainnet) with chain-aware data fetchi
 
 **Key Components:**
 
-
 | Component                            | Chain Handling                                              |
-| -------------------------------------- | ------------------------------------------------------------- |
+| ------------------------------------ | ----------------------------------------------------------- |
 | `NetworkSwitcher`                    | Switches wallet chain + pushes`?chain=<id>` URL param       |
 | `getPublicClient(chainId)`           | Returns cached Viem client for specific chain               |
 | `getCompanyByAddress(addr, chainId)` | Queries correct chain's StartupChain contract               |
@@ -468,9 +472,8 @@ The app supports multiple chains (Sepolia, Mainnet) with chain-aware data fetchi
 
 ## Key Technologies
 
-
 | Category       | Technologies                                                                     |
-| ---------------- | ---------------------------------------------------------------------------------- |
+| -------------- | -------------------------------------------------------------------------------- |
 | **Frontend**   | Next.js 16 (App Router), React 19 (Server Components), TailwindCSS v4, shadcn/ui |
 | **Auth**       | Privy (wallet auth), JWT tokens, HTTP-only cookies                               |
 | **Blockchain** | Viem (client), Wagmi (hooks), @ensdomains/ensjs, Custom Solidity contracts       |
@@ -481,9 +484,8 @@ The app supports multiple chains (Sepolia, Mainnet) with chain-aware data fetchi
 
 ## Key Files Reference
 
-
 | File                                                        | Purpose                                               |
-| ------------------------------------------------------------- | ------------------------------------------------------- |
+| ----------------------------------------------------------- | ----------------------------------------------------- |
 | `src/app/(public)/page.tsx`                                 | Landing page with ENS checker                         |
 | `src/components/ens-name-checker/EnsNameChecker.tsx`        | ENS availability checking UI                          |
 | `src/components/ens-name-checker/useEnsCheck.ts`            | ENS check hook (chain-aware query keys)               |
@@ -514,9 +516,8 @@ The app supports multiple chains (Sepolia, Mainnet) with chain-aware data fetchi
 
 **Hybrid model: User sends ETH to treasury for ENS/Safe costs, server executes ENS + Safe txs, then user signs final recordCompany() tx.**
 
-
 | Cost Component                   | Paid By                | Recipient                     |
-| ---------------------------------- | ------------------------ | ------------------------------- |
+| -------------------------------- | ---------------------- | ----------------------------- |
 | ENS Registration (1 year)        | Server (from treasury) | ENS Protocol                  |
 | Safe Deployment Gas              | Server (from treasury) | Network                       |
 | Service Fee (25% of ENS cost)    | Server (from treasury) | StartupChain (`feeRecipient`) |

@@ -1,4 +1,4 @@
-import { ListChecks } from 'lucide-react'
+import { formatDate } from '../utils'
 
 interface LatestEvent {
   ensName: string
@@ -17,61 +17,56 @@ interface RegistrationStatusCardProps {
   pending: PendingRegistration | null
 }
 
-function formatDate(value?: Date) {
-  if (!value) return 'Pending'
-  return value.toLocaleString()
-}
-
-export function RegistrationStatusCard({
+export function RegistrationStatusInline({
   latestEvent,
   pending,
 }: RegistrationStatusCardProps) {
+  if (!latestEvent && (!pending || pending.status !== 'completed')) {
+    return null
+  }
+
+  const items: { label: string; value: string; mono?: boolean }[] = []
+
+  if (latestEvent) {
+    items.push({ label: 'ENS', value: latestEvent.ensName })
+    items.push({
+      label: 'Block',
+      value: latestEvent.blockNumber.toString(),
+      mono: true,
+    })
+    items.push({
+      label: 'Registered',
+      value: formatDate(latestEvent.createdAt),
+    })
+  } else if (pending?.status === 'completed') {
+    items.push({ label: 'ENS', value: pending.ensName })
+    items.push({ label: 'Status', value: 'Completed' })
+    items.push({
+      label: 'Registered',
+      value: formatDate(new Date(pending.updatedAt)),
+    })
+  }
+
   return (
-    <section className="bg-card border-border rounded-2xl border p-6 shadow-sm">
-      <div className="flex items-center gap-2">
-        <ListChecks className="text-primary h-5 w-5" />
-        <h3 className="text-foreground text-lg font-semibold">
-          Registration status
-        </h3>
-      </div>
-      {latestEvent ? (
-        <div className="mt-4 space-y-2 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">ENS</span>
-            <span className="font-semibold">{latestEvent.ensName}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Block</span>
-            <span className="font-mono">
-              {latestEvent.blockNumber.toString()}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Registered</span>
-            <span>{formatDate(latestEvent.createdAt)}</span>
+    <div className="flex flex-wrap items-center gap-6">
+      {items.map((item, idx) => (
+        <div key={item.label} className="flex items-center gap-6">
+          {idx > 0 && (
+            <div
+              className="bg-border/70 hidden h-4 w-px sm:block"
+              aria-hidden="true"
+            />
+          )}
+          <div>
+            <p className="text-muted-foreground text-xs">{item.label}</p>
+            <p
+              className={`text-sm font-semibold ${item.mono ? 'font-mono' : ''}`}
+            >
+              {item.value}
+            </p>
           </div>
         </div>
-      ) : pending?.status === 'completed' ? (
-        <div className="mt-4 space-y-2 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">ENS</span>
-            <span className="font-semibold">{pending.ensName}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Status</span>
-            <span className="text-primary font-semibold">Completed</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Registered</span>
-            <span>{formatDate(new Date(pending.updatedAt))}</span>
-          </div>
-        </div>
-      ) : (
-        <p className="text-muted-foreground mt-4 text-sm">
-          No registration logs yet. Complete a registration to see history
-          here.
-        </p>
-      )}
-    </section>
+      ))}
+    </div>
   )
 }

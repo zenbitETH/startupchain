@@ -1,4 +1,4 @@
-import { ExternalLink, MessageCircle, Wallet2 } from 'lucide-react'
+import { ExternalLink, Wallet2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { shortenAddress } from '@/lib/utils'
