@@ -32,7 +32,11 @@ contract DeployAttestationModule is Script {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
         address deployer = vm.addr(deployerPrivateKey);
 
+        // #4 — schema config is owner-gated; deploy the owner as a 2/3 Safe.
+        address initialOwner = vm.envOr("STARTUPCHAIN_OWNER", deployer);
+
         console.log("Deploying AttestationModule with deployer:", deployer);
+        console.log("Owner (should be a 2/3 Safe):", initialOwner);
         console.log("EAS address:", easAddress);
         console.log("StartupChain registry:", startupChainRegistry);
         console.log("Chain ID:", chainId);
@@ -41,7 +45,8 @@ contract DeployAttestationModule is Script {
 
         AttestationModule attestationModule = new AttestationModule(
             easAddress,
-            startupChainRegistry
+            startupChainRegistry,
+            initialOwner
         );
 
         console.log("AttestationModule deployed at:", address(attestationModule));

@@ -1,8 +1,21 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
-import {AttestationModule, IEAS} from "../src/AttestationModule.sol";
+import {AttestationModule, IEAS, IStartupChainRegistry} from "../src/AttestationModule.sol";
+
+/// @notice Mock registry backing the #4 membership check — configurable per (companyId, account).
+contract MockRegistry is IStartupChainRegistry {
+    mapping(uint256 => mapping(address => bool)) public founder;
+
+    function setFounder(uint256 companyId, address account, bool ok) external {
+        founder[companyId][account] = ok;
+    }
+
+    function isFounder(uint256 companyId, address account) external view returns (bool) {
+        return founder[companyId][account];
+    }
+}
 
 contract MockEAS is IEAS {
     mapping(bytes32 => Attestation) public attestations;
@@ -40,10 +53,11 @@ contract MockEAS is IEAS {
 contract AttestationModuleTest is Test {
     AttestationModule public attestationModule;
     MockEAS public eas;
+    MockRegistry public registry;
 
-    address public registryAddress = address(1);
     address public companyOwner = address(2);
     address public member = address(3);
+    address public nonMember = address(4);
 
     uint256 public constant COMPANY_ID = 1;
 
@@ -55,14 +69,38 @@ contract AttestationModuleTest is Test {
 
     function setUp() public {
         eas = new MockEAS();
-        attestationModule = new AttestationModule(address(eas), registryAddress);
+        registry = new MockRegistry();
+        // this test contract is the owner (can configure schemas)
+        attestationModule = new AttestationModule(address(eas), address(registry), address(this));
 
-        // Set up schemas
+        // companyOwner and member are founders of COMPANY_ID
+        registry.setFounder(COMPANY_ID, companyOwner, true);
+        registry.setFounder(COMPANY_ID, member, true);
+
+        // Set up schemas (owner-only)
         attestationModule.setCompanyFormationSchema(COMPANY_FORMATION_SCHEMA);
         attestationModule.setGovernanceDecisionSchema(GOVERNANCE_DECISION_SCHEMA);
         attestationModule.setFinancialTransactionSchema(FINANCIAL_TRANSACTION_SCHEMA);
         attestationModule.setMilestoneAchievementSchema(MILESTONE_ACHIEVEMENT_SCHEMA);
         attestationModule.setMembershipChangeSchema(MEMBERSHIP_CHANGE_SCHEMA);
+    }
+
+    // --- #4 hardening: real membership + owner-gated schema config ---
+
+    function testOnlyCompanyMemberCanAttest() public {
+        vm.prank(nonMember);
+        vm.expectRevert("Not a company member");
+        attestationModule.createAttestation(
+            COMPANY_ID, AttestationModule.AttestationType.CompanyFormation, "nope", ""
+        );
+    }
+
+    function testSchemaSetterIsOwnerGated() public {
+        // a fresh module whose owner is address(this); a non-owner cannot pin schema UIDs
+        AttestationModule fresh = new AttestationModule(address(eas), address(registry), address(this));
+        vm.prank(nonMember);
+        vm.expectRevert(); // OwnableUnauthorizedAccount
+        fresh.setCompanyFormationSchema(keccak256("frontrun"));
     }
 
     function testCreateAttestation() public {

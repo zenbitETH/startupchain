@@ -1,9 +1,12 @@
 import { addEnsContracts } from '@ensdomains/ensjs'
 import {
+  type Address,
   type PublicClient,
   createPublicClient,
   createWalletClient,
+  getAddress,
   http,
+  isAddress,
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { mainnet, sepolia } from 'viem/chains'
@@ -156,8 +159,35 @@ export const walletClient = createWalletClient({
 export const startupChainAccount = account
 export const startupChainChain = target.chain
 
-// Treasury address where users send prepayments - uses the signer's address
-export const TREASURY_ADDRESS = account.address
+/**
+ * Treasury address where users send prepayments.
+ *
+ * SECURITY (#8 — de-risk the hot relayer key): the treasury MUST be SEPARATE from the hot signer that
+ * pays gas for commit/register/deploy. Reusing the signer address as the treasury couples "least
+ * privilege gas payer" with "holds user funds" — a single compromised key then drains fees too. Set
+ * `STARTUPCHAIN_TREASURY_ADDRESS` to a distinct address (ideally a Safe). We fall back to the signer
+ * address only when it is unset, and warn loudly, so existing dev setups keep working.
+ */
+function resolveTreasuryAddress(): Address {
+  const configured = process.env.STARTUPCHAIN_TREASURY_ADDRESS?.trim()
+  if (configured && isAddress(configured)) {
+    const treasury = getAddress(configured)
+    if (treasury.toLowerCase() === account.address.toLowerCase()) {
+      console.warn(
+        '[startupchain] STARTUPCHAIN_TREASURY_ADDRESS equals the hot signer address — ' +
+          'separate them so the gas payer does not also custody fees (#8).'
+      )
+    }
+    return treasury
+  }
+  console.warn(
+    '[startupchain] STARTUPCHAIN_TREASURY_ADDRESS is not set — falling back to the hot signer address ' +
+      'as treasury. Set a distinct treasury (ideally a Safe) before production (#8).'
+  )
+  return account.address
+}
+
+export const TREASURY_ADDRESS = resolveTreasuryAddress()
 
 export const startupChainClient = async () => ({
   publicClient,

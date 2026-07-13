@@ -200,9 +200,11 @@ export async function commitEnsRegistrationAction({
   const { totalWei } = await getEnsRegistrationCostAction(ensName, verificationYears, founders.length)
   console.log(LOG_PREFIX, 'Expected payment amount:', totalWei)
 
+  // SECURITY (#7): bind the payment to a founder wallet of this registration.
   const paymentStatus = await checkPaymentStatusAction({
     paymentTxHash,
     minValueWei: totalWei,
+    allowedFrom: founderStructs.map((f) => f.wallet),
   })
   console.log(LOG_PREFIX, 'Payment verification result:', paymentStatus)
 

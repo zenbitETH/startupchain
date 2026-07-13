@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.28;
+
+import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+
+/// @notice The StartupChain registry membership check (#4 — replaces the no-op onlyCompanyMember).
+interface IStartupChainRegistry {
+    function isFounder(uint256 companyId, address account) external view returns (bool);
+}
 
 interface IEAS {
     struct AttestationRequest {
@@ -34,7 +41,11 @@ interface IEAS {
     function getAttestation(bytes32 uid) external view returns (Attestation memory);
 }
 
-contract AttestationModule {
+/// @title AttestationModule
+/// @notice EAS wrapper for company attestations. Hardened (#4): `onlyCompanyMember` now enforces real
+/// StartupChain-registry membership, and the schema-config setters are owner-gated (not permissionless),
+/// so the schema UIDs can no longer be front-run/pinned by the first caller. Admin = a 2/3 Safe.
+contract AttestationModule is Ownable2Step {
     enum AttestationType {
         CompanyFormation,
         GovernanceDecision,
@@ -90,48 +101,52 @@ contract AttestationModule {
     );
 
     modifier onlyCompanyMember(uint256 _companyId) {
-        // In production, this would check against StartupChain registry
-        // For now, we'll allow any address to attest (can be restricted later)
+        // #4 — real membership check against the StartupChain registry.
+        require(
+            IStartupChainRegistry(startupChainRegistry).isFounder(_companyId, msg.sender), "Not a company member"
+        );
         _;
     }
 
-    constructor(address _eas, address _startupChainRegistry) {
+    /// @param _initialOwner Admin for schema configuration — deploy as a 2/3 Safe multisig.
+    constructor(address _eas, address _startupChainRegistry, address _initialOwner) Ownable(_initialOwner) {
+        require(_startupChainRegistry != address(0), "Invalid registry");
         eas = IEAS(_eas);
         startupChainRegistry = _startupChainRegistry;
     }
 
-    // Schema management functions
-    function setCompanyFormationSchema(bytes32 _schema) external {
+    // Schema management functions — #4 owner-gated (was permissionless one-time).
+    function setCompanyFormationSchema(bytes32 _schema) external onlyOwner {
         require(companyFormationSchema == bytes32(0), "Schema already set");
         companyFormationSchema = _schema;
         emit SchemaRegistered(AttestationType.CompanyFormation, _schema);
     }
 
-    function setGovernanceDecisionSchema(bytes32 _schema) external {
+    function setGovernanceDecisionSchema(bytes32 _schema) external onlyOwner {
         require(governanceDecisionSchema == bytes32(0), "Schema already set");
         governanceDecisionSchema = _schema;
         emit SchemaRegistered(AttestationType.GovernanceDecision, _schema);
     }
 
-    function setFinancialTransactionSchema(bytes32 _schema) external {
+    function setFinancialTransactionSchema(bytes32 _schema) external onlyOwner {
         require(financialTransactionSchema == bytes32(0), "Schema already set");
         financialTransactionSchema = _schema;
         emit SchemaRegistered(AttestationType.FinancialTransaction, _schema);
     }
 
-    function setMilestoneAchievementSchema(bytes32 _schema) external {
+    function setMilestoneAchievementSchema(bytes32 _schema) external onlyOwner {
         require(milestoneAchievementSchema == bytes32(0), "Schema already set");
         milestoneAchievementSchema = _schema;
         emit SchemaRegistered(AttestationType.MilestoneAchievement, _schema);
     }
 
-    function setMembershipChangeSchema(bytes32 _schema) external {
+    function setMembershipChangeSchema(bytes32 _schema) external onlyOwner {
         require(membershipChangeSchema == bytes32(0), "Schema already set");
         membershipChangeSchema = _schema;
         emit SchemaRegistered(AttestationType.MembershipChange, _schema);
     }
 
-    function setContractDeploymentSchema(bytes32 _schema) external {
+    function setContractDeploymentSchema(bytes32 _schema) external onlyOwner {
         require(contractDeploymentSchema == bytes32(0), "Schema already set");
         contractDeploymentSchema = _schema;
         emit SchemaRegistered(AttestationType.ContractDeployment, _schema);

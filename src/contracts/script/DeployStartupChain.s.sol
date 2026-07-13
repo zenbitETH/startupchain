@@ -14,11 +14,14 @@ contract DeployStartupChain is Script {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
         address deployer = vm.addr(deployerPrivateKey);
 
-        // Fee recipient is the deployer (treasury)
-        address feeRecipient = deployer;
+        // #2/#8 — owner should be a 2/3 Safe; fee recipient (treasury) should be SEPARATE from the hot
+        // signer. Both default to the deployer only if not provided (loudly, for local dev).
+        address initialOwner = vm.envOr("STARTUPCHAIN_OWNER", deployer);
+        address feeRecipient = vm.envOr("FEE_RECIPIENT", deployer);
 
         console.log("Deploying StartupChain with deployer:", deployer);
-        console.log("Fee recipient:", feeRecipient);
+        console.log("Owner (should be a 2/3 Safe):", initialOwner);
+        console.log("Fee recipient (treasury):", feeRecipient);
         console.log("Chain ID:", block.chainid);
 
         vm.startBroadcast(deployerPrivateKey);
@@ -26,7 +29,8 @@ contract DeployStartupChain is Script {
         StartupChain startupChain = new StartupChain(
             ensRegistry,
             ensResolver,
-            feeRecipient
+            feeRecipient,
+            initialOwner
         );
 
         console.log("StartupChain deployed at:", address(startupChain));
